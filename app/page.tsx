@@ -815,9 +815,8 @@ const JournalDetailPage = ({
           <button
             onClick={() => prevPost && onNavigate(prevPost)}
             disabled={!prevPost}
-            className={`group p-6 md:p-8 text-left transition-all duration-300 ${
-              prevPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
-            }`}
+            className={`group p-6 md:p-8 text-left transition-all duration-300 ${prevPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
+              }`}
           >
             <span className="font-mono text-xs tracking-widest opacity-50 flex items-center gap-2 mb-2">
               <ChevronLeft size={14} /> PREV
@@ -830,9 +829,8 @@ const JournalDetailPage = ({
           <button
             onClick={() => nextPost && onNavigate(nextPost)}
             disabled={!nextPost}
-            className={`group p-6 md:p-8 text-right transition-all duration-300 ${
-              nextPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
-            }`}
+            className={`group p-6 md:p-8 text-right transition-all duration-300 ${nextPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
+              }`}
           >
             <span className="font-mono text-xs tracking-widest opacity-50 flex items-center justify-end gap-2 mb-2">
               NEXT <ChevronRight size={14} />
@@ -897,6 +895,7 @@ const Hero = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                 whileHover={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
+                whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
               >
                 {char}
               </motion.span>
@@ -1098,9 +1097,8 @@ const AccordionItem = ({
           </div>
         </div>
         <div
-          className={`transform transition-transform duration-500 ${
-            isOpen ? "rotate-180" : "rotate-0"
-          } opacity-30 group-hover:opacity-100`}
+          className={`transform transition-transform duration-500 ${isOpen ? "rotate-180" : "rotate-0"
+            } opacity-30 group-hover:opacity-100`}
         >
           <ChevronDown size={32} strokeWidth={1} />
         </div>
@@ -1309,9 +1307,8 @@ const Blog = ({
                       <button
                         key={idx}
                         onClick={() => setCurrentPage(idx)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                          idx === currentPage ? "bg-black scale-125" : "bg-black/30 hover:bg-black/50"
-                        }`}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === currentPage ? "bg-black scale-125" : "bg-black/30 hover:bg-black/50"
+                          }`}
                         aria-label={`Go to page ${idx + 1}`}
                       />
                     ))}
@@ -1498,13 +1495,13 @@ const Museum = ({
 
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start mb-12 md:mb-20 border-b border-black pb-6 md:pb-8 relative">
-           <button
+          <button
             onClick={onBack}
             className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
           >
             <ChevronLeft size={16} /> BACK HOME
           </button>
-          
+
           <div>
             <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">
               ARCHIVE COLLECTION
@@ -1557,9 +1554,8 @@ const Museum = ({
                     />
                   ) : (
                     <ModernBananaSVG
-                      className={`w-48 h-48 text-[#FAC800] transition-transform duration-700 ${
-                        i % 2 === 0 ? "group-hover:rotate-12" : "group-hover:-rotate-12"
-                      } group-hover:scale-110`}
+                      className={`w-48 h-48 text-[#FAC800] transition-transform duration-700 ${i % 2 === 0 ? "group-hover:rotate-12" : "group-hover:-rotate-12"
+                        } group-hover:scale-110`}
                     />
                   )}
 
@@ -1716,11 +1712,10 @@ const BananaAI = ({ onBack }: { onBack: () => void }) => {
                 {msg.role === "user" ? "YOU" : "BANANA AI"}
               </span>
               <div
-                className={`max-w-[85%] ${
-                  msg.role === "user"
+                className={`max-w-[85%] ${msg.role === "user"
                     ? "text-right font-mono text-lg md:text-sm leading-relaxed tracking-wide opacity-70"
                     : "text-left font-serif text-2xl md:text-3xl leading-snug tracking-tight"
-                }`}
+                  }`}
               >
                 {msg.text.split("\n").map((line, idx) => (
                   <span key={idx} className="block min-h-[1em]">
@@ -1809,8 +1804,8 @@ const Letter = ({ onBack }: { onBack: () => void }) => {
             WRITE ANOTHER
           </button>
           <button
-              onClick={onBack}
-              className="block mx-auto mt-6 text-sm font-mono opacity-30 hover:opacity-100 transition-opacity"
+            onClick={onBack}
+            className="block mx-auto mt-6 text-sm font-mono opacity-30 hover:opacity-100 transition-opacity"
           >
             BACK HOME
           </button>
@@ -1971,7 +1966,7 @@ export default function GoldenBananaApp() {
       alert("Error deleting post.")
     }
   }
-    
+
   const handleEditPost = (post: BlogPost) => {
     // Set current post to edit
     setEditingPost(post)
@@ -1999,14 +1994,14 @@ export default function GoldenBananaApp() {
       <GlobalStyles />
       <div className="noise-overlay" />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      
-      <BlogEditor 
-        isOpen={isBlogEditorOpen} 
+
+      <BlogEditor
+        isOpen={isBlogEditorOpen}
         onClose={() => {
           setIsBlogEditorOpen(false)
           setEditingPost(null)
-        }} 
-        user={user} 
+        }}
+        user={user}
         editingPost={editingPost}
       />
 
@@ -2038,10 +2033,10 @@ export default function GoldenBananaApp() {
                 <ParallaxText baseVelocity={2}>KNOWLEDGE — HISTORY — TRIVIA — </ParallaxText>
               </div>
               <Knowledge />
-              <Blog 
-                isAdmin={isAdmin} 
-                user={user} 
-                onOpenPost={handleOpenPost} 
+              <Blog
+                isAdmin={isAdmin}
+                user={user}
+                onOpenPost={handleOpenPost}
               />
               <Footer
                 isAdmin={isAdmin}
