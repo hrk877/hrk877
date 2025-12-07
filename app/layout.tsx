@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "./components/providers/AuthProvider";
+import GlobalStyles from "./components/ui/GlobalStyles";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +20,7 @@ export const metadata: Metadata = {
   description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter.",
   // ★★★ 本番環境のURLをここに設定してください（例: https://hrk877.vercel.app）
   metadataBase: new URL("https://hrk877.vercel.app"),
-  
+
   // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {
     title: "Golden Banana | We Bend the World with the Banana life",
@@ -70,11 +72,14 @@ export default function RootLayout({
 }>) {
   return (
     // <head>タグはNext.jsが自動生成するため削除します
-    <html lang="ja"> 
+    <html lang="ja">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthProvider>
+          <GlobalStyles />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

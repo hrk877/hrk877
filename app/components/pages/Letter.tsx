@@ -6,7 +6,9 @@ import { ChevronLeft, Banana } from "lucide-react"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 
-const Letter = ({ onBack }: { onBack: () => void }) => {
+import Link from "next/link"
+
+const Letter = () => {
     const [message, setMessage] = useState("")
     const [isSent, setIsSent] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -52,12 +54,12 @@ const Letter = ({ onBack }: { onBack: () => void }) => {
                     >
                         WRITE ANOTHER
                     </button>
-                    <button
-                        onClick={onBack}
+                    <Link
+                        href="/"
                         className="block mx-auto mt-6 text-sm font-mono opacity-30 hover:opacity-100 transition-opacity"
                     >
                         BACK HOME
-                    </button>
+                    </Link>
                 </motion.div>
             </div>
         )
@@ -67,12 +69,12 @@ const Letter = ({ onBack }: { onBack: () => void }) => {
         <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 flex flex-col">
             <div className="w-full max-w-2xl mx-auto relative flex-1 flex flex-col">
                 <div className="mb-8 md:mb-12 border-b border-black pb-6 relative">
-                    <button
-                        onClick={onBack}
+                    <Link
+                        href="/"
                         className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
                     >
                         <ChevronLeft size={16} /> BACK HOME
-                    </button>
+                    </Link>
                     <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">ANONYMOUS MESSAGE</span>
                     <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">LETTER</h1>
                 </div>

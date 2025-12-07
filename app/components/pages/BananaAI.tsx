@@ -44,7 +44,11 @@ const BANANA_TRIVIA = [
     "バナナには精神を安定させるセロトニンの材料、トリプトファンが含まれています。幸せの黄色い果実。",
 ]
 
-const BananaAI = ({ onBack }: { onBack: () => void }) => {
+import Link from "next/link"
+
+// ... existing code ...
+
+const BananaAI = () => {
     const [input, setInput] = useState("")
     const [messages, setMessages] = useState([{ role: "ai", text: "ようこそ。曲線について語りましょうか、それとも。" }])
     const [isTyping, setIsTyping] = useState(false)
@@ -103,12 +107,12 @@ const BananaAI = ({ onBack }: { onBack: () => void }) => {
         <div className="min-h-[100dvh] bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 flex flex-col">
             <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col">
                 <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
-                    <button
-                        onClick={onBack}
+                    <Link
+                        href="/"
                         className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
                     >
                         <ChevronLeft size={16} /> BACK HOME
-                    </button>
+                    </Link>
                     <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">
                         CONVERSATIONAL INTERFACE
                     </span>

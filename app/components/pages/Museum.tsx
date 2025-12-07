@@ -3,18 +3,17 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ChevronLeft, Plus, Edit, Trash2 } from "lucide-react"
-import type { User as FirebaseUser } from "firebase/auth"
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 
 import { ModernBananaSVG } from "../ui/ModernBananaSVG"
 import MuseumEditorModal, { type Artwork } from "../modals/MuseumEditorModal"
 
-const Museum = ({
-    isAdmin,
-    user,
-    onBack,
-}: { isAdmin: boolean; user: FirebaseUser | null; onBack: () => void }) => {
+import { useAuth } from "../providers/AuthProvider"
+import Link from "next/link"
+
+const Museum = () => {
+    const { isAdmin, user } = useAuth()
     const [artworks, setArtworks] = useState<Artwork[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -104,12 +103,12 @@ const Museum = ({
 
             <div className="max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row justify-between items-start mb-12 md:mb-20 border-b border-black pb-6 md:pb-8 relative">
-                    <button
-                        onClick={onBack}
+                    <Link
+                        href="/"
                         className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
                     >
                         <ChevronLeft size={16} /> BACK HOME
-                    </button>
+                    </Link>
 
                     <div>
                         <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">

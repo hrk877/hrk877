@@ -1,0 +1,123 @@
+﻿
+> my-v0-project@0.1.0 build
+> next build
+
+   笆ｲ Next.js 15.2.4
+
+   Creating an optimized production build ...
+ 笨・Compiled successfully
+   Linting and checking validity of types ...
+node.exe : 
+発生場所 行:1 文字:1
++ & "C:\Program File
+s\nodejs/node.exe" "
+C:\Program Files\nod
+ejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (:Str   
+ ing) [], Remote    
+Exception
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+Failed to compile.
+
+./app/components/lay
+out/TopNavigation.ts
+x
+5:26  Error: 'onNavi
+gate' is defined but
+ never used.  @types
+cript-eslint/no-unus
+ed-vars
+
+./app/components/mod
+als/MuseumEditorModa
+l.tsx
+160:41  Warning: Usi
+ng `<img>` could res
+ult in slower LCP an
+d higher bandwidth. 
+Consider using `<Ima
+ge />` from `next/im
+age` or a custom ima
+ge loader to automat
+ically optimize imag
+es. This may incur a
+dditional usage or c
+ost from your provid
+er. See: https://nex
+tjs.org/docs/message
+s/no-img-element  @n
+ext/next/no-img-elem
+ent
+
+./app/components/pag
+es/Museum.tsx
+6:23  Error: 'Fireba
+seUser' is defined b
+ut never used.  @typ
+escript-eslint/no-un
+used-vars
+58:8  Warning: React
+ Hook useEffect has 
+a missing dependency
+: 'defaultArtworks'.
+ Either include it o
+r remove the depende
+ncy array.  react-ho
+oks/exhaustive-deps
+159:41  Warning: Usi
+ng `<img>` could res
+ult in slower LCP an
+d higher bandwidth. 
+Consider using `<Ima
+ge />` from `next/im
+age` or a custom ima
+ge loader to automat
+ically optimize imag
+es. This may incur a
+dditional usage or c
+ost from your provid
+er. See: https://nex
+tjs.org/docs/message
+s/no-img-element  @n
+ext/next/no-img-elem
+ent
+
+./app/components/sec
+tions/Journal.tsx
+62:8  Warning: React
+ Hook useEffect has 
+a missing dependency
+: 'mockPosts'. Eithe
+r include it or remo
+ve the dependency ar
+ray.  react-hooks/ex
+haustive-deps
+
+./app/page.tsx
+4:10  Error: 'motion
+' is defined but nev
+er used.  @typescrip
+t-eslint/no-unused-v
+ars
+6:23  Error: 'Fireba
+seUser' is defined b
+ut never used.  @typ
+escript-eslint/no-un
+used-vars
+
+info  - Need to disa
+ble some ESLint rule
+s? Learn more here: 
+https://nextjs.org/d
+ocs/app/api-referenc
+e/config/eslint#disa
+bling-rules
