@@ -1,6 +1,7 @@
 'use server';
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getRandomBananaMessage } from "./bananaMessages";
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -65,6 +66,7 @@ A: 難しい数式も、バナナの皮をむくように一枚ずつめくれ�
         return result.response.text();
     } catch (error) {
         console.error("Gemini Error:", error);
-        return "バナナの皮で滑ってしまいました... もう一度話しかけてください。";
+
+        return getRandomBananaMessage();
     }
 }
