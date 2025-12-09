@@ -45,6 +45,7 @@ const BANANA_TRIVIA = [
 ]
 
 import Link from "next/link"
+import TopNavigation from "../layout/TopNavigation"
 
 // ... existing code ...
 
@@ -105,18 +106,12 @@ const BananaAI = () => {
 
     return (
         <div className="min-h-[100dvh] bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 flex flex-col">
+            <TopNavigation />
             <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col">
                 <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
-                    <Link
-                        href="/"
-                        className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
-                    >
-                        <ChevronLeft size={16} /> BACK HOME
-                    </Link>
-                    <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">
-                        CONVERSATIONAL INTERFACE
-                    </span>
-                    <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">BANANA AI</h1>
+
+                    {/* CONVERSATIONAL INTERFACE removed */}
+                    <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
                 </header>
 
                 <div
@@ -132,7 +127,7 @@ const BananaAI = () => {
                             className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                         >
                             <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">
-                                {msg.role === "user" ? "YOU" : "BANANA AI"}
+                                {msg.role === "user" ? "YOU" : "877 AI"}
                             </span>
                             <div
                                 className={`max-w-[85%] ${msg.role === "user"
@@ -150,7 +145,7 @@ const BananaAI = () => {
                     ))}
                     {isTyping && (
                         <div className="flex flex-col items-start">
-                            <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">BANANA AI</span>
+                            <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">877 AI</span>
                             <div className="font-serif text-2xl md:text-2xl animate-pulse opacity-50">...</div>
                         </div>
                     )}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { ChevronLeft, Plus, Edit, Trash2 } from "lucide-react"
 import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore"
@@ -11,6 +12,7 @@ import MuseumEditorModal, { type Artwork } from "../modals/MuseumEditorModal"
 
 import { useAuth } from "../providers/AuthProvider"
 import Link from "next/link"
+import TopNavigation from "../layout/TopNavigation"
 
 const Museum = () => {
     const { isAdmin, user } = useAuth()
@@ -91,6 +93,7 @@ const Museum = () => {
 
     return (
         <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
+            <TopNavigation />
             <MuseumEditorModal
                 isOpen={isEditorOpen}
                 onClose={() => {
@@ -102,18 +105,11 @@ const Museum = () => {
             />
 
             <div className="max-w-7xl mx-auto">
-                <header className="flex flex-col md:flex-row justify-between items-start mb-12 md:mb-20 border-b border-black pb-6 md:pb-8 relative">
-                    <Link
-                        href="/"
-                        className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
-                    >
-                        <ChevronLeft size={16} /> BACK HOME
-                    </Link>
+                <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
+
 
                     <div>
-                        <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">
-                            ARCHIVE COLLECTION
-                        </span>
+                        {/* ARCHIVE COLLECTION removed */}
                         <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">MUSEUM</h1>
                     </div>
                     <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
@@ -147,18 +143,22 @@ const Museum = () => {
                             <motion.div
                                 key={art.id}
                                 initial={{ opacity: 0, y: 50 }}
-                                whileInView={{ opacity: 1, y: 0 }}
+                                animate={i < 4 ? { opacity: 1, y: 0 } : undefined}
+                                whileInView={i >= 4 ? { opacity: 1, y: 0 } : undefined}
                                 transition={{ duration: 0.8, delay: i * 0.1 }}
-                                viewport={{ once: true }}
+                                viewport={{ once: true, margin: "-50px" }}
                                 className="group cursor-pointer"
                             >
                                 <div className="aspect-[3/4] bg-black relative overflow-hidden mb-6 flex items-center justify-center">
                                     <div className="absolute inset-0 bg-[#FAC800] opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
                                     {art.image ? (
-                                        <img
-                                            src={art.image || "/placeholder.svg"}
+                                        <Image
+                                            src={art.image}
                                             alt={art.title}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            priority={i < 4}
+                                            sizes="(max-width: 768px) 100vw, 50vw"
+                                            className="object-cover"
                                         />
                                     ) : (
                                         <ModernBananaSVG

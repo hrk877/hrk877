@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 
 import Link from "next/link"
+import TopNavigation from "../layout/TopNavigation"
 
 const Letter = () => {
     const [message, setMessage] = useState("")
@@ -67,15 +68,9 @@ const Letter = () => {
 
     return (
         <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 flex flex-col">
+            <TopNavigation />
             <div className="w-full max-w-2xl mx-auto relative flex-1 flex flex-col">
                 <div className="mb-8 md:mb-12 border-b border-black pb-6 relative">
-                    <Link
-                        href="/"
-                        className="absolute -top-12 left-0 font-mono text-xs opacity-50 hover:opacity-100 flex items-center gap-2"
-                    >
-                        <ChevronLeft size={16} /> BACK HOME
-                    </Link>
-                    <span className="font-mono text-sm md:text-xs tracking-[0.3em] opacity-40 block mb-4">ANONYMOUS MESSAGE</span>
                     <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">LETTER</h1>
                 </div>
 
