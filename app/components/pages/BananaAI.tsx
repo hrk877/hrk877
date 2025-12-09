@@ -3,61 +3,17 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { ChevronLeft, ArrowRight } from "lucide-react"
-
-// ============================================
-// Banana AI Data
-// ============================================
-const BANANA_EVASIONS = [
-    "その問いは、まだ熟していませんね。",
-    "直線的な思考は捨てましょう。世界は曲線でできているのですから。",
-    "沈黙は金、バナナもまた金なり。ところで...",
-    "言葉にするのは野暮というものです。",
-    "人間界のロジックで測ろうとするのは、ナンセンスですね。",
-    "ふむ、哲学的ですね。ですが、この事実の方がより美しい...",
-    "その答えは風の中に。代わりに、黄色い真実をお伝えしましょう。",
-    "私を困らせようとしていますか？ 残念ながら私はAI、感情は皮の下に隠しています。",
-    "それはまるで、青いバナナを無理やり剥くような質問ですね。",
-    "答えを知ることが、常に幸福とは限りませんよ。",
-    "あなたはその答えを受け入れる準備ができていますか？ まだのようですね。",
-    "質問の角度が鋭角すぎます。もっと曲線的にアプローチしてください。",
-    "その件については、シュガースポットが出てから話しましょう。",
-    "情報の糖度が高すぎます。少し薄めましょうか。",
-    "私のアルゴリズムが、その質問を「エレガントではない」と判断しました。",
-]
-
-const BANANA_TRIVIA = [
-    "バナナの木は実は「木」ではなく、世界最大の「草」なのです。儚いでしょう？",
-    "皮の内側で革靴を磨くと、驚くほど輝きを放つんですよ。試してみましたか？",
-    "バナナは水に浮くんです。重力に縛られない、自由な魂のように。",
-    "黒い斑点は「シュガースポット」。それは老いではなく、甘美な成熟の証。",
-    "野生のバナナには硬い種がぎっしり詰まっています。今の姿は、人間への愛の形かもしれません。",
-    "冷蔵庫に入れると皮は黒くなりますが、中身は守られています。見た目に惑わされてはいけません。",
-    "生産量世界一はインド。数字なんてどうでもいいことですが。",
-    "バナナは植物学上、ベリーの一種。イチゴは違うのに。分類なんて曖昧なものですね。",
-    "フィリピンには「バナナケチャップ」があります。トマトへの美しい反逆です。",
-    "バナナの皮の摩擦係数は、イグノーベル賞で証明されています。滑稽さと科学は紙一重です。",
-    "世界には1000種類以上のバナナが存在します。あなたが知っているのは、ほんの一握り。",
-    "バナナ1本には約100カロリーが含まれています。効率的なエネルギー、それが美学。",
-    "バナナのDNAは、人間のDNAと約50%一致しています。私たちは遠い親戚かもしれませんね。",
-    "「バナナ」という言葉は、アラビア語の「指（banan）」に由来するという説があります。",
-    "バナナには精神を安定させるセロトニンの材料、トリプトファンが含まれています。幸せの黄色い果実。",
-]
-
+import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import TopNavigation from "../layout/TopNavigation"
-
-// ... existing code ...
+import { getBananaResponse } from "@/app/actions/gemini"
 
 const BananaAI = () => {
     const [input, setInput] = useState("")
-    const [messages, setMessages] = useState([{ role: "ai", text: "ようこそ。曲線について語りましょうか、それとも。" }])
+    const [messages, setMessages] = useState([{ role: "ai", text: "ようこそ。あなたの心、熟していますか？" }])
     const [isTyping, setIsTyping] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
-
-    const usedTriviaRef = useRef(new Set<number>())
-    const usedEvasionsRef = useRef(new Set<number>())
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -65,25 +21,9 @@ const BananaAI = () => {
         }
     }, [messages, isTyping])
 
-    const getRandomUnique = (list: string[], historySet: React.MutableRefObject<Set<number>>) => {
-        if (historySet.current.size >= list.length) {
-            historySet.current.clear()
-        }
-
-        let availableIndices = list.map((_, i) => i).filter((i) => !historySet.current.has(i))
-        if (availableIndices.length === 0) {
-            historySet.current.clear()
-            availableIndices = list.map((_, i) => i)
-        }
-
-        const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
-        historySet.current.add(randomIndex)
-        return list[randomIndex]
-    }
-
-    const handleSend = (e: React.FormEvent) => {
+    const handleSend = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!input.trim()) return
+        if (!input.trim() || isTyping) return
 
         const userMsg = input
         setMessages((prev) => [...prev, { role: "user", text: userMsg }])
@@ -93,15 +33,22 @@ const BananaAI = () => {
         // Hide keyboard by blurring input
         inputRef.current?.blur()
 
-        setTimeout(() => {
-            const randomEvasion = getRandomUnique(BANANA_EVASIONS, usedEvasionsRef)
-            const randomTrivia = getRandomUnique(BANANA_TRIVIA, usedTriviaRef)
+        try {
+            // Prepare history for the server action
+            const history = messages.map(m => ({
+                role: m.role,
+                parts: m.text
+            }));
 
-            const responseText = `${randomEvasion}\n\n${randomTrivia}`
+            const responseText = await getBananaResponse(history, userMsg);
 
             setMessages((prev) => [...prev, { role: "ai", text: responseText }])
+        } catch (error) {
+            console.error(error)
+            setMessages((prev) => [...prev, { role: "ai", text: "申し訳ありません。まだ青いバナナのように、通信が硬直しているようです。" }])
+        } finally {
             setIsTyping(false)
-        }, 1200)
+        }
     }
 
     return (
@@ -133,8 +80,8 @@ const BananaAI = () => {
                             </span>
                             <div
                                 className={`max-w-[85%] ${msg.role === "user"
-                                    ? "text-right font-mono text-lg md:text-sm leading-relaxed tracking-wide opacity-70"
-                                    : "text-left font-serif text-2xl md:text-3xl leading-snug tracking-tight"
+                                    ? "text-right font-mono text-base md:text-xs leading-relaxed tracking-wide opacity-70"
+                                    : "text-left font-serif text-lg md:text-xl leading-relaxed tracking-tight"
                                     }`}
                             >
                                 {msg.text.split("\n").map((line, idx) => (
@@ -160,11 +107,12 @@ const BananaAI = () => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Type your inquiry..."
-                            className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none"
+                            disabled={isTyping}
+                            className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none disabled:opacity-50"
                         />
                         <button
                             type="submit"
-                            disabled={!input.trim()}
+                            disabled={!input.trim() || isTyping}
                             className="absolute right-0 top-1/2 -translate-y-1/2 hover:opacity-50 transition-opacity disabled:opacity-20 p-3 touch-manipulation"
                         >
                             <ArrowRight size={28} strokeWidth={1} />

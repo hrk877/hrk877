@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./components/providers/AuthProvider";
@@ -62,8 +62,11 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Golden Banana",
   },
-  themeColor: "#FAC800",
 };
+
+export const viewport: Viewport = {
+  themeColor: "#FAC800",
+}
 
 export default function RootLayout({
   children,
