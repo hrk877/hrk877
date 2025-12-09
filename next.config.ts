@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["10.230.50.110:3000", "localhost:3000"],
+    },
+  },
 
 };
 
