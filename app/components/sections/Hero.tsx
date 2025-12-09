@@ -3,6 +3,8 @@
 import { motion, useScroll, useTransform } from "framer-motion"
 import { ArrowDown } from "lucide-react"
 
+import BananaScene from "../3d/BananaScene"
+
 const Hero = () => {
     const { scrollY } = useScroll()
     const y2 = useTransform(scrollY, [0, 500], [0, -50])
@@ -10,13 +12,15 @@ const Hero = () => {
 
     return (
         <section className="h-[100svh] relative flex flex-col items-center justify-center p-4 md:p-12 overflow-hidden">
-            <div className="flex flex-col items-center relative z-10 w-full">
+            <BananaScene />
+            {/* pointer-events-none to allow clicking through to 3D scene, but enable for children text */}
+            <div className="flex flex-col items-center relative z-10 w-full pointer-events-none">
                 <div className="flex justify-center w-full">
                     <div className="flex items-baseline relative whitespace-nowrap">
                         {title.split("").map((char, index) => (
                             <motion.span
                                 key={index}
-                                className="text-[27vw] md:text-[18vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none cursor-default"
+                                className="text-[27vw] md:text-[18vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none cursor-default pointer-events-auto"
                                 initial={{ y: 100, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
