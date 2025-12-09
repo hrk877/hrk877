@@ -92,7 +92,7 @@ const Museum = () => {
     const prevPageMuseum = () => setCurrentPageMuseum(Math.max(currentPageMuseum - 1, 1))
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20">
             <TopNavigation />
             <MuseumEditorModal
                 isOpen={isEditorOpen}

@@ -67,7 +67,7 @@ const Letter = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 flex flex-col">
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20 flex flex-col">
             <TopNavigation />
             <div className="w-full max-w-2xl mx-auto relative flex-1 flex flex-col">
                 <div className="mb-8 md:mb-12 border-b border-black pb-6 relative">
@@ -89,17 +89,16 @@ const Letter = () => {
                         />
                     </motion.div>
 
-                    <div className="mt-8 flex flex-row justify-between items-center gap-4 md:gap-6">
-                        <span className="font-mono text-sm md:text-[10px] opacity-30 tracking-widest">{message.length} CHARS</span>
+                    <div className="mt-8 flex flex-row justify-end items-center gap-4 md:gap-6">
                         <button
                             onClick={handleSend}
                             disabled={!message.trim() || loading}
                             className="group relative px-8 py-4 overflow-hidden border border-black rounded-full hover:border-black transition-colors disabled:opacity-20 disabled:hover:border-black/10 touch-manipulation active:scale-95"
                         >
-                            <span className="relative z-10 font-mono text-sm md:text-xs tracking-[0.2em] group-hover:text-white transition-colors duration-500">
+                            <span className="relative z-10 font-mono text-sm md:text-xs tracking-[0.2em] group-hover:text-white group-active:text-white transition-colors duration-500">
                                 {loading ? "SEALING..." : "SEND LETTER"}
                             </span>
-                            <div className="absolute inset-0 bg-black transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
+                            <div className="absolute inset-0 bg-black transform scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform origin-left duration-500" />
                         </button>
                     </div>
                 </div>

@@ -105,7 +105,7 @@ const BananaAI = () => {
     }
 
     return (
-        <div className="min-h-[100dvh] bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 flex flex-col">
+        <div className="min-h-[100dvh] bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 flex flex-col">
             <TopNavigation />
             <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col">
                 <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
@@ -151,21 +151,23 @@ const BananaAI = () => {
                     )}
                 </div>
 
-                <form onSubmit={handleSend} className="relative mt-auto w-full bg-[#FAC800] pb-safe pt-4">
-                    <input
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type your inquiry..."
-                        className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim()}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 hover:opacity-50 transition-opacity disabled:opacity-20 p-3 touch-manipulation"
-                    >
-                        <ArrowRight size={28} strokeWidth={1} />
-                    </button>
+                <form onSubmit={handleSend} className="mt-auto w-full bg-[#FAC800] pb-12 md:pb-24 pt-4">
+                    <div className="relative w-full">
+                        <input
+                            ref={inputRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your inquiry..."
+                            className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim()}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 hover:opacity-50 transition-opacity disabled:opacity-20 p-3 touch-manipulation"
+                        >
+                            <ArrowRight size={28} strokeWidth={1} />
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
