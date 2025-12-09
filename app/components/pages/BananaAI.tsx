@@ -105,18 +105,20 @@ const BananaAI = () => {
     }
 
     return (
-        <div className="min-h-[100dvh] bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 flex flex-col">
-            <TopNavigation />
-            <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col">
-                <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
+        <div className="h-[100dvh] bg-[#FAC800] text-black flex flex-col overflow-hidden">
+            <div className="flex-none pt-20 md:pt-24 px-4 md:px-6">
+                <TopNavigation />
+                <div className="w-full max-w-3xl mx-auto">
+                    <header className="mb-4 md:mb-6 border-b border-black pb-4 md:pb-6 relative">
+                        <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
+                    </header>
+                </div>
+            </div>
 
-                    {/* CONVERSATIONAL INTERFACE removed */}
-                    <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
-                </header>
-
+            <div className="flex-1 min-h-0 w-full max-w-3xl mx-auto px-4 md:px-6 flex flex-col">
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto space-y-6 md:space-y-12 mb-4 pr-2 md:pr-4 scrollbar-hide min-h-0 max-h-[35vh] md:max-h-[50vh]"
+                    className="flex-1 overflow-y-auto space-y-6 md:space-y-12 pr-2 md:pr-4 scrollbar-hide"
                 >
                     {messages.map((msg, i) => (
                         <motion.div
@@ -151,7 +153,7 @@ const BananaAI = () => {
                     )}
                 </div>
 
-                <form onSubmit={handleSend} className="mt-auto w-full bg-[#FAC800] pb-12 md:pb-24 pt-4">
+                <form onSubmit={handleSend} className="flex-none bg-[#FAC800] pb-8 md:pb-12 pt-4 w-full">
                     <div className="relative w-full">
                         <input
                             ref={inputRef}
