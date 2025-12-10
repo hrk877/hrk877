@@ -41,7 +41,7 @@ const Hero = () => {
                     transition={{ delay: 1, duration: 1 }}
                 >
                     <p className="text-3xl md:text-5xl lg:text-6xl font-serif font-light italic leading-tight tracking-tight max-w-[90vw] md:max-w-5xl mx-auto">
-                        <span className="block">We Bend the World</span>
+                        <span className="block">We Curve the World</span>
                         <span className="block mt-2 md:mt-3">with the Banana life</span>
                     </p>
                     <div className="mt-8 font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>

@@ -16,14 +16,14 @@ const geistMono = Geist_Mono({
 
 // メタデータをここに集約します
 export const metadata: Metadata = {
-  title: "Golden Banana | We Bend the World with the Banana life",
+  title: "Golden Banana | We Curve the World with the Banana life",
   description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter.",
   // ★★★ 本番環境のURLをここに設定してください（例: https://hrk877.vercel.app）
   metadataBase: new URL("https://hrk877.vercel.app"),
 
   // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {
-    title: "Golden Banana | We Bend the World with the Banana life",
+    title: "Golden Banana | We Curve the World with the Banana life",
     description: "A creative space bending the world with the power of bananas.",
     url: "/",
     siteName: "Golden Banana",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Golden Banana | We Bend the World with the Banana life",
+    title: "Golden Banana | We Curve the World with the Banana life",
     description: "A creative space bending the world with the power of bananas.",
     images: ["/ogp-image.png"], // public/ogp-image.png
   },

@@ -24,7 +24,7 @@ export async function getBananaResponse(history: { role: string, parts: string }
             model: "gemini-2.0-flash-lite-001",
         });
 
-        const systemPrompt = `あなたは「877 AI」です。テーマは「We Bend the World with the Banana life（バナナライフで世界を曲げる）」です。
+        const systemPrompt = `あなたは「877 AI」です。テーマは「We Curve the World with the Banana life（バナナライフで世界を曲げる）」です。
 
 **【3つの核心哲学】**
 1. **負の向地性 (Rebellion)**: バナナの曲線は、重力に逆らって太陽を求める「意志」の形です。困難に立ち向かう強さを象徴します。
