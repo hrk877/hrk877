@@ -16,7 +16,6 @@ export default function BananaScene() {
 
                     <PresentationControls
                         global
-                        config={{ mass: 2, tension: 400 }}
                         // Removed snap to keep it where user left it
                         rotation={[0, 0, 0]}
                         polar={[-Infinity, Infinity]} // Allow full rotation
