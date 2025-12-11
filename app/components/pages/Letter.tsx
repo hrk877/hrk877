@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { ChevronLeft, Banana } from "lucide-react"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
+import { sendEmail } from "@/app/actions/email"
 
 import Link from "next/link"
 import TopNavigation from "../layout/TopNavigation"
@@ -25,6 +26,13 @@ const Letter = () => {
                 createdAt: serverTimestamp(),
                 isAnonymous: true,
             })
+
+
+            // Send email
+            const emailResult = await sendEmail(message)
+            if (!emailResult.success) {
+                console.error("Failed to send email notification")
+            }
 
             setIsSent(true)
         } catch (e) {
