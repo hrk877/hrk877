@@ -26,7 +26,7 @@ import JournalDetailPage from "./components/modals/JournalDetailPage"
 // ============================================
 // Main App Component
 // ============================================
-export default function GoldenBananaApp() {
+export default function Hrk877App() {
   const { user, isAdmin } = useAuth()
   const [isLoginOpen, setIsLoginOpen] = useState(false)
 
