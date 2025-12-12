@@ -49,7 +49,7 @@ const AdminLoginModal = ({ isOpen, onClose }: AdminLoginModalProps) => {
 
         try {
             await signInWithEmailAndPassword(auth, email, password)
-            window.location.href = "https://lin.ee/CYLzSSE"
+            window.location.href = "/hand"
             onClose()
         } catch (error) {
             console.error("Login failed: ", error)

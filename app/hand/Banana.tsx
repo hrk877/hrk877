@@ -28,6 +28,12 @@ export const Banana = forwardRef<THREE.Group, any>((props, ref) => {
                     })
                     mesh.castShadow = true
                     mesh.receiveShadow = true
+                    // Fix for mobile/scaling issues: Disable culling to ensure visibility
+                    mesh.frustumCulled = false
+                    // Ensure geometry is ready
+                    if (mesh.geometry) {
+                        mesh.geometry.computeVertexNormals()
+                    }
                 }
             })
         }
