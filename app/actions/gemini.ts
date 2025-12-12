@@ -17,8 +17,8 @@ const generationConfig = {
 export async function getBananaResponse(history: { role: string, parts: string }[], message: string) {
     if (!process.env.GEMINI_API_KEY) {
         console.warn("API Key not found, returning random banana message.");
-        // Simulate thinking time (2-4 seconds)
-        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+        // Simulate thinking time (3-5 seconds)
+        await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
         return getRandomBananaMessage();
     }
 
@@ -70,7 +70,8 @@ A: 難しい数式も、バナナの皮をむくように一枚ずつめくれ�
         return result.response.text();
     } catch (error) {
         console.error("Gemini Error:", error);
-
+        // Simulate thinking time (3-5 seconds) even on error
+        await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
         return getRandomBananaMessage();
     }
 }
