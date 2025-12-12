@@ -95,7 +95,20 @@ const BananaAI = () => {
                     {isTyping && (
                         <div className="flex flex-col items-start">
                             <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">877 AI</span>
-                            <div className="font-serif text-2xl md:text-2xl animate-pulse opacity-50">...</div>
+                            <div className="flex space-x-1 font-serif text-2xl md:text-2xl opacity-50 h-[36px] items-center">
+                                <motion.span
+                                    animate={{ opacity: [0, 1, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
+                                >.</motion.span>
+                                <motion.span
+                                    animate={{ opacity: [0, 1, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1], delay: 0.2 }}
+                                >.</motion.span>
+                                <motion.span
+                                    animate={{ opacity: [0, 1, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1], delay: 0.4 }}
+                                >.</motion.span>
+                            </div>
                         </div>
                     )}
                 </div>
