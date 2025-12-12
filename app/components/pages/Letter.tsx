@@ -97,7 +97,10 @@ const Letter = () => {
                         />
                     </motion.div>
 
-                    <div className="mt-8 flex flex-row justify-end items-center gap-4 md:gap-6">
+                    <div className="mt-8 flex flex-row justify-between items-end md:items-center">
+                        <p className="font-mono text-[10px] md:text-xs opacity-40 tracking-widest max-w-[60%] leading-relaxed">
+                            YOUR LETTER IS SENT<br className="block md:hidden" /> COMPLETELY ANONYMOUSLY.
+                        </p>
                         <button
                             onClick={handleSend}
                             disabled={!message.trim() || loading}
