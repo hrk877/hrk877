@@ -73,7 +73,7 @@ const AdminLoginModal = ({ isOpen, onClose }: AdminLoginModalProps) => {
                             <X size={24} />
                         </button>
 
-                        <h2 className="text-3xl font-serif mb-8 text-center">Welcome to 877hand</h2>
+                        <h2 className="text-3xl font-serif mb-8 text-center pt-8 md:pt-0">Welcome to 877hand</h2>
 
                         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                             <div>
