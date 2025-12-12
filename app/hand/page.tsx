@@ -35,7 +35,7 @@ function Cursor({ active }: { active: boolean }) {
 }
 
 // Logic to bind cursor to a body
-function DragConstraint({ cursorRef, bodyRef }: { cursorRef: RefObject<THREE.Object3D>, bodyRef: RefObject<THREE.Object3D> }) {
+function DragConstraint({ cursorRef, bodyRef }: { cursorRef: RefObject<THREE.Object3D | null>, bodyRef: RefObject<THREE.Object3D | null> }) {
     usePointToPointConstraint(cursorRef, bodyRef, {
         pivotA: [0, 0, 0],
         pivotB: [0, 0, 0],
@@ -169,7 +169,7 @@ function Scene() {
                 <CursorInternal forwardedRef={cursorRef} />
 
                 {draggedBody && cursorRef.current && (
-                    <DragConstraint cursorRef={cursorRef} bodyRef={draggedBody as RefObject<THREE.Object3D>} />
+                    <DragConstraint cursorRef={cursorRef} bodyRef={draggedBody as any} />
                 )}
 
                 {bananas.map(b => (
