@@ -45,7 +45,7 @@ export function BananaModel(props: any) {
                     object={obj}
                     {...props}
                     scale={25}
-                    rotation={[0, Math.PI / 4, 0]}
+                    rotation={[0, Math.PI, 0]}
                 />
             </Center>
         </Float>
