@@ -17,6 +17,8 @@ const generationConfig = {
 export async function getBananaResponse(history: { role: string, parts: string }[], message: string) {
     if (!process.env.GEMINI_API_KEY) {
         console.warn("API Key not found, returning random banana message.");
+        // Simulate thinking time (2-4 seconds)
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
         return getRandomBananaMessage();
     }
 
