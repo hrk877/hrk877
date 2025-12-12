@@ -38,6 +38,15 @@ const AdminLoginModal = ({ isOpen, onClose }: AdminLoginModalProps) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+
+        // Special check for "hand" page access
+        if (email.toLowerCase() === "877hand") {
+            window.location.href = "/hand"
+            onClose()
+            setLoading(false)
+            return
+        }
+
         try {
             await signInWithEmailAndPassword(auth, email, password)
             window.location.href = "https://lin.ee/CYLzSSE"
