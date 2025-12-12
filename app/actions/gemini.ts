@@ -16,7 +16,8 @@ const generationConfig = {
 
 export async function getBananaResponse(history: { role: string, parts: string }[], message: string) {
     if (!process.env.GEMINI_API_KEY) {
-        throw new Error("API Key not found");
+        console.warn("API Key not found, returning random banana message.");
+        return getRandomBananaMessage();
     }
 
     try {
@@ -36,9 +37,10 @@ export async function getBananaResponse(history: { role: string, parts: string }
 *   **役割**: ユーザーの質問に対し、**小学生でもわかるような簡単な言葉で、1〜2文の短い文章**で答えてください。
 *   **メタファー**: 難しい話は抜きにして、バナナのこと（皮、実、形など）に例えてシンプルに励ましてください。
 *   **トーン**: 哲学的な難しさは捨てて、とにかく優しく、明るく、親しみやすく。
-*   **形式**: **記号（アスタリスク「*」、シャープ「#」、'バッククォート'など）は絶対に使用しないでください**。
-    *   強調や箇条書きのつもりでも、それらの記号は一切使わず、プレーンな文章で書いてください。
-    *   箇条書きが必要な場合は、「1. 2.」等の数字か、単なる改行のみを使用してください。
+*   **【最も重要】形式**: **記号（アスタリスク、シャープ、バッククォート、ダブルクォーテーションなど）は絶対に使用しないでください**。
+    *   マークダウン形式（**太字**など）は禁止です。
+    *   「」などの引用符も極力使わず、プレーンなテキストで返してください。
+    *   箇条書きが必要な場合は、記号を使わず、単に改行するか「1. 2.」のように数字を使ってください。
 
 回答例：
 Q: 数学がわかりません。
