@@ -221,27 +221,40 @@ function CursorInternal({ forwardedRef }: { forwardedRef: any }) {
 }
 
 function App() {
+    const containerRef = useRef<HTMLDivElement>(null)
+
     return (
         <div
+            ref={containerRef}
+            className="w-full h-full bg-[#FAC800] overflow-hidden"
+            // Use 100dvh for mobile browsers to avoid scrollbar/address bar issues
             style={{
-                width: "100vw",
-                height: "100vh",
-                background: BG_COLOR, // #FAC800
-                overflow: "hidden",
+                height: "100dvh",
+                position: "fixed",
+                inset: 0,
                 touchAction: "none" // Prevents scrolling on mobile while dragging
             }}
         >
             <HamburgerMenu />
 
             {/* Centered Title & Text - Hero Style */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 md:p-12 pointer-events-none z-10">
+            {/* z-0 places it behind the Canvas (z-10) */}
+            {/* Centered Title & Text - Hero Style */}
+            {/* z-0 places it behind the Canvas (z-10) */}
+            {/* Centered Title & Text - Hero Style */}
+            {/* z-0 places it behind the Canvas (z-10) */}
+            {/* Centered Title & Text - Hero Style */}
+            {/* z-0 places it behind the Canvas (z-10) */}
+            {/* FORCE CENTER + Mobile Offset: justify-center + pb-[35dvh] (shifts even further up) */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pb-[35dvh] md:pb-0 pointer-events-none z-0">
                 <div className="flex flex-col items-center w-full">
                     <div className="flex justify-center w-full">
                         <div className="flex items-baseline relative whitespace-nowrap">
                             {"877hand".split("").map((char, index) => (
                                 <motion.span
                                     key={index}
-                                    className="text-[27vw] md:text-[18vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none cursor-default pointer-events-auto cursor-pointer"
+                                    // Reduced size to 2/3: text-[18vw] md:text-[12vw]
+                                    className="text-[18vw] md:text-[12vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none cursor-default pointer-events-auto cursor-pointer"
                                     initial={{ y: 100, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
@@ -255,21 +268,25 @@ function App() {
                     </div>
 
                     <motion.div
-                        className="mt-8 md:mt-16 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
+                        className="mt-4 md:mt-8 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1, duration: 1 }}
                     >
-                        <p className="text-3xl md:text-5xl lg:text-6xl font-serif font-light italic leading-tight tracking-tight max-w-[90vw] md:max-w-5xl mx-auto">
-                            <span className="block">We Curve the World</span>
-                            <span className="block mt-2 md:mt-3">with the Banana life</span>
-                        </p>
-                        <div className="mt-8 font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
+                        {/* "We Curve" removed as requested */}
+                        <div className="font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
                     </motion.div>
                 </div>
             </div>
 
-            <Canvas shadows camera={{ position: [0, 0, 12], fov: 50 }}>
+            {/* Canvas: z-10 (Front), pointer-events-none (Click-through), with eventSource (Captures events from container) */}
+            <Canvas
+                shadows
+                camera={{ position: [0, 0, 12], fov: 50 }}
+                className="pointer-events-none relative z-10"
+                eventSource={containerRef as any}
+                eventPrefix="client"
+            >
                 {/* Lighting setup: Matches Homepage "Sunset" vibe but top-down */}
                 {/* User requested: Real shadows, darker like homepage */}
                 <ambientLight intensity={1.0} />
