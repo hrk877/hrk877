@@ -11,6 +11,7 @@ const MENU_ITEMS = [
     { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
     { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
     { label: "hrk.877", href: "/" },
+    { label: "CONTACT", href: "mailto:877hand@gmail.com", external: true },
 ]
 
 export default function HamburgerMenu() {
@@ -39,7 +40,7 @@ export default function HamburgerMenu() {
             {/* Toggle Button */}
             <button
                 onClick={toggleMenu}
-                className="fixed top-12 left-6 z-[60] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
+                className="fixed top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
                 aria-label="Toggle Menu"
             >
                 <div className="flex flex-col gap-[6px] w-8 items-center justify-center">
@@ -65,7 +66,9 @@ export default function HamburgerMenu() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0, transition: { duration: 0.3 } }}
-                        className="fixed inset-0 z-[55] bg-black flex items-center justify-center h-dvh overscroll-none touch-none"
+                        className="fixed inset-0 z-[100] bg-black flex items-center justify-center h-dvh overscroll-none touch-none pointer-events-auto"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <nav className="flex flex-col items-center gap-6">
                             {MENU_ITEMS.map((item, index) => (

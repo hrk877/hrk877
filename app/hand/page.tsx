@@ -282,16 +282,7 @@ function App() {
     }
 
     return (
-        <div
-            ref={containerRef}
-            className="w-full h-full bg-[#FAC800] overflow-hidden"
-            style={{
-                height: "100dvh",
-                position: "fixed",
-                inset: 0,
-                touchAction: "none"
-            }}
-        >
+        <>
             <HamburgerMenu />
 
             <HandPostEditor
@@ -305,62 +296,74 @@ function App() {
                 post={viewerPost}
             />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center pb-[35dvh] md:pb-0 pointer-events-none z-0">
-                <div className="flex flex-col items-center w-full">
-                    <div className="flex justify-center w-full">
-                        <div className="flex items-baseline relative whitespace-nowrap">
-                            {/* 877hand */}
-                            {"877hand".split("").map((char, index) => (
-                                <motion.span
-                                    key={index}
-                                    className="text-[18vw] md:text-[12vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none pointer-events-auto cursor-pointer"
-                                    initial={{ y: 100, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                                    whileHover={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
-                                    whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
-                                    onPointerDown={(e) => {
-                                        e.preventDefault()
-                                        handleCharTap(char)
-                                    }}
-                                >
-                                    {char}
-                                </motion.span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <motion.div
-                        className="mt-8 md:mt-16 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1, duration: 1 }}
-                    >
-                        <div className="font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
-                    </motion.div>
-                </div>
-            </div>
-
-            <Canvas
-                shadows
-                camera={{ position: [0, 0, 12], fov: 50 }}
-                className="pointer-events-none relative z-10"
-                eventSource={containerRef as any}
-                eventPrefix="client"
+            <div
+                ref={containerRef}
+                className="w-full h-full bg-[#FAC800] overflow-hidden"
+                style={{
+                    height: "100dvh",
+                    position: "fixed",
+                    inset: 0,
+                    touchAction: "none"
+                }}
             >
-                <ambientLight intensity={1.0} />
-                <spotLight
-                    position={[0, 15, 0]}
-                    angle={1.5}
-                    penumbra={1}
-                    intensity={4}
-                    castShadow
-                    shadow-bias={-0.0001}
-                />
-                <Environment preset="sunset" />
-                <Scene bananas={bananas} onBananaClick={handleBananaClick} />
-            </Canvas>
-        </div>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center pb-[35dvh] md:pb-0 pointer-events-none z-0">
+                    <div className="flex flex-col items-center w-full">
+                        <div className="flex justify-center w-full">
+                            <div className="flex items-baseline relative whitespace-nowrap">
+                                {/* 877hand */}
+                                {"877hand".split("").map((char, index) => (
+                                    <motion.span
+                                        key={index}
+                                        className="text-[18vw] md:text-[12vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none pointer-events-auto cursor-pointer"
+                                        initial={{ y: 100, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                                        whileHover={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
+                                        whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
+                                        onPointerDown={(e) => {
+                                            e.preventDefault()
+                                            handleCharTap(char)
+                                        }}
+                                    >
+                                        {char}
+                                    </motion.span>
+                                ))}
+                            </div>
+                        </div>
+
+                        <motion.div
+                            className="mt-8 md:mt-16 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 1, duration: 1 }}
+                        >
+                            <div className="font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                <Canvas
+                    shadows
+                    camera={{ position: [0, 0, 12], fov: 50 }}
+                    className="pointer-events-none relative z-10"
+                    eventSource={containerRef as any}
+                    eventPrefix="client"
+                >
+                    <ambientLight intensity={1.0} />
+                    <spotLight
+                        position={[0, 15, 0]}
+                        angle={1.5}
+                        penumbra={1}
+                        intensity={4}
+                        castShadow
+                        shadow-bias={-0.0001}
+                    />
+                    <Environment preset="sunset" />
+                    <Scene bananas={bananas} onBananaClick={handleBananaClick} />
+                </Canvas>
+            </div>
+        </>
     )
 }
 
