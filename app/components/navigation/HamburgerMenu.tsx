@@ -7,7 +7,7 @@ import Link from "next/link"
 const MENU_ITEMS = [
     { label: "HAND", href: "/hand" },
     { label: "SHOP", href: "/shop" },
-    { label: "GAME", href: "/game" },
+    { label: "SPIN", href: "/spin" },
     { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
     { label: "HOME", href: "/" },
 ]
