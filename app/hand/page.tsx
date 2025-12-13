@@ -200,6 +200,11 @@ function App() {
     const [isEditorOpen, setIsEditorOpen] = useState(false)
     const [viewerPost, setViewerPost] = useState<HandPost | null>(null)
     const [bananas, setBananas] = useState<BananaData[]>([])
+    const [isHoverSupported, setIsHoverSupported] = useState(false)
+
+    useEffect(() => {
+        setIsHoverSupported(window.matchMedia('(hover: hover)').matches)
+    }, [])
 
     // Queue for staggered spawning
     const bananaQueue = useRef<BananaData[]>([])
@@ -364,7 +369,7 @@ function App() {
                                         initial={{ y: 100, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                                        whileHover={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
+                                        whileHover={isHoverSupported ? { y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } } : undefined}
                                         whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
                                         onPointerDown={(e) => {
                                             e.preventDefault()
