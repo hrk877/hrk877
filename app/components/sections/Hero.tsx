@@ -3,19 +3,18 @@
 import { useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { ArrowDown } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import BananaScene from "../3d/BananaScene"
-import AdminLoginModal from "../modals/AdminLoginModal"
 
 const Hero = () => {
+    const router = useRouter()
     const { scrollY } = useScroll()
     const y2 = useTransform(scrollY, [0, 500], [0, -50])
     const title = "hrk.877"
 
-    // Admin Mode Logic
-    const [isBananaAdminMode, setIsBananaAdminMode] = useState(false)
+    // Sequence Logic: Indices 4, 5, 6 for '877'
     const [tapSequenceIndex, setTapSequenceIndex] = useState(0)
-    // The target sequence of indices: 4 ('8'), 5 ('7'), 6 ('7')
     const targetSequence = [4, 5, 6]
 
     const handleCharTap = (index: number) => {
@@ -24,18 +23,14 @@ const Hero = () => {
         if (index === expectedIndex) {
             // Correct character tapped in sequence
             if (tapSequenceIndex === targetSequence.length - 1) {
-                // Determine if this was the last step
-                setIsBananaAdminMode(true)
-                setTapSequenceIndex(0) // Reset for next time
+                // Success: Navigate to Hand
+                router.push("/hand")
+                setTapSequenceIndex(0)
             } else {
-                // Advance sequence
                 setTapSequenceIndex(prev => prev + 1)
             }
         } else {
-            // Incorrect character tapped - Reset sequence
-            // Special case: if they tapped '8' (index 4) and it was not expected (i.e. we were at index 5 or 6),
-            // maybe we should start sequence from there? 
-            // For now, strict reset. If index is 4, start new sequence.
+            // Incorrect - Reset
             if (index === 4) {
                 setTapSequenceIndex(1)
             } else {
@@ -60,7 +55,10 @@ const Hero = () => {
                                 transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                                 whileHover={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
                                 whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
-                                onPointerDown={() => handleCharTap(index)}
+                                onPointerDown={(e) => {
+                                    e.preventDefault()
+                                    handleCharTap(index)
+                                }}
                             >
                                 {char}
                             </motion.span>
@@ -92,11 +90,6 @@ const Hero = () => {
                 <span className="font-mono text-sm md:text-xs tracking-widest opacity-50">SCROLL TO EXPLORE</span>
                 <ArrowDown size={20} strokeWidth={1} className="animate-bounce opacity-50" />
             </motion.div>
-
-            <AdminLoginModal
-                isOpen={isBananaAdminMode}
-                onClose={() => setIsBananaAdminMode(false)}
-            />
         </section>
     )
 }
