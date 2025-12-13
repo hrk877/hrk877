@@ -9,7 +9,7 @@ const MENU_ITEMS = [
     { label: "SHOP", href: "/shop" },
     { label: "SPIN", href: "/spin" },
     { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
-    { label: "HOME", href: "/" },
+    { label: "hrk.877", href: "/" },
 ]
 
 export default function HamburgerMenu() {
