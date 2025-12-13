@@ -9,6 +9,7 @@ const MENU_ITEMS = [
     { label: "SHOP", href: "/shop" },
     { label: "SPIN", href: "/spin" },
     { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
+    { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
     { label: "hrk.877", href: "/" },
 ]
 
@@ -66,7 +67,7 @@ export default function HamburgerMenu() {
                         exit={{ opacity: 0, transition: { duration: 0.3 } }}
                         className="fixed inset-0 z-[55] bg-black flex items-center justify-center h-dvh overscroll-none touch-none"
                     >
-                        <nav className="flex flex-col items-center gap-10">
+                        <nav className="flex flex-col items-center gap-6">
                             {MENU_ITEMS.map((item, index) => (
                                 <motion.div
                                     key={item.label}
@@ -85,7 +86,7 @@ export default function HamburgerMenu() {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={toggleMenu}
-                                            className="text-5xl md:text-7xl font-serif font-thin tracking-[0.1em] text-[#FAC800] hover:text-white transition-all duration-500 hover:scale-110 hover:tracking-[0.15em]"
+                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:text-white transition-all duration-500 hover:tracking-[0.3em]"
                                         >
                                             {item.label}
                                         </a>
@@ -93,7 +94,7 @@ export default function HamburgerMenu() {
                                         <Link
                                             href={item.href}
                                             onClick={toggleMenu}
-                                            className="text-5xl md:text-7xl font-serif font-thin tracking-[0.1em] text-[#FAC800] hover:text-white transition-all duration-500 hover:scale-110 hover:tracking-[0.15em]"
+                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:text-white transition-all duration-500 hover:tracking-[0.3em]"
                                         >
                                             {item.label}
                                         </Link>

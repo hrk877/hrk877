@@ -19,27 +19,10 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                     </span>
                 </div>
                 <div className="flex flex-col text-left font-mono text-lg md:text-xs gap-3">
-                    <a
-                        href="https://www.instagram.com/hrk.877/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-white transition-colors"
-                    >
-                        INSTAGRAM
-                    </a>
-                    {isAdmin ? (
+                    {isAdmin && (
                         <button onClick={handleLogout} className="text-left hover:text-white transition-colors uppercase">
                             LOGOUT (ADMIN)
                         </button>
-                    ) : (
-                        <a
-                            href="https://ig.me/m/hrk.877"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-white transition-colors uppercase"
-                        >
-                            CONTACT
-                        </a>
                     )}
                 </div>
             </div>
