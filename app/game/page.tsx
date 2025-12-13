@@ -65,7 +65,7 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
         position: [0, 0, 0],
         args: [5, 2, 2], // Physics shape size (approx)
         linearDamping: 0.1,
-        angularDamping: 0.5, // Increased friction
+        angularDamping: 0.4, // Fine-tuned friction
         linearFactor: [0, 0, 0], // Lock Position
         angularFactor: [0, 0, 1] // Lock Rotation to Z axis
     }))
