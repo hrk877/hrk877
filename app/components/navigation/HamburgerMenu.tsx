@@ -70,7 +70,7 @@ export default function HamburgerMenu() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0, transition: { duration: 0.3 } }}
-                        className="fixed inset-0 z-[55] bg-black flex items-center justify-center"
+                        className="fixed inset-0 z-[55] bg-black flex items-center justify-center h-dvh overscroll-none touch-none"
                     >
                         <nav className="flex flex-col items-center gap-10">
                             {MENU_ITEMS.map((item, index) => (

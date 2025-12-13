@@ -56,7 +56,8 @@ function DragLink({ bodyRef, cursorRef, pivot }: { bodyRef: RefObject<THREE.Obje
 // Spinning Banana
 function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> }) {
     const { viewport } = useThree()
-    const scale = Math.min(viewport.width, viewport.height) * 3
+    // Increased scale for larger appearance, fitting within viewport
+    const scale = Math.min(viewport.width, viewport.height) * 3.8
 
     // Physics Body
     const [ref] = useBox(() => ({
@@ -101,7 +102,8 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
             {dragPivot && cursorRef.current && <DragLink bodyRef={ref as any} cursorRef={cursorRef} pivot={dragPivot} />}
 
             <mesh ref={ref as any} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
-                <group rotation={[0, Math.PI, Math.PI / 2]}>
+                {/* Horizontal Orientation: [0, Math.PI, 0] matches Home page better than upright [..., PI/2] */}
+                <group rotation={[0, Math.PI, 0]}>
                     <Center>
                         <Banana scale={scale} />
                     </Center>
