@@ -268,7 +268,7 @@ function App() {
                     </div>
 
                     <motion.div
-                        className="mt-4 md:mt-8 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
+                        className="mt-8 md:mt-16 text-center relative z-20 px-2 mix-blend-overlay text-black pointer-events-auto"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1, duration: 1 }}

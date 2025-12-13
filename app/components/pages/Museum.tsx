@@ -133,9 +133,15 @@ const Museum = () => {
                 </header>
 
                 {isLoading ? (
-                    <div className="py-20 flex flex-col items-center justify-center opacity-50">
-                        <ModernBananaSVG className="w-16 h-16 animate-spin duration-3000" />
-                        <span className="mt-4 font-mono text-base md:text-xs tracking-widest">LOADING COLLECTION...</span>
+                    <div className="py-20 flex flex-col items-center justify-center opacity-50 space-y-4">
+                        <span className="font-mono text-base md:text-xs tracking-widest flex items-center">
+                            LOADING COLLECTION
+                            <span className="flex ml-1">
+                                <span className="animate-bounce">.</span>
+                                <span className="animate-bounce" style={{ animationDelay: "0.1s" }}>.</span>
+                                <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>.</span>
+                            </span>
+                        </span>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">

@@ -41,12 +41,6 @@ export default function HamburgerMenu() {
                 className="fixed top-12 left-6 z-[60] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
                 aria-label="Toggle Menu"
             >
-                {/* 
-                   Refined Icon: 
-                   - Thinner lines (h-[1px])
-                   - Wider gap for elegance
-                   - Perfect Center X rotation
-                */}
                 <div className="flex flex-col gap-[6px] w-8 items-center justify-center">
                     <motion.div
                         animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
