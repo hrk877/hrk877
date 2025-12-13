@@ -44,7 +44,7 @@ export default function HamburgerMenu() {
     const toggleMenu = () => {
         if (isOpen) {
             // Reset view when closing
-            setTimeout(() => setCurrentView("MAIN"), 300)
+            setTimeout(() => setCurrentView("MAIN"), 200)
         } else {
             setCurrentView("MAIN")
         }
@@ -100,7 +100,7 @@ export default function HamburgerMenu() {
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        exit={{ opacity: 0, transition: { duration: 0.3 } }}
+                        exit={{ opacity: 0, transition: { duration: 0.2 } }}
                         className="fixed inset-0 z-[100] bg-black flex items-center justify-center h-dvh overscroll-none touch-none pointer-events-auto"
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
@@ -112,7 +112,7 @@ export default function HamburgerMenu() {
                                     initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
                                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                                     exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-                                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                                     className="flex flex-col items-center gap-8"
                                 >
                                     {getVisibleItems().map((item: any) => (
@@ -163,7 +163,7 @@ export default function HamburgerMenu() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 0.3 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ delay: 0.4, duration: 1 }}
+                                transition={{ delay: 0.2, duration: 0.5 }}
                                 className="absolute bottom-12 text-xs font-mono tracking-[0.3em] text-white pointer-events-none"
                             >
                                 HRK877 COLLECTION

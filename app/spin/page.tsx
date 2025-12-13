@@ -103,7 +103,7 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
 
             <mesh ref={ref as any} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
                 {/* Horizontal Orientation: [0, Math.PI, 0] matches Home page better than upright [..., PI/2] */}
-                <group rotation={[0, 0, 0]}>
+                <group rotation={[0, Math.PI, 0]}>
                     <Center>
                         <Banana scale={scale} />
                     </Center>

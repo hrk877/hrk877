@@ -201,6 +201,37 @@ function App() {
     const [viewerPost, setViewerPost] = useState<HandPost | null>(null)
     const [bananas, setBananas] = useState<BananaData[]>([])
 
+    // Queue for staggered spawning
+    const bananaQueue = useRef<BananaData[]>([])
+    const knownIds = useRef(new Set<string>())
+
+    // Process Queue Interval
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (bananaQueue.current.length > 0) {
+                const nextBanana = bananaQueue.current.shift()
+                if (nextBanana) {
+                    setBananas(prev => {
+                        // Double check it's not already there (safety)
+                        if (prev.find(b => b.id === nextBanana.id)) return prev
+
+                        return [
+                            ...prev,
+                            {
+                                ...nextBanana,
+                                // Random spawn at top
+                                pos: [(Math.random() - 0.5) * 3, 10, (Math.random() - 0.5) * 1] as [number, number, number],
+                                rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI] as [number, number, number]
+                            }
+                        ]
+                    })
+                }
+            }
+        }, 1000) // 1 second interval
+
+        return () => clearInterval(interval)
+    }, [])
+
     // Firestore Integration
     useEffect(() => {
         if (!db) return
@@ -218,31 +249,43 @@ function App() {
                     id: doc.id,
                     content: data.content,
                     createdAt: data.createdAt?.toMillis() || Date.now(),
-                    // Check existing to preserve physics state if needed, or re-randomize
-                    // In React render loop, we need to be careful.
-                    // Here we just map raw data. State update logic below handles merge.
                     pos: [0, 0, 0],
                     rot: [0, 0, 0]
                 }
             })
 
-            setBananas(prev => {
-                // Merge strategies:
-                // 1. New items get random spawn.
-                // 2. Existing items keep their previous random spawn (so they don't jump).
-                // 3. Removed items drop out.
+            const fetchedIds = new Set(fetchedBananas.map(b => b.id))
 
-                return fetchedBananas.map(fb => {
-                    const existing = prev.find(p => p.id === fb.id)
-                    if (existing) return existing // Keep pos/rot
-                    return {
-                        ...fb,
-                        // Random spawn at top
-                        pos: [(Math.random() - 0.5) * 3, 10, (Math.random() - 0.5) * 1] as [number, number, number],
-                        rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI] as [number, number, number]
+            // 1. Handle Removals & Updates immediately
+            setBananas(prev => {
+                const surviving = prev.filter(b => fetchedIds.has(b.id))
+                // Clean up knownIds for removed items
+                const currentIds = new Set(surviving.map(b => b.id))
+                // Note: We can't easily sync knownIds ref exactly here without iteration, 
+                // but we can rely on add logic to maintain it.
+                // Actually, let's sync knownIds with fetchedIds eventually.
+
+                return surviving.map(b => {
+                    const freshData = fetchedBananas.find(fb => fb.id === b.id)
+                    if (freshData && freshData.content !== b.content) {
+                        return { ...b, content: freshData.content } // Update content if changed
                     }
+                    return b
                 })
             })
+
+            // 2. Handle Additions (Queue)
+            fetchedBananas.forEach(b => {
+                // If not in knownIds (current + queue), add to queue
+                if (!knownIds.current.has(b.id)) {
+                    knownIds.current.add(b.id)
+                    bananaQueue.current.push(b)
+                }
+            })
+
+            // Handle deletions from knownIds to allow re-adding if deleted and re-created (edge case)
+            // Ideally we iterate knownIds and remove those not in fetchedIds, 
+            // but for simplicity we rely on unique IDs from Firestore.
         })
 
         return () => unsubscribe()
@@ -311,6 +354,8 @@ function App() {
                     <div className="flex flex-col items-center w-full">
                         <div className="flex justify-center w-full">
                             <div className="flex items-baseline relative whitespace-nowrap">
+
+
                                 {/* 877hand */}
                                 {"877hand".split("").map((char, index) => (
                                     <motion.span
