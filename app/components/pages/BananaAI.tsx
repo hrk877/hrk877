@@ -10,7 +10,7 @@ import { getBananaResponse } from "@/app/actions/gemini"
 
 const BananaAI = () => {
     const [input, setInput] = useState("")
-    const [messages, setMessages] = useState([{ role: "ai", text: "ようこそ。あなたの心、熟していますか？" }])
+    const [messages, setMessages] = useState([{ role: "ai", text: "あなたの心、熟していますか？" }])
     const [isTyping, setIsTyping] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
