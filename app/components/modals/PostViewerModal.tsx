@@ -1,23 +1,26 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { X } from "lucide-react"
-
-interface HandPost {
-    id: string
-    content: string
-    createdAt: number
-}
+import { X, Edit, Trash2 } from "lucide-react"
+import type { HandPost } from "./HandPostEditor"
 
 const PostViewerModal = ({
     post,
     isOpen,
     onClose,
+    currentUserId,
+    onEdit,
+    onDelete,
 }: {
     post: HandPost | null
     isOpen: boolean
     onClose: () => void
+    currentUserId?: string | null
+    onEdit: (post: HandPost) => void
+    onDelete: (id: string) => void
 }) => {
+    const isAuthor = currentUserId && post?.authorId === currentUserId
+
     return (
         <AnimatePresence>
             {isOpen && post && (
@@ -36,12 +39,37 @@ const PostViewerModal = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-8 md:p-12">
-                            <button
-                                onClick={onClose}
-                                className="absolute top-6 right-6 p-2 hover:bg-gray-100 transition-colors z-10"
-                            >
-                                <X size={24} className="text-black" />
-                            </button>
+                            <div className="absolute top-6 right-6 flex items-center gap-4 z-10">
+                                {isAuthor && (
+                                    <div className="flex items-center gap-3 border-r border-black/10 pr-4">
+                                        <button
+                                            onClick={() => onEdit(post)}
+                                            className="hover:opacity-50 transition-opacity p-1"
+                                            title="Edit Post"
+                                        >
+                                            <Edit size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm("Delete this banana?")) {
+                                                    onDelete(post.id)
+                                                    onClose()
+                                                }
+                                            }}
+                                            className="hover:text-red-500 transition-colors p-1"
+                                            title="Delete Post"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-gray-100 transition-colors"
+                                >
+                                    <X size={24} className="text-black" />
+                                </button>
+                            </div>
 
                             <div className="flex flex-col gap-8">
                                 <div className="font-mono text-xs tracking-widest opacity-40 uppercase">banana post</div>

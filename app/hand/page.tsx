@@ -12,7 +12,7 @@ import HandPostEditor, { HandPost } from "../components/modals/HandPostEditor"
 import PostViewerModal from "../components/modals/PostViewerModal"
 import LoginModal from "../components/modals/LoginModal"
 import { useAuth } from "../components/providers/AuthProvider"
-import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore"
+import { collection, query, orderBy, onSnapshot, limit, deleteDoc, doc } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 
 // Background Color
@@ -177,6 +177,7 @@ interface BananaData {
     rot: [number, number, number]
     content: string
     createdAt: number
+    authorId?: string
 }
 
 function Scene({ bananas, onBananaClick }: { bananas: BananaData[], onBananaClick: (id: string) => void }) {
@@ -248,6 +249,9 @@ function App() {
     const [isLoginOpen, setIsLoginOpen] = useState(false)
     const { user } = useAuth()
 
+    // Editing state
+    const [editingPost, setEditingPost] = useState<HandPost | null>(null)
+
     useEffect(() => {
         setIsHoverSupported(window.matchMedia('(hover: hover)').matches)
     }, [])
@@ -287,6 +291,11 @@ function App() {
     useEffect(() => {
         if (!db) return
 
+        // Reset scene when user changes (so we can re-sort with new user items first)
+        setBananas([])
+        bananaQueue.current = []
+        knownIds.current = new Set()
+
         const q = query(
             collection(db, "artifacts", appId, "public", "data", "banana_hand_posts"),
             orderBy("createdAt", "desc"),
@@ -294,32 +303,47 @@ function App() {
         )
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedBananas: BananaData[] = snapshot.docs.map(doc => {
+            let fetchedBananas: BananaData[] = snapshot.docs.map(doc => {
                 const data = doc.data()
                 return {
                     id: doc.id,
                     content: data.content,
                     createdAt: data.createdAt?.toMillis() || Date.now(),
+                    authorId: data.authorId,
                     pos: [0, 0, 0],
                     rot: [0, 0, 0]
                 }
             })
 
+            // Sort logic: My posts first
+            if (user?.uid) {
+                fetchedBananas.sort((a, b) => {
+                    const isMyA = a.authorId === user.uid
+                    const isMyB = b.authorId === user.uid
+                    if (isMyA && !isMyB) return -1
+                    if (!isMyA && isMyB) return 1
+                    return 0 // Keep original order (createdAt desc)
+                })
+            }
+
             const fetchedIds = new Set(fetchedBananas.map(b => b.id))
 
             // 1. Handle Removals & Updates immediately
             setBananas(prev => {
+                // Remove deleted
                 const surviving = prev.filter(b => fetchedIds.has(b.id))
+                // Update content
                 return surviving.map(b => {
                     const freshData = fetchedBananas.find(fb => fb.id === b.id)
                     if (freshData && freshData.content !== b.content) {
-                        return { ...b, content: freshData.content } // Update content if changed
+                        return { ...b, content: freshData.content }
                     }
                     return b
                 })
             })
 
             // 2. Handle Additions (Queue)
+            // Since `fetchedBananas` is sorted, they will be pushed to queue in order
             fetchedBananas.forEach(b => {
                 if (!knownIds.current.has(b.id)) {
                     knownIds.current.add(b.id)
@@ -329,7 +353,7 @@ function App() {
         })
 
         return () => unsubscribe()
-    }, [])
+    }, [user?.uid])
 
 
     // Sequence Logic: 8-7-7 (Indices: 0, 1, 2 of "877")
@@ -343,6 +367,7 @@ function App() {
             if (tapSequenceIndex === targetSequence.length - 1) {
                 // Success
                 if (user && !user.isAnonymous) {
+                    setEditingPost(null)
                     setIsEditorOpen(true)
                 } else {
                     setIsLoginOpen(true)
@@ -364,8 +389,30 @@ function App() {
     const handleBananaClick = (id: string) => {
         const banana = bananas.find(b => b.id === id)
         if (banana) {
-            setViewerPost({ id: banana.id, content: banana.content, createdAt: banana.createdAt })
+            setViewerPost({
+                id: banana.id,
+                content: banana.content,
+                createdAt: banana.createdAt,
+                authorId: banana.authorId
+            })
         }
+    }
+
+    const handleDeletePost = async (id: string) => {
+        if (!db) return
+        try {
+            await deleteDoc(doc(db, "artifacts", appId, "public", "data", "banana_hand_posts", id))
+            // The snapshot listener will handle the UI removal
+        } catch (err) {
+            console.error("Error deleting:", err)
+            alert("Error deleting post.")
+        }
+    }
+
+    const handleEditPost = (post: HandPost) => {
+        setViewerPost(null) // Close viewer
+        setEditingPost(post)
+        setIsEditorOpen(true)
     }
 
     return (
@@ -376,13 +423,21 @@ function App() {
 
             <HandPostEditor
                 isOpen={isEditorOpen}
-                onClose={() => setIsEditorOpen(false)}
+                onClose={() => {
+                    setIsEditorOpen(false)
+                    setEditingPost(null)
+                }}
+                user={user}
+                postToEdit={editingPost}
             />
 
             <PostViewerModal
                 isOpen={!!viewerPost}
                 onClose={() => setViewerPost(null)}
                 post={viewerPost}
+                currentUserId={user?.uid}
+                onEdit={handleEditPost}
+                onDelete={handleDeletePost}
             />
 
             <div
