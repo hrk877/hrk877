@@ -26,9 +26,7 @@ export async function sendEmail(message: string) {
             text: `You received a new anonymous letter:\n\n${message}`,
         })
         return {
-            success: true,
-            sender: process.env.GMAIL_USER_NEW,
-            pwdPrefix: process.env.GMAIL_APP_PASSWORD_NEW?.substring(0, 2)
+            success: true
         }
     } catch (error) {
         console.error("Error sending email:", error)
