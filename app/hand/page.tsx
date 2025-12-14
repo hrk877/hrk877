@@ -37,10 +37,10 @@ function Cursor({ active }: { active: boolean }) {
     return <mesh ref={ref as any} visible={false} />
 }
 
-function DragConstraint({ cursorRef, bodyRef }: { cursorRef: RefObject<THREE.Object3D | null>, bodyRef: RefObject<THREE.Object3D | null> }) {
+function DragConstraint({ cursorRef, bodyRef, offset }: { cursorRef: RefObject<THREE.Object3D | null>, bodyRef: RefObject<THREE.Object3D | null>, offset: [number, number, number] }) {
     usePointToPointConstraint(cursorRef, bodyRef, {
         pivotA: [0, 0, 0],
-        pivotB: [0, 0, 0],
+        pivotB: offset,
     })
     return null
 }
@@ -49,13 +49,15 @@ function DragConstraint({ cursorRef, bodyRef }: { cursorRef: RefObject<THREE.Obj
 function FallingBanana({
     position,
     rotation,
-    onPointerDown,
+    onDragStart,
+    onDragEnd,
     onBananaClick,
     id
 }: {
     position: [number, number, number],
     rotation: [number, number, number],
-    onPointerDown: (ref: RefObject<THREE.Object3D>) => void
+    onDragStart: (ref: RefObject<THREE.Object3D>, offset: [number, number, number]) => void
+    onDragEnd: () => void
     onBananaClick: (id: string) => void
     id: string
 }) {
@@ -77,9 +79,9 @@ function FallingBanana({
         linearDamping: 0.5,
     }))
 
-    // Track click vs drag
+    // Interaction State
     const isDragging = useRef(false)
-    const downTime = useRef(0)
+    const startPointerPos = useRef<{ x: number, y: number } | null>(null)
 
     return (
         <group
@@ -88,16 +90,43 @@ function FallingBanana({
                 e.stopPropagation()
                 // @ts-ignore
                 e.target.setPointerCapture(e.pointerId)
+
+                // Calculate local offset
+                const worldPoint = e.point.clone()
+                const localPoint = ref.current!.worldToLocal(worldPoint)
+
+                startPointerPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
                 isDragging.current = false
-                downTime.current = Date.now()
-                onPointerDown(ref)
+
+                    // Store temp offset for when drag starts
+                    ; (ref.current as any).userData.dragOffset = [localPoint.x, localPoint.y, localPoint.z]
+            }}
+            onPointerMove={(e) => {
+                if (!startPointerPos.current) return
+
+                if (!isDragging.current) {
+                    const dx = e.nativeEvent.clientX - startPointerPos.current.x
+                    const dy = e.nativeEvent.clientY - startPointerPos.current.y
+                    const dist = Math.sqrt(dx * dx + dy * dy)
+
+                    if (dist > 5) { // Threshold
+                        isDragging.current = true
+                        const offset = (ref.current as any).userData.dragOffset
+                        onDragStart(ref, offset)
+                    }
+                }
             }}
             onPointerUp={(e) => {
-                const timeDiff = Date.now() - downTime.current
-                // If short click and didn't move much (drag handled by parent state, but time is good proxy)
-                if (timeDiff < 200) {
+                // @ts-ignore
+                e.target.releasePointerCapture(e.pointerId)
+                startPointerPos.current = null
+
+                if (isDragging.current) {
+                    onDragEnd()
+                } else {
                     onBananaClick(id)
                 }
+                isDragging.current = false
             }}
         >
             <Banana scale={25} rotation={[0, Math.PI, 0]} />
@@ -144,6 +173,7 @@ interface BananaData {
 
 function Scene({ bananas, onBananaClick }: { bananas: BananaData[], onBananaClick: (id: string) => void }) {
     const [draggedBody, setDraggedBody] = useState<RefObject<THREE.Object3D> | null>(null)
+    const [dragOffset, setDragOffset] = useState<[number, number, number]>([0, 0, 0])
     const cursorRef = useRef<THREE.Object3D>(null)
 
     return (
@@ -153,7 +183,7 @@ function Scene({ bananas, onBananaClick }: { bananas: BananaData[], onBananaClic
                 <CursorInternal forwardedRef={cursorRef} />
 
                 {draggedBody && cursorRef.current && (
-                    <DragConstraint cursorRef={cursorRef} bodyRef={draggedBody as any} />
+                    <DragConstraint cursorRef={cursorRef} bodyRef={draggedBody as any} offset={dragOffset} />
                 )}
 
                 {bananas.map(b => (
@@ -162,7 +192,11 @@ function Scene({ bananas, onBananaClick }: { bananas: BananaData[], onBananaClic
                         id={b.id}
                         position={b.pos}
                         rotation={b.rot}
-                        onPointerDown={(ref) => setDraggedBody(ref)}
+                        onDragStart={(ref, offset) => {
+                            setDragOffset(offset)
+                            setDraggedBody(ref)
+                        }}
+                        onDragEnd={() => setDraggedBody(null)}
                         onBananaClick={onBananaClick}
                     />
                 ))}
