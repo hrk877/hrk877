@@ -71,13 +71,7 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
         angularFactor: [0, 0, 1] // Lock Rotation to Z axis
     }))
 
-    // Force reset on mount to ensure consistent initial state
-    useEffect(() => {
-        api.position.set(0, 0, 0)
-        api.velocity.set(0, 0, 0)
-        api.angularVelocity.set(0, 0, 0)
-        api.rotation.set(0, Math.PI, 0)
-    }, [api])
+
 
     // Hinge removed in favor of Factors
 
