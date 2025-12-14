@@ -17,6 +17,7 @@ export async function sendEmail(message: string) {
     }
 
     try {
+        console.log("Sending email as:", process.env.GMAIL_USER) // Debug log
         await transporter.sendMail({
             from: process.env.GMAIL_USER,
             to: "877hand@gmail.com",
