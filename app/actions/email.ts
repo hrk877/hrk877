@@ -24,7 +24,7 @@ export async function sendEmail(message: string) {
             subject: "New Anonymous Letter from hrk.877",
             text: `You received a new anonymous letter:\n\n${message}`,
         })
-        return { success: true, sender: process.env.GMAIL_USER }
+        return { success: true }
     } catch (error) {
         console.error("Error sending email:", error)
         return { success: false, error: "Failed to send email" }
