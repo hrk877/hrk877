@@ -60,15 +60,24 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
     const scale = Math.min(viewport.width, viewport.height) * 3.8
 
     // Physics Body
-    const [ref] = useBox(() => ({
+    const [ref, api] = useBox(() => ({
         mass: 10,  // Heavier feels better
         position: [0, 0, 0],
+        rotation: [0, 0, 0], // Reset to default 0
         args: [5, 2, 2], // Physics shape size (approx)
         linearDamping: 0.1,
         angularDamping: 0.4, // Fine-tuned friction
         linearFactor: [0, 0, 0], // Lock Position
         angularFactor: [0, 0, 1] // Lock Rotation to Z axis
     }))
+
+    // Force reset on mount to ensure consistent initial state
+    useEffect(() => {
+        api.position.set(0, 0, 0)
+        api.velocity.set(0, 0, 0)
+        api.angularVelocity.set(0, 0, 0)
+        api.rotation.set(0, 0, 0) // Reset to default 0
+    }, [api])
 
     // Hinge removed in favor of Factors
 
@@ -102,7 +111,7 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
             {dragPivot && cursorRef.current && <DragLink bodyRef={ref as any} cursorRef={cursorRef} pivot={dragPivot} />}
 
             <mesh ref={ref as any} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
-                {/* Horizontal Orientation: [0, Math.PI, 0] matches Home page better than upright [..., PI/2] */}
+                {/* Horizontal Orientation: [0, Math.PI, 0] flips it to face Left within the 0-rotation physics body */}
                 <group rotation={[0, Math.PI, 0]}>
                     <Center>
                         <Banana scale={scale} />
@@ -119,6 +128,8 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
 export default function GamePage() {
     const containerRef = useRef(null)
     const cursorRef = useRef<THREE.Object3D>(null)
+    // Force Physics re-initialization on mount to prevent state leaks from previous page visits
+    const [physicsKey] = useState(() => Date.now())
 
     return (
         <div
@@ -127,12 +138,12 @@ export default function GamePage() {
         >
             <HamburgerMenu />
 
-            <Canvas shadows camera={{ position: [0, 0, 15], fov: 50 }}>
+            <Canvas key={physicsKey} shadows camera={{ position: [0, 0, 15], fov: 50 }}>
                 <ambientLight intensity={1.5} />
                 <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={2} castShadow />
                 <Environment preset="sunset" />
 
-                <Physics gravity={[0, 0, 0]}>
+                <Physics key={physicsKey} gravity={[0, 0, 0]}>
                     <Cursor forwardedRef={cursorRef as any} />
                     <SpinningBanana cursorRef={cursorRef as any} />
                 </Physics>
