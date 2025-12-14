@@ -47,11 +47,8 @@ export const metadata: Metadata = {
 
   // アイコンとマニフェストの設定
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icons/icon-32.png', type: 'image/png', sizes: '32x32' },
-      { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' },
-    ],
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
     apple: '/icons/apple-touch-icon.png',
   },
   manifest: "/manifest.json",
