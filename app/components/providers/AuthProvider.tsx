@@ -47,8 +47,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         initAuth()
 
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            console.log("Auth State Changed:", currentUser?.email, currentUser?.providerData)
             setUser(currentUser)
-            setIsAdmin(!!currentUser?.email)
+            // Admin only if logged in via Password (email/password)
+            const isPasswordAuth = currentUser?.providerData?.some(p => p.providerId === 'password') ?? false
+            setIsAdmin(!!currentUser && isPasswordAuth)
             setLoading(false)
         })
 

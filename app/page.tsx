@@ -19,7 +19,7 @@ import Knowledge from "./components/sections/Knowledge"
 import Journal from "./components/sections/Journal"
 
 // Modals
-import LoginModal from "./components/modals/LoginModal"
+import AdminLoginModal from "./components/modals/AdminLoginModal"
 import BlogEditor, { type BlogPost } from "./components/modals/BlogEditor"
 import JournalDetailPage from "./components/modals/JournalDetailPage"
 
@@ -102,7 +102,7 @@ export default function Hrk877App() {
   return (
     <div className="min-h-screen bg-[#FAC800] text-black selection:bg-black selection:text-[#FAC800]">
       <div className="noise-overlay" />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <AdminLoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
       <BlogEditor
         isOpen={isBlogEditorOpen}

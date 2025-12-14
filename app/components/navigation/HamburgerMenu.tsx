@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import { useAuth } from "../providers/AuthProvider"
+import { signOut } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 const MENU_ITEMS = [
     { label: "HAND", href: "/hand" },
@@ -27,6 +30,7 @@ const MENU_ITEMS = [
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "GAME" | "SNS">("MAIN")
+    const { user } = useAuth()
 
     // Dynamic Theme Color for Mobile Status Bar
     useEffect(() => {
@@ -159,15 +163,19 @@ export default function HamburgerMenu() {
                                 </motion.div>
                             </AnimatePresence>
 
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 0.3 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ delay: 0.2, duration: 0.5 }}
-                                className="absolute bottom-12 text-xs font-mono tracking-[0.3em] text-white pointer-events-none"
-                            >
-                                HRK877 COLLECTION
-                            </motion.div>
+                            {/* Logout Button (Replaces Collection Text) */}
+                            {user && !user.isAnonymous && (
+                                <motion.button
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ delay: 0.2, duration: 0.5 }}
+                                    onClick={() => signOut(auth)}
+                                    className="absolute bottom-12 text-xs font-mono tracking-[0.3em] text-white hover:opacity-50 transition-opacity"
+                                >
+                                    LOGOUT
+                                </motion.button>
+                            )}
                         </nav>
                     </motion.div>
                 )}
