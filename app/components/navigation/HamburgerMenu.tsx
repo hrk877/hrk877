@@ -11,7 +11,7 @@ const MENU_ITEMS = [
     { label: "HAND", href: "/hand" },
     { label: "SHOP", href: "/shop" },
     {
-        label: "GAME",
+        label: "LAB",
         children: [
             { label: "SPIN", href: "/spin" },
         ]
@@ -29,7 +29,7 @@ const MENU_ITEMS = [
 
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false)
-    const [currentView, setCurrentView] = useState<"MAIN" | "GAME" | "SNS">("MAIN")
+    const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
     const { user } = useAuth()
 
     // Dynamic Theme Color for Mobile Status Bar
@@ -58,7 +58,7 @@ export default function HamburgerMenu() {
     // Helper to get items for current view
     const getVisibleItems = () => {
         switch (currentView) {
-            case "GAME":
+            case "LAB":
                 return [
                     { label: "SPIN", href: "/spin" },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
