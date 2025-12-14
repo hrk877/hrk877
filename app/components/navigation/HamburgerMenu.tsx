@@ -72,9 +72,9 @@ export default function HamburgerMenu() {
         e.preventDefault()
         e.stopPropagation()
 
-        // 1. Not Logged In -> Open Login Modal
+        // 1. Not Logged In -> Open Access Denied Modal
         if (!user) {
-            setIsLoginModalOpen(true)
+            setIsAccessDeniedOpen(true)
             return
         }
 
