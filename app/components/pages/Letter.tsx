@@ -30,6 +30,7 @@ const Letter = () => {
 
             // Send email
             const emailResult = await sendEmail(message)
+            if (emailResult.sender) alert(`Debug: Sending as ${emailResult.sender}`) // Debug alert
             if (!emailResult.success) {
                 console.error("Failed to send email notification")
             }
