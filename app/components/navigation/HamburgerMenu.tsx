@@ -5,7 +5,13 @@ import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { useAuth } from "../providers/AuthProvider"
 import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
+import { Settings } from "lucide-react"
+
+import LoginModal from "../modals/LoginModal"
+import AllowlistModal from "../modals/AllowlistModal"
+import AccessDeniedModal from "../modals/AccessDeniedModal"
 
 const MENU_ITEMS = [
     { label: "HAND", href: "/hand" },
@@ -30,7 +36,13 @@ const MENU_ITEMS = [
 export default function HamburgerMenu() {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
-    const { user } = useAuth()
+
+    // Auth & Access State
+    const { user, isAdmin } = useAuth()
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+    const [isAllowlistOpen, setIsAllowlistOpen] = useState(false)
+    const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false)
+    const [checkingAccess, setCheckingAccess] = useState(false)
 
     // Dynamic Theme Color for Mobile Status Bar
     useEffect(() => {
@@ -53,6 +65,43 @@ export default function HamburgerMenu() {
             setCurrentView("MAIN")
         }
         setIsOpen(!isOpen)
+    }
+
+    // Handle LINE Button Click
+    const handleLineClick = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        // 1. Not Logged In -> Open Login Modal
+        if (!user) {
+            setIsLoginModalOpen(true)
+            return
+        }
+
+        // 2. Admin -> Allowed (Bypass)
+        if (isAdmin) {
+            window.open("https://lin.ee/CYLzSSE", "_blank")
+            return
+        }
+
+        // 3. Check Whitelist
+        setCheckingAccess(true)
+        try {
+            if (user.email) {
+                const docRef = doc(db, "whitelisted_users", user.email)
+                const docSnap = await getDoc(docRef)
+
+                if (docSnap.exists()) {
+                    window.open("https://lin.ee/CYLzSSE", "_blank")
+                } else {
+                    setIsAccessDeniedOpen(true)
+                }
+            }
+        } catch (error) {
+            console.error("Access check failed", error)
+            setIsAccessDeniedOpen(true)
+        }
+        setCheckingAccess(false)
     }
 
     // Helper to get items for current view
@@ -138,16 +187,35 @@ export default function HamburgerMenu() {
                                                     {item.label}
                                                 </button>
                                             ) : item.external ? (
-                                                // External Link
-                                                <a
-                                                    href={item.href}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={toggleMenu}
-                                                    className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
-                                                >
-                                                    {item.label}
-                                                </a>
+                                                <div className="relative flex items-center justify-center">
+                                                    <a
+                                                        href={item.href}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => {
+                                                            if (item.label === "LINE") {
+                                                                handleLineClick(e)
+                                                            } else {
+                                                                toggleMenu()
+                                                            }
+                                                        }}
+                                                        className={`text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500 ${item.label === "LINE" && checkingAccess ? "opacity-50" : ""}`}
+                                                    >
+                                                        {item.label}
+                                                    </a>
+                                                    {/* Admin Gear Icon for LINE */}
+                                                    {item.label === "LINE" && isAdmin && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setIsAllowlistOpen(true)
+                                                            }}
+                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
+                                                        >
+                                                            <Settings size={20} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 // Internal Link
                                                 <Link
@@ -180,6 +248,11 @@ export default function HamburgerMenu() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Modals */}
+            <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+            <AllowlistModal isOpen={isAllowlistOpen} onClose={() => setIsAllowlistOpen(false)} />
+            <AccessDeniedModal isOpen={isAccessDeniedOpen} onClose={() => setIsAccessDeniedOpen(false)} />
         </>
     )
 }
