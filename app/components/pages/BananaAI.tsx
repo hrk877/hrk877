@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import TopNavigation from "../layout/TopNavigation"
 import { getBananaResponse } from "@/app/actions/gemini"
-import { addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../providers/AuthProvider"
 
@@ -17,6 +17,9 @@ const BananaAI = () => {
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const { user } = useAuth()
+
+    // Track the current session's Firestore document ID
+    const sessionDocId = useRef<string | null>(null)
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -39,12 +42,28 @@ const BananaAI = () => {
         try {
             // Log User Message
             if (db) {
-                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+                const userLogEntry = {
                     role: "user",
                     content: userMsg,
-                    createdAt: serverTimestamp(),
-                    userId: user?.uid || "anonymous"
-                })
+                    timestamp: new Date().toISOString()
+                }
+
+                if (!sessionDocId.current) {
+                    // Start new session
+                    const newDocRef = doc(collection(db, "artifacts", appId, "public", "data", "ai_logs"))
+                    sessionDocId.current = newDocRef.id
+
+                    await setDoc(newDocRef, {
+                        userId: user?.uid || "anonymous",
+                        createdAt: serverTimestamp(),
+                        messages: [userLogEntry]
+                    })
+                } else {
+                    // Append to existing session
+                    await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
+                        messages: arrayUnion(userLogEntry)
+                    })
+                }
             }
 
             // Prepare history for the server action
@@ -58,12 +77,15 @@ const BananaAI = () => {
             setMessages((prev) => [...prev, { role: "ai", text: responseText }])
 
             // Log AI Response
-            if (db) {
-                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+            if (db && sessionDocId.current) {
+                const aiLogEntry = {
                     role: "ai",
                     content: responseText,
-                    createdAt: serverTimestamp(),
-                    userId: user?.uid || "anonymous"
+                    timestamp: new Date().toISOString()
+                }
+
+                await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
+                    messages: arrayUnion(aiLogEntry)
                 })
             }
         } catch (error) {
@@ -72,13 +94,16 @@ const BananaAI = () => {
             setMessages((prev) => [...prev, { role: "ai", text: errorMsg }])
 
             // Log Error Response
-            if (db) {
-                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+            if (db && sessionDocId.current) {
+                const errorLogEntry = {
                     role: "ai",
                     content: errorMsg,
-                    createdAt: serverTimestamp(),
-                    userId: user?.uid || "anonymous",
+                    timestamp: new Date().toISOString(),
                     error: true
+                }
+
+                await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
+                    messages: arrayUnion(errorLogEntry)
                 })
             }
         } finally {
