@@ -4,9 +4,11 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
-import Link from "next/link"
 import TopNavigation from "../layout/TopNavigation"
 import { getBananaResponse } from "@/app/actions/gemini"
+import { addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { db, appId } from "@/lib/firebase"
+import { useAuth } from "../providers/AuthProvider"
 
 const BananaAI = () => {
     const [input, setInput] = useState("")
@@ -14,6 +16,7 @@ const BananaAI = () => {
     const [isTyping, setIsTyping] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    const { user } = useAuth()
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -34,6 +37,16 @@ const BananaAI = () => {
         inputRef.current?.blur()
 
         try {
+            // Log User Message
+            if (db) {
+                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+                    role: "user",
+                    content: userMsg,
+                    createdAt: serverTimestamp(),
+                    userId: user?.uid || "anonymous"
+                })
+            }
+
             // Prepare history for the server action
             const history = messages.map(m => ({
                 role: m.role,
@@ -43,9 +56,31 @@ const BananaAI = () => {
             const responseText = await getBananaResponse(history, userMsg);
 
             setMessages((prev) => [...prev, { role: "ai", text: responseText }])
+
+            // Log AI Response
+            if (db) {
+                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+                    role: "ai",
+                    content: responseText,
+                    createdAt: serverTimestamp(),
+                    userId: user?.uid || "anonymous"
+                })
+            }
         } catch (error) {
             console.error(error)
-            setMessages((prev) => [...prev, { role: "ai", text: "申し訳ありません。まだ青いバナナのように、通信が硬直しているようです。" }])
+            const errorMsg = "申し訳ありません。まだ青いバナナのように、通信が硬直しているようです。"
+            setMessages((prev) => [...prev, { role: "ai", text: errorMsg }])
+
+            // Log Error Response
+            if (db) {
+                await addDoc(collection(db, "artifacts", appId, "public", "data", "ai_logs"), {
+                    role: "ai",
+                    content: errorMsg,
+                    createdAt: serverTimestamp(),
+                    userId: user?.uid || "anonymous",
+                    error: true
+                })
+            }
         } finally {
             setIsTyping(false)
         }
