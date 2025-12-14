@@ -165,7 +165,7 @@ function Plane({ isWall, opacity = 0.3, ...props }: any) {
     return (
         <mesh ref={ref} receiveShadow={!isWall} castShadow={false}>
             <planeGeometry args={[100, 100]} />
-            {!isWall && <shadowMaterial color="#000" transparent opacity={opacity} polygonOffset polygonOffsetFactor={10} polygonOffsetUnits={10} />}
+            {!isWall && <shadowMaterial color="#000" transparent opacity={opacity} />}
             {isWall && <meshBasicMaterial visible={false} depthWrite={false} />}
         </mesh>
     )
