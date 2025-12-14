@@ -81,6 +81,7 @@ function FallingBanana({
 
     // Interaction State
     const isDragging = useRef(false)
+    const hasMoved = useRef(false)
     const startPointerPos = useRef<{ x: number, y: number } | null>(null)
 
     return (
@@ -97,6 +98,7 @@ function FallingBanana({
 
                 startPointerPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
                 isDragging.current = false
+                hasMoved.current = false
 
                     // Store temp offset for when drag starts
                     ; (ref.current as any).userData.dragOffset = [localPoint.x, localPoint.y, localPoint.z]
@@ -104,12 +106,16 @@ function FallingBanana({
             onPointerMove={(e) => {
                 if (!startPointerPos.current) return
 
-                if (!isDragging.current) {
-                    const dx = e.nativeEvent.clientX - startPointerPos.current.x
-                    const dy = e.nativeEvent.clientY - startPointerPos.current.y
-                    const dist = Math.sqrt(dx * dx + dy * dy)
+                const dx = e.nativeEvent.clientX - startPointerPos.current.x
+                const dy = e.nativeEvent.clientY - startPointerPos.current.y
+                const dist = Math.sqrt(dx * dx + dy * dy)
 
-                    if (dist > 5) { // Threshold
+                if (dist > 5) {
+                    hasMoved.current = true
+                }
+
+                if (!isDragging.current) {
+                    if (dist > 10) { // Threshold
                         isDragging.current = true
                         const offset = (ref.current as any).userData.dragOffset
                         onDragStart(ref, offset)
@@ -117,16 +123,18 @@ function FallingBanana({
                 }
             }}
             onPointerUp={(e) => {
+                e.stopPropagation()
                 // @ts-ignore
                 e.target.releasePointerCapture(e.pointerId)
                 startPointerPos.current = null
 
                 if (isDragging.current) {
                     onDragEnd()
-                } else {
+                } else if (!hasMoved.current) {
                     onBananaClick(id)
                 }
                 isDragging.current = false
+                hasMoved.current = false
             }}
         >
             <Banana scale={25} rotation={[0, Math.PI, 0]} />
