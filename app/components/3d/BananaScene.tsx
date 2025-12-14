@@ -21,7 +21,7 @@ export default function BananaScene() {
                         polar={[-Infinity, Infinity]} // Allow full rotation
                         azimuth={[-Infinity, Infinity]}
                     >
-                        <BananaModel rotation={[0, 0, Math.PI / 4]} scale={1.5} />
+                        <BananaModel scale={1.5} />
                     </PresentationControls>
 
                     <ContactShadows position={[0, -2, 0]} opacity={0.4} scale={10} blur={2.5} far={4} />

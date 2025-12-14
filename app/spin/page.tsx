@@ -63,7 +63,7 @@ function SpinningBanana({ cursorRef }: { cursorRef: RefObject<THREE.Object3D> })
     const [ref, api] = useBox(() => ({
         mass: 10,  // Heavier feels better
         position: [0, 0, 0],
-        rotation: [0, Math.PI, 0],
+        rotation: [0, 0, 0],
         args: [5, 2, 2], // Physics shape size (approx)
         linearDamping: 0.1,
         angularDamping: 0.4, // Fine-tuned friction

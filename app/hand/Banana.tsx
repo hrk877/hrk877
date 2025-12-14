@@ -46,6 +46,7 @@ export const Banana = forwardRef<THREE.Group, any>((props, ref) => {
         <primitive
             ref={ref}
             object={clone}
+            rotation={[0, Math.PI, 0]}
             {...props}
         // Scale matches the original logic, adjusted for physics if needed
         // Original had scale={25}, let's keep it but we might need to adjust physics body size

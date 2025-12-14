@@ -6,7 +6,7 @@ import { OBJLoader } from "three-stdlib"
 import { useMemo } from "react"
 import * as THREE from "three"
 
-export function BananaModel(props: any) {
+export function BananaModel({ rotation = [0, Math.PI, 0], ...props }: any) {
     // 1. Load Object (ignore MTL for now to force our own material)
     const obj = useLoader(OBJLoader, "/banana.obj")
 
@@ -43,9 +43,9 @@ export function BananaModel(props: any) {
             <Center>
                 <primitive
                     object={obj}
+                    rotation={rotation}
                     {...props}
                     scale={25}
-                    rotation={[0, Math.PI, 0]}
                 />
             </Center>
         </Float>
