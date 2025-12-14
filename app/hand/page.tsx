@@ -10,6 +10,8 @@ import { motion } from "framer-motion"
 import * as THREE from "three"
 import HandPostEditor, { HandPost } from "../components/modals/HandPostEditor"
 import PostViewerModal from "../components/modals/PostViewerModal"
+import LoginModal from "../components/modals/LoginModal"
+import { useAuth } from "../components/providers/AuthProvider"
 import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 
@@ -201,6 +203,8 @@ function App() {
     const [viewerPost, setViewerPost] = useState<HandPost | null>(null)
     const [bananas, setBananas] = useState<BananaData[]>([])
     const [isHoverSupported, setIsHoverSupported] = useState(false)
+    const [isLoginOpen, setIsLoginOpen] = useState(false)
+    const { user } = useAuth()
 
     useEffect(() => {
         setIsHoverSupported(window.matchMedia('(hover: hover)').matches)
@@ -264,12 +268,6 @@ function App() {
             // 1. Handle Removals & Updates immediately
             setBananas(prev => {
                 const surviving = prev.filter(b => fetchedIds.has(b.id))
-                // Clean up knownIds for removed items
-                const currentIds = new Set(surviving.map(b => b.id))
-                // Note: We can't easily sync knownIds ref exactly here without iteration, 
-                // but we can rely on add logic to maintain it.
-                // Actually, let's sync knownIds with fetchedIds eventually.
-
                 return surviving.map(b => {
                     const freshData = fetchedBananas.find(fb => fb.id === b.id)
                     if (freshData && freshData.content !== b.content) {
@@ -281,16 +279,11 @@ function App() {
 
             // 2. Handle Additions (Queue)
             fetchedBananas.forEach(b => {
-                // If not in knownIds (current + queue), add to queue
                 if (!knownIds.current.has(b.id)) {
                     knownIds.current.add(b.id)
                     bananaQueue.current.push(b)
                 }
             })
-
-            // Handle deletions from knownIds to allow re-adding if deleted and re-created (edge case)
-            // Ideally we iterate knownIds and remove those not in fetchedIds, 
-            // but for simplicity we rely on unique IDs from Firestore.
         })
 
         return () => unsubscribe()
@@ -307,7 +300,11 @@ function App() {
         if (char === expectedChar) {
             if (tapSequenceIndex === targetSequence.length - 1) {
                 // Success
-                setIsEditorOpen(true)
+                if (user && !user.isAnonymous) {
+                    setIsEditorOpen(true)
+                } else {
+                    setIsLoginOpen(true)
+                }
                 setTapSequenceIndex(0)
             } else {
                 setTapSequenceIndex(prev => prev + 1)
@@ -332,6 +329,8 @@ function App() {
     return (
         <>
             <HamburgerMenu />
+
+            <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
             <HandPostEditor
                 isOpen={isEditorOpen}
