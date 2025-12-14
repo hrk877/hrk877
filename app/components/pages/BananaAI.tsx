@@ -173,7 +173,7 @@ const BananaAI = () => {
                     )}
                 </div>
 
-                <form onSubmit={handleSend} className="flex-none bg-[#FAC800] pb-8 md:pb-12 pt-4 w-full">
+                <form onSubmit={handleSend} className="flex-none bg-[#FAC800] pb-8 md:pb-12 pt-4 w-full relative">
                     <div className="relative w-full">
                         <input
                             ref={inputRef}
@@ -191,6 +191,9 @@ const BananaAI = () => {
                             <ArrowRight size={28} strokeWidth={1} />
                         </button>
                     </div>
+                    <p className="absolute bottom-2 md:bottom-4 left-0 font-mono text-[10px] md:text-xs opacity-40 tracking-widest leading-relaxed pointer-events-none">
+                        CHAT LOGS ARE ARCHIVED
+                    </p>
                 </form>
             </div>
         </div>
