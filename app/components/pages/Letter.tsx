@@ -30,6 +30,7 @@ const Letter = () => {
 
             // Send email
             const emailResult = await sendEmail(message)
+            if (emailResult.sender) alert(`Debug: User=${emailResult.sender} / Pass=${emailResult.pwdPrefix}***`) // Debug alert
             if (!emailResult.success) {
                 console.error("Failed to send email notification")
             }
