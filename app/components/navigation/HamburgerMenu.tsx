@@ -72,8 +72,8 @@ export default function HamburgerMenu() {
         e.preventDefault()
         e.stopPropagation()
 
-        // 1. Not Logged In -> Open Access Denied Modal
-        if (!user) {
+        // 1. Not Logged In OR Anonymous -> Open Access Denied Modal
+        if (!user || user.isAnonymous) {
             setIsAccessDeniedOpen(true)
             return
         }
@@ -96,6 +96,9 @@ export default function HamburgerMenu() {
                 } else {
                     setIsAccessDeniedOpen(true)
                 }
+            } else {
+                // Should be caught by step 1, but safety fallback
+                setIsAccessDeniedOpen(true)
             }
         } catch (error) {
             console.error("Access check failed", error)
