@@ -19,7 +19,7 @@ export async function sendEmail(message: string) {
     try {
         await transporter.sendMail({
             from: process.env.GMAIL_USER,
-            to: "hrkr422@gmail.com",
+            to: "877hand@gmail.com",
             subject: "New Anonymous Letter from hrk.877",
             text: `You received a new anonymous letter:\n\n${message}`,
         })
