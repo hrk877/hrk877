@@ -76,6 +76,11 @@ const PostViewerModal = ({
 
                                 <div className="font-serif text-2xl md:text-3xl leading-relaxed text-black whitespace-pre-wrap">
                                     {post.content}
+                                    {post.authorFingerId && (
+                                        <span className="opacity-50 text-base block mt-8 font-mono">
+                                            by {post.authorFingerId}
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="w-full h-px bg-black/5 mt-4" />

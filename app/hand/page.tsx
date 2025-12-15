@@ -178,6 +178,7 @@ interface BananaData {
     content: string
     createdAt: number
     authorId?: string
+    authorFingerId?: string
 }
 
 function Scene({ bananas, onBananaClick }: { bananas: BananaData[], onBananaClick: (id: string) => void }) {
@@ -310,6 +311,7 @@ function App() {
                     content: data.content,
                     createdAt: data.createdAt?.toMillis() || Date.now(),
                     authorId: data.authorId,
+                    authorFingerId: data.authorFingerId,
                     pos: [0, 0, 0],
                     rot: [0, 0, 0]
                 }
@@ -393,7 +395,8 @@ function App() {
                 id: banana.id,
                 content: banana.content,
                 createdAt: banana.createdAt,
-                authorId: banana.authorId
+                authorId: banana.authorId,
+                authorFingerId: banana.authorFingerId
             })
         }
     }

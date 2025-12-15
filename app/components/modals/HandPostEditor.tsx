@@ -13,7 +13,10 @@ export interface HandPost {
     content: string
     createdAt: number
     authorId?: string
+    authorFingerId?: string
 }
+
+import { useAuth } from "../providers/AuthProvider"
 
 const HandPostEditor = ({
     isOpen,
@@ -26,6 +29,7 @@ const HandPostEditor = ({
     user: User | null
     postToEdit?: HandPost | null
 }) => {
+    const { fingerId } = useAuth()
     const [content, setContent] = useState("")
     const [loading, setLoading] = useState(false)
 
@@ -77,6 +81,7 @@ const HandPostEditor = ({
                     authorName: user?.displayName || "Anonymous",
                     authorPhoto: user?.photoURL || null,
                     authorEmail: user?.email || null, // Optional, for admin use
+                    authorFingerId: fingerId || null,
                 })
             }
             setContent("")
