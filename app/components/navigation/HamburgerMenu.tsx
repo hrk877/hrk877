@@ -168,21 +168,31 @@ export default function HamburgerMenu() {
                                                 </button>
                                             ) : item.external ? (
                                                 <div className="relative flex items-center justify-center">
-                                                    <a
-                                                        href={item.href}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => {
-                                                            if (item.label === "LINE") {
-                                                                handleLineClick(e)
-                                                            } else {
-                                                                toggleMenu()
-                                                            }
-                                                        }}
-                                                        className={`text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500`}
-                                                    >
-                                                        {item.label}
-                                                    </a>
+                                                    {item.label === "LINE" && (!isAdmin && !isWhitelisted) ? (
+                                                        // RESTRICTED LINE BUTTON (No HREF to prevent preview)
+                                                        <button
+                                                            onClick={handleLineClick}
+                                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ) : (
+                                                        // NORMAL LINK (Authorized LINE or Other External)
+                                                        <a
+                                                            href={item.href}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => {
+                                                                if (item.label !== "LINE") {
+                                                                    toggleMenu()
+                                                                }
+                                                                // Authorized LINE uses native href behavior
+                                                            }}
+                                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
+                                                        >
+                                                            {item.label}
+                                                        </a>
+                                                    )}
                                                     {/* Admin Gear Icon for LINE */}
                                                     {item.label === "LINE" && isAdmin && (
                                                         <button
