@@ -81,7 +81,6 @@ function FallingBanana({
 
     // Interaction State
     const isDragging = useRef(false)
-    const hasMoved = useRef(false)
     const startPointerPos = useRef<{ x: number, y: number } | null>(null)
 
     return (
@@ -97,8 +96,7 @@ function FallingBanana({
                 const localPoint = ref.current!.worldToLocal(worldPoint)
 
                 startPointerPos.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
-                isDragging.current = false
-                hasMoved.current = false
+                isDragging.current = false // Reset for this new interaction
 
                     // Store temp offset for when drag starts
                     ; (ref.current as any).userData.dragOffset = [localPoint.x, localPoint.y, localPoint.z]
@@ -110,12 +108,8 @@ function FallingBanana({
                 const dy = e.nativeEvent.clientY - startPointerPos.current.y
                 const dist = Math.sqrt(dx * dx + dy * dy)
 
-                if (dist > 5) {
-                    hasMoved.current = true
-                }
-
                 if (!isDragging.current) {
-                    if (dist > 10) { // Threshold
+                    if (dist > 20) { // Threshold
                         isDragging.current = true
                         const offset = (ref.current as any).userData.dragOffset
                         onDragStart(ref, offset)
@@ -130,14 +124,22 @@ function FallingBanana({
 
                 if (isDragging.current) {
                     onDragEnd()
-                } else if (!hasMoved.current) {
+                }
+                // Do not reset isDragging here, so onClick can check it
+            }}
+            onClick={(e) => {
+                e.stopPropagation()
+                if (!isDragging.current) {
                     onBananaClick(id)
                 }
-                isDragging.current = false
-                hasMoved.current = false
             }}
         >
             <Banana scale={25} rotation={[0, Math.PI, 0]} />
+            {/* Hit box helper: Transparent box to make clicking easier */}
+            <mesh>
+                <boxGeometry args={[1.5, 0.8, 0.8]} />
+                <meshBasicMaterial visible={false} />
+            </mesh>
         </group>
     )
 }
@@ -163,7 +165,7 @@ function Boundaries() {
 function Plane({ isWall, opacity = 0.3, ...props }: any) {
     const [ref] = usePlane<THREE.Mesh>(() => ({ ...props }))
     return (
-        <mesh ref={ref} receiveShadow={!isWall} castShadow={false}>
+        <mesh ref={ref} receiveShadow={!isWall} castShadow={false} raycast={isWall ? () => null : undefined}>
             <planeGeometry args={[100, 100]} />
             {!isWall && <shadowMaterial color="#000" transparent opacity={opacity} />}
             {isWall && <meshBasicMaterial visible={false} depthWrite={false} />}
@@ -470,8 +472,8 @@ function App() {
                                         transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                                         whileHover={isHoverSupported ? { y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } } : undefined}
                                         whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
-                                        onPointerDown={(e) => {
-                                            e.preventDefault()
+                                        onClick={(e) => {
+                                            e.stopPropagation()
                                             handleCharTap(char)
                                         }}
                                     >
