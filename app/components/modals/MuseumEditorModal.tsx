@@ -103,6 +103,9 @@ const MuseumEditorModal = ({
                 image: imagePreview || null,
                 createdAt: editingArtwork ? undefined : serverTimestamp(), // Keep original timestamp if editing
                 authorId: user.uid,
+                authorName: user.displayName || "Anonymous",
+                authorPhoto: user.photoURL || null,
+                authorEmail: user.email || null,
             }
 
             // Remove undefined fields

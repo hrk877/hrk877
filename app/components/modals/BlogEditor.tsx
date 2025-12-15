@@ -89,6 +89,9 @@ const BlogEditor = ({
                         .replace(/\//g, "."),
                     createdAt: serverTimestamp(),
                     authorId: user.uid,
+                    authorName: user.displayName || "Anonymous",
+                    authorPhoto: user.photoURL || null,
+                    authorEmail: user.email || null,
                 })
             }
 
