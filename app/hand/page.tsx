@@ -361,14 +361,15 @@ function App() {
 
 
     // Sequence Logic: 8-7-7 (Indices: 0, 1, 2 of "877")
-    const [tapSequenceIndex, setTapSequenceIndex] = useState(0)
+    const tapSequenceIndex = useRef(0)
     const targetSequence = ["8", "7", "7"]
 
     const handleCharTap = (char: string) => {
-        const expectedChar = targetSequence[tapSequenceIndex]
+        const currentIndex = tapSequenceIndex.current
+        const expectedChar = targetSequence[currentIndex]
 
         if (char === expectedChar) {
-            if (tapSequenceIndex === targetSequence.length - 1) {
+            if (currentIndex === targetSequence.length - 1) {
                 // Success
                 if (user && !user.isAnonymous) {
                     setEditingPost(null)
@@ -376,16 +377,16 @@ function App() {
                 } else {
                     setIsLoginOpen(true)
                 }
-                setTapSequenceIndex(0)
+                tapSequenceIndex.current = 0
             } else {
-                setTapSequenceIndex(prev => prev + 1)
+                tapSequenceIndex.current = currentIndex + 1
             }
         } else {
             // Reset
             if (char === "8") {
-                setTapSequenceIndex(1)
+                tapSequenceIndex.current = 1
             } else {
-                setTapSequenceIndex(0)
+                tapSequenceIndex.current = 0
             }
         }
     }
