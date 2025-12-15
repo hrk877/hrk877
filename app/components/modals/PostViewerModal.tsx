@@ -72,7 +72,7 @@ const PostViewerModal = ({
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <div className="flex flex-col gap-1 border-b border-black/10 pb-6 mb-4">
+                                <div className="flex flex-col gap-1 border-b border-black/10 pb-4 mb-4">
                                     <span className="font-mono text-[10px] tracking-[0.2em] opacity-40 uppercase">DROPPED BY</span>
                                     <h2 className="font-serif text-2xl md:text-3xl text-black">
                                         {post.authorFingerId ? post.authorFingerId.replace(/^finger(\d+)$/, (_, n) => `Finger ${n}`) : 'Anonymous'}
