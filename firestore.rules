@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is the owner of the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is an admin (password provider)
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Counters collection (Critical for finger_id)
+    match /counters/user_count {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Whitelisted users (Read-only for authenticated users)
+    match /whitelisted_users/{email} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Artifacts collection (Nested structure)
+    match /artifacts/{appId}/public/data {
+      
+      // Banana Hand Posts (Social feature)
+      match /banana_hand_posts/{postId} {
+        allow read: if true;
+        allow create: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+
+      // Museum Artworks (Admin only content)
+      match /museum_artworks/{artworkId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
+      // Blog Posts (Admin only content)
+      match /posts/{postId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+  }
+}

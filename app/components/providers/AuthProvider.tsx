@@ -79,7 +79,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                 transaction.set(userRef, { fingerId: currentFingerId }, { merge: true })
                             })
                         } catch (err) {
-                            console.error("Transaction failed: ", err)
+                            console.error("Finger ID Transaction failed: ", err)
+                            // If it's a permission error, this will help confirm it.
+                            if ((err as any).code === 'permission-denied') {
+                                console.error("PERMISSION DENIED: likely missing write access to 'counters/user_count'. check firestore.rules.")
+                            }
                         }
                     }
                     setFingerId(currentFingerId)
