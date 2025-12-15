@@ -24,8 +24,8 @@ const MENU_ITEMS = [
     {
         label: "SNS",
         children: [
-            { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
             { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
+            { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
         ]
     },
     { label: "hrk.877", href: "/" },
@@ -94,8 +94,8 @@ export default function HamburgerMenu() {
                 ]
             case "SNS":
                 return [
-                    { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
                     { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
+                    { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
             default:
