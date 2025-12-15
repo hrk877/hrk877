@@ -38,7 +38,7 @@ const PostViewerModal = ({
                         className="bg-[#FAFAFA] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-8 md:p-12">
+                        <div className="p-6 md:p-12">
                             <div className="absolute top-6 right-6 flex items-center gap-4 z-10">
                                 {isAuthor && (
                                     <div className="flex items-center gap-3 border-r border-black/10 pr-4">
@@ -71,22 +71,20 @@ const PostViewerModal = ({
                                 </button>
                             </div>
 
-                            <div className="flex flex-col gap-8">
-                                <div className="font-mono text-xs tracking-widest opacity-40 uppercase">banana post</div>
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-1 border-b border-black/10 pb-6 mb-4">
+                                    <span className="font-mono text-[10px] tracking-[0.2em] opacity-40 uppercase">DROPPED BY</span>
+                                    <h2 className="text-3xl font-serif">
+                                        {post.authorFingerId ? post.authorFingerId.replace(/^finger(\d+)$/, (_, n) => `Finger ${n}`) : 'Anonymous'}
+                                    </h2>
+                                </div>
 
                                 <div className="font-serif text-2xl md:text-3xl leading-relaxed text-black whitespace-pre-wrap">
                                     {post.content}
-                                    {post.authorFingerId && (
-                                        <span className="opacity-50 text-base block mt-8 font-mono">
-                                            by {post.authorFingerId}
-                                        </span>
-                                    )}
                                 </div>
 
-                                <div className="w-full h-px bg-black/5 mt-4" />
-
-                                <div className="flex justify-end items-center gap-2 font-mono text-[10px] opacity-40 uppercase">
-                                    <span>POSTED ON</span>
+                                <div className="flex justify-end items-center gap-2 font-mono text-[10px] opacity-40 uppercase mt-2 pt-0 border-t-0">
+                                    <span>DROPPED ON</span>
                                     <span>
                                         {new Date(post.createdAt).toLocaleDateString("ja-JP", {
                                             year: "numeric",
