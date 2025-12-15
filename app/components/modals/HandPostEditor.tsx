@@ -17,6 +17,7 @@ export interface HandPost {
 }
 
 import { useAuth } from "../providers/AuthProvider"
+import { notifyCommunity } from "@/app/lib/notification"
 
 const HandPostEditor = ({
     isOpen,
@@ -83,6 +84,9 @@ const HandPostEditor = ({
                     authorEmail: user?.email || null, // Optional, for admin use
                     authorFingerId: fingerId || null,
                 })
+
+                // Notify community
+                notifyCommunity('banana', content)
             }
             setContent("")
             onClose()

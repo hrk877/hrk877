@@ -7,6 +7,7 @@ import { X, ImageIcon } from "lucide-react"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
+import { notifyCommunity } from "@/app/lib/notification"
 
 export interface Artwork {
     id: string
@@ -121,6 +122,9 @@ const MuseumEditorModal = ({
             } else {
                 // Create new
                 await addDoc(museumRef, dataToSave)
+
+                // Notify community
+                notifyCommunity('museum', title)
             }
 
             onClose()

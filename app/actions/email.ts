@@ -33,3 +33,25 @@ export async function sendEmail(message: string) {
         return { success: false, error: "Failed to send email" }
     }
 }
+
+export async function sendBroadcastEmail(bcc: string[], subject: string, message: string) {
+    if (!process.env.GMAIL_USER_NEW || !process.env.GMAIL_APP_PASSWORD_NEW) {
+        console.error("Missing Gmail credentials")
+        return { success: false, error: "Configuration Error" }
+    }
+
+    try {
+        console.log(`Sending broadcast to ${bcc.length} recipients`)
+        await transporter.sendMail({
+            from: process.env.GMAIL_USER_NEW,
+            to: process.env.GMAIL_USER_NEW, // Send to self
+            bcc: bcc, // Blind copy all users
+            subject: subject,
+            text: message,
+        })
+        return { success: true }
+    } catch (error) {
+        console.error("Error sending broadcast:", error)
+        return { success: false, error: "Failed to send broadcast" }
+    }
+}
