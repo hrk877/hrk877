@@ -51,8 +51,8 @@ ${SITE_URL}/museum`
             case 'journal':
                 subject = "New Journal Entry Published 🍌"
                 message = `
-新しい日記が綴られました。
-行間にある静けさを、バナナと共に味わってみませんか。
+新しい記録が綴られました。
+行間にある静けさを、共に味わってみませんか。
 
 Read the Journal
 ${SITE_URL}/letter`
