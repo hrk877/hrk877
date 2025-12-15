@@ -58,10 +58,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const isPasswordAuth = currentUser?.providerData?.some(p => p.providerId === 'password') ?? false
             setIsAdmin(!!currentUser && isPasswordAuth)
 
-            if (currentUser) {
-                // Save/Update User in Firestore
-                // We do this for all users, including anonymous (though anonymous usually lack info)
-                // Helpful if they later link accounts or for tracking anonymous usage
+            if (currentUser && !currentUser.isAnonymous) {
+                // Save/Update User in Firestore (Only for signed-in users)
                 try {
                     const userRef = doc(db, "users", currentUser.uid)
                     await setDoc(userRef, {
