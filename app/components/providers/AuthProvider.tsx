@@ -3,17 +3,20 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "firebase/auth"
 import type { User as FirebaseUser } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
 
 interface AuthContextType {
     user: FirebaseUser | null
     isAdmin: boolean
+    isWhitelisted: boolean
     loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     isAdmin: false,
+    isWhitelisted: false,
     loading: true,
 })
 
@@ -22,6 +25,7 @@ export const useAuth = () => useContext(AuthContext)
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<FirebaseUser | null>(null)
     const [isAdmin, setIsAdmin] = useState(false)
+    const [isWhitelisted, setIsWhitelisted] = useState(false)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -46,17 +50,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         initAuth()
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             console.log("Auth State Changed:", currentUser?.email, currentUser?.providerData)
             setUser(currentUser)
+
             // Admin only if logged in via Password (email/password)
             const isPasswordAuth = currentUser?.providerData?.some(p => p.providerId === 'password') ?? false
             setIsAdmin(!!currentUser && isPasswordAuth)
+
+            // Check whitelist status
+            if (currentUser && currentUser.email && !currentUser.isAnonymous) {
+                try {
+                    const docRef = doc(db, "whitelisted_users", currentUser.email)
+                    const docSnap = await getDoc(docRef)
+                    setIsWhitelisted(docSnap.exists())
+                } catch (error) {
+                    console.error("Whitelist check failed", error)
+                    setIsWhitelisted(false)
+                }
+            } else {
+                setIsWhitelisted(false)
+            }
+
             setLoading(false)
         })
 
         return () => unsubscribe()
     }, [])
 
-    return <AuthContext.Provider value={{ user, isAdmin, loading }}>{children}</AuthContext.Provider>
+    return <AuthContext.Provider value={{ user, isAdmin, isWhitelisted, loading }}>{children}</AuthContext.Provider>
 }

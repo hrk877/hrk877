@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { useAuth } from "../providers/AuthProvider"
 import { signOut } from "firebase/auth"
-import { auth, db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import { auth } from "@/lib/firebase"
 import { Settings } from "lucide-react"
 
 import LoginModal from "../modals/LoginModal"
@@ -38,11 +37,10 @@ export default function HamburgerMenu() {
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
 
     // Auth & Access State
-    const { user, isAdmin } = useAuth()
+    const { user, isAdmin, isWhitelisted } = useAuth()
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
     const [isAllowlistOpen, setIsAllowlistOpen] = useState(false)
     const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false)
-    const [checkingAccess, setCheckingAccess] = useState(false)
 
     // Dynamic Theme Color for Mobile Status Bar
     useEffect(() => {
@@ -68,7 +66,7 @@ export default function HamburgerMenu() {
     }
 
     // Handle LINE Button Click
-    const handleLineClick = async (e: React.MouseEvent) => {
+    const handleLineClick = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
 
@@ -78,33 +76,12 @@ export default function HamburgerMenu() {
             return
         }
 
-        // 2. Admin -> Allowed (Bypass)
-        if (isAdmin) {
+        // 2. Admin or Whitelisted -> Allowed
+        if (isAdmin || isWhitelisted) {
             window.open("https://lin.ee/CYLzSSE", "_blank")
-            return
-        }
-
-        // 3. Check Whitelist
-        setCheckingAccess(true)
-        try {
-            if (user.email) {
-                const docRef = doc(db, "whitelisted_users", user.email)
-                const docSnap = await getDoc(docRef)
-
-                if (docSnap.exists()) {
-                    window.open("https://lin.ee/CYLzSSE", "_blank")
-                } else {
-                    setIsAccessDeniedOpen(true)
-                }
-            } else {
-                // Should be caught by step 1, but safety fallback
-                setIsAccessDeniedOpen(true)
-            }
-        } catch (error) {
-            console.error("Access check failed", error)
+        } else {
             setIsAccessDeniedOpen(true)
         }
-        setCheckingAccess(false)
     }
 
     // Helper to get items for current view
@@ -202,7 +179,7 @@ export default function HamburgerMenu() {
                                                                 toggleMenu()
                                                             }
                                                         }}
-                                                        className={`text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500 ${item.label === "LINE" && checkingAccess ? "opacity-50" : ""}`}
+                                                        className={`text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500`}
                                                     >
                                                         {item.label}
                                                     </a>
