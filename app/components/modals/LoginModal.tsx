@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X } from "lucide-react"
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
@@ -10,6 +10,17 @@ import { auth } from "@/lib/firebase"
 const LoginModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
+    const safeToClose = useRef(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            safeToClose.current = false
+            const timer = setTimeout(() => {
+                safeToClose.current = true
+            }, 300)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
 
     return (
         <AnimatePresence>
@@ -19,7 +30,9 @@ const LoginModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
-                    onClick={onClose}
+                    onClick={() => {
+                        if (safeToClose.current) onClose()
+                    }}
                 >
                     <motion.div
                         initial={{ y: 50, opacity: 0 }}

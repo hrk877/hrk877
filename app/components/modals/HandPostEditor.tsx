@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X } from "lucide-react"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
@@ -100,6 +100,17 @@ const HandPostEditor = ({
 
     const isEditing = !!postToEdit
 
+    const safeToClose = useRef(false)
+    useEffect(() => {
+        if (isOpen) {
+            safeToClose.current = false
+            const timer = setTimeout(() => {
+                safeToClose.current = true
+            }, 300)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen])
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -108,7 +119,9 @@ const HandPostEditor = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
-                    onClick={onClose}
+                    onClick={() => {
+                        if (safeToClose.current) onClose()
+                    }}
                 >
                     <motion.div
                         initial={{ y: 50, opacity: 0 }}

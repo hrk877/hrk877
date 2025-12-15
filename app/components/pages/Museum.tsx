@@ -13,6 +13,7 @@ import MuseumEditorModal, { type Artwork } from "../modals/MuseumEditorModal"
 import { useAuth } from "../providers/AuthProvider"
 import Link from "next/link"
 import TopNavigation from "../layout/TopNavigation"
+import AdminLoginModal from "../modals/AdminLoginModal"
 
 const Museum = () => {
     const { isAdmin, user } = useAuth()
@@ -20,6 +21,19 @@ const Museum = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
     const [editingArtwork, setEditingArtwork] = useState<Artwork | null>(null)
+    const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false)
+    const [secretClickCount, setSecretClickCount] = useState(0)
+
+    const handleSecretClick = () => {
+        setSecretClickCount(prev => {
+            const newCount = prev + 1
+            if (newCount === 5) {
+                setIsAdminLoginOpen(true)
+                return 0
+            }
+            return newCount
+        })
+    }
 
     const defaultArtworks: Artwork[] = [
         { id: "1", title: "The Sovereign", date: "2025", type: "Digital Structure", desc: "完全なる曲線の具現化。" },
@@ -103,6 +117,10 @@ const Museum = () => {
                 user={user}
                 editingArtwork={editingArtwork}
             />
+            <AdminLoginModal
+                isOpen={isAdminLoginOpen}
+                onClose={() => setIsAdminLoginOpen(false)}
+            />
 
             <div className="max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
@@ -114,7 +132,7 @@ const Museum = () => {
                     </div>
                     <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
                         <p className="font-mono text-lg md:text-xs opacity-60">
-                            Curated by HRK.877
+                            Curated by <span className="cursor-pointer select-none hover:text-white transition-colors" onClick={handleSecretClick}>HRK.877</span>
                             <br />
                             Tokyo, Japan
                         </p>

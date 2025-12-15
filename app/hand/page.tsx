@@ -473,8 +473,8 @@ function App() {
                                         transition={{ delay: 0.2 + index * 0.1, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                                         whileHover={isHoverSupported ? { y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } } : undefined}
                                         whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
-                                        onClick={(e) => {
-                                            e.stopPropagation()
+                                        onPointerDown={(e) => {
+                                            e.preventDefault()
                                             handleCharTap(char)
                                         }}
                                     >
