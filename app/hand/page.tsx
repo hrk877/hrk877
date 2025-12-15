@@ -302,7 +302,7 @@ function App() {
         const q = query(
             collection(db, "artifacts", appId, "public", "data", "banana_hand_posts"),
             orderBy("createdAt", "desc"),
-            limit(50)
+            limit(100)
         )
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -326,7 +326,7 @@ function App() {
                     const isMyB = b.authorId === user.uid
                     if (isMyA && !isMyB) return -1
                     if (!isMyA && isMyB) return 1
-                    return 0 // Keep original order (createdAt desc)
+                    return b.createdAt - a.createdAt // Explicitly maintain date sort
                 })
             }
 
