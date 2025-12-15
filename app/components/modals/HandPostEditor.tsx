@@ -73,7 +73,10 @@ const HandPostEditor = ({
                 await addDoc(collection(db, "artifacts", appId, "public", "data", "banana_hand_posts"), {
                     content,
                     createdAt: serverTimestamp(),
-                    authorId: user?.uid || "anonymous"
+                    authorId: user?.uid || "anonymous",
+                    authorName: user?.displayName || "Anonymous",
+                    authorPhoto: user?.photoURL || null,
+                    authorEmail: user?.email || null, // Optional, for admin use
                 })
             }
             setContent("")

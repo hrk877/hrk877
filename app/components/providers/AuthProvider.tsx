@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "firebase/auth"
 import type { User as FirebaseUser } from "firebase/auth"
 import { auth, db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 
 interface AuthContextType {
     user: FirebaseUser | null
@@ -58,14 +58,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const isPasswordAuth = currentUser?.providerData?.some(p => p.providerId === 'password') ?? false
             setIsAdmin(!!currentUser && isPasswordAuth)
 
-            // Check whitelist status
-            if (currentUser && currentUser.email && !currentUser.isAnonymous) {
+            if (currentUser) {
+                // Save/Update User in Firestore
+                // We do this for all users, including anonymous (though anonymous usually lack info)
+                // Helpful if they later link accounts or for tracking anonymous usage
                 try {
-                    const docRef = doc(db, "whitelisted_users", currentUser.email)
-                    const docSnap = await getDoc(docRef)
-                    setIsWhitelisted(docSnap.exists())
+                    const userRef = doc(db, "users", currentUser.uid)
+                    await setDoc(userRef, {
+                        uid: currentUser.uid,
+                        email: currentUser.email || null,
+                        displayName: currentUser.displayName || null,
+                        photoURL: currentUser.photoURL || null,
+                        lastLoginAt: serverTimestamp(),
+                        isAnonymous: currentUser.isAnonymous,
+                    }, { merge: true })
                 } catch (error) {
-                    console.error("Whitelist check failed", error)
+                    console.error("Error updating user record:", error)
+                }
+
+                // Check whitelist status
+                if (currentUser.email && !currentUser.isAnonymous) {
+                    try {
+                        const docRef = doc(db, "whitelisted_users", currentUser.email)
+                        const docSnap = await getDoc(docRef)
+                        setIsWhitelisted(docSnap.exists())
+                    } catch (error) {
+                        console.error("Whitelist check failed", error)
+                        setIsWhitelisted(false)
+                    }
+                } else {
                     setIsWhitelisted(false)
                 }
             } else {
