@@ -33,18 +33,16 @@ export const notifyCommunity = async (type: 'banana' | 'museum' | 'journal', _co
             case 'banana':
                 subject = "A New Banana Has Dropped 🍌"
                 message = `
-誰かの思考が、バナナとなって舞い降りました。
-
+誰かの思考が、バナナとなって落ちてきました。
 その言葉の欠片を、拾い上げてみてください。
 
-Check the Banana
+Visit the 877hand
 ${SITE_URL}/hand`
                 break
             case 'museum':
-                subject = "New Art Exhibition Open 🍌"
+                subject = "New Art Has Arrived 🍌"
                 message = `
 新しいコレクションが追加されました。
-
 静謐な空間で、その作品はあなたを待っています。
 
 Visit the Museum
@@ -53,9 +51,8 @@ ${SITE_URL}/museum`
             case 'journal':
                 subject = "New Journal Entry Published 🍌"
                 message = `
-新しい記録が綴られました。
-
-行間にある静けさを、共に味わってみませんか。
+新しい日記が綴られました。
+行間にある静けさを、バナナと共に味わってみませんか。
 
 Read the Journal
 ${SITE_URL}/letter`
