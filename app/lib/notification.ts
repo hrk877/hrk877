@@ -32,36 +32,32 @@ export const notifyCommunity = async (type: 'banana' | 'museum' | 'journal', _co
         switch (type) {
             case 'banana':
                 subject = "A New Banana Has Dropped 🍌"
-                message = `静寂の空間に、またひとつ、誰かの思考がバナナとなってこの場所に舞い降りました。
+                message = `
+誰かの思考が、バナナとなって舞い降りました。
 
-それは誰かの何気ない日常の欠片かもしれないし、
-あるいは、あなたにとって重要なメッセージを含んでいるかもしれません。
+その言葉の欠片を、拾い上げてみてください。
 
-バナナの皮をむくように、その言葉に触れてみてください。
-
-[Check the Banana]
+Check the Banana
 ${SITE_URL}/hand`
                 break
             case 'museum':
                 subject = "New Art Exhibition Open 🍌"
-                message = `その空間は、常に静かに変化を続けています。
+                message = `
+新しいコレクションが追加されました。
 
-ミュージアムに新しいコレクションが追加されました。
-デジタルの額縁の中で、その作品は誰かの眼差しを待っています。
+静謐な空間で、その作品はあなたを待っています。
 
-日常の喧騒を離れ、少しだけアートに触れる時間を。
-
-[Visit the Museum]
+Visit the Museum
 ${SITE_URL}/museum`
                 break
             case 'journal':
                 subject = "New Journal Entry Published 🍌"
-                message = `思考の記録が、新たに綴られました。
+                message = `
+新しい記録が綴られました。
 
-言葉は時に、形あるものよりも鮮明に、その瞬間の空気を閉じ込めます。
-その行間にある静けさを、共に味わってみませんか。
+行間にある静けさを、共に味わってみませんか。
 
-[Read the Journal]
+Read the Journal
 ${SITE_URL}/letter`
                 break
         }
