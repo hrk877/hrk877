@@ -1,24 +1,13 @@
 
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { sendBroadcastEmail } from "@/app/actions/email"
+import { getAllUserEmails } from "@/app/lib/users"
 
 const SITE_URL = "https://877hand.vercel.app"
 
 export const notifyCommunity = async (type: 'banana' | 'museum' | 'journal', _content: string) => {
     try {
         // 1. Fetch all users with emails
-        const usersRef = collection(db, "users")
-        const q = query(usersRef, where("email", "!=", null))
-        const querySnapshot = await getDocs(q)
-
-        const recipients: string[] = []
-        querySnapshot.forEach((doc) => {
-            const data = doc.data()
-            if (data.email && !data.isAnonymous) {
-                recipients.push(data.email)
-            }
-        })
+        const recipients = await getAllUserEmails()
 
         if (recipients.length === 0) {
             console.log("No recipients found for notification")

@@ -55,3 +55,19 @@ export async function sendBroadcastEmail(bcc: string[], subject: string, message
         return { success: false, error: "Failed to send broadcast" }
     }
 }
+
+import { getAllUserEmails } from "@/app/lib/users"
+
+export async function sendCustomBroadcast(subject: string, message: string) {
+    try {
+        const recipients = await getAllUserEmails()
+        if (recipients.length === 0) {
+            return { success: false, error: "No recipients found" }
+        }
+
+        return await sendBroadcastEmail(recipients, subject, message)
+    } catch (error) {
+        console.error("Custom broadcast failed:", error)
+        return { success: false, error: "Failed to send custom broadcast" }
+    }
+}
