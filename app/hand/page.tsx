@@ -494,12 +494,6 @@ function App() {
                             transition={{ delay: 1, duration: 1 }}
                         >
                             <div className="font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
-                            <button
-                                onClick={() => setIsTermsOpen(true)}
-                                className="mt-4 font-mono text-[10px] md:text-[10px] opacity-40 hover:opacity-100 tracking-widest transition-opacity uppercase"
-                            >
-                                Terms & Privacy
-                            </button>
                         </motion.div>
                     </div>
                 </div>
