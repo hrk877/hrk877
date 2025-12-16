@@ -1,6 +1,7 @@
 "use client"
 
 import BroadcastModal from "../modals/BroadcastModal"
+import TermsModal from "../modals/TermsModal"
 import { useState } from "react"
 
 interface FooterProps {
@@ -11,6 +12,7 @@ interface FooterProps {
 
 const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
     const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
+    const [isTermsOpen, setIsTermsOpen] = useState(false)
 
     return (
         <>
@@ -31,6 +33,12 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                         </span>
                     </div>
                     <div className="flex flex-col text-left font-mono text-lg md:text-xs gap-3">
+                        <button
+                            onClick={() => setIsTermsOpen(true)}
+                            className="text-left hover:text-white transition-colors uppercase"
+                        >
+                            TERMS & PRIVACY
+                        </button>
                         {isAdmin && (
                             <>
                                 <button
@@ -51,7 +59,7 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                         BANANA
                     </h2>
                 </div>
-                <div className="flex justify-between items-end font-mono text-base md:text-xs uppercase opacity-40 z-10 pt-4">
+                <div className="flex justify-between items-end font-mono text-base md:text-xs uppercase opacity-40 z-10 pt-4 w-full">
                     <span>
                         © 2025 HRK.877
                     </span>
@@ -62,6 +70,10 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
             <BroadcastModal
                 isOpen={isBroadcastModalOpen}
                 onClose={() => setIsBroadcastModalOpen(false)}
+            />
+            <TermsModal
+                isOpen={isTermsOpen}
+                onClose={() => setIsTermsOpen(false)}
             />
         </>
     )

@@ -11,6 +11,7 @@ import * as THREE from "three"
 import HandPostEditor, { HandPost } from "../components/modals/HandPostEditor"
 import PostViewerModal from "../components/modals/PostViewerModal"
 import LoginModal from "../components/modals/LoginModal"
+import TermsModal from "../components/modals/TermsModal"
 import { useAuth } from "../components/providers/AuthProvider"
 import { collection, query, orderBy, onSnapshot, limit, deleteDoc, doc } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
@@ -250,6 +251,7 @@ function App() {
     const [bananas, setBananas] = useState<BananaData[]>([])
     const [isHoverSupported, setIsHoverSupported] = useState(false)
     const [isLoginOpen, setIsLoginOpen] = useState(false)
+    const [isTermsOpen, setIsTermsOpen] = useState(false)
     const { user } = useAuth()
 
     // Editing state
@@ -426,6 +428,7 @@ function App() {
             <HamburgerMenu />
 
             <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+            <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
 
             <HandPostEditor
                 isOpen={isEditorOpen}
@@ -491,6 +494,12 @@ function App() {
                             transition={{ delay: 1, duration: 1 }}
                         >
                             <div className="font-mono text-sm md:text-xs opacity-60 tracking-widest">EST. 2025 — TOKYO</div>
+                            <button
+                                onClick={() => setIsTermsOpen(true)}
+                                className="mt-4 font-mono text-[10px] md:text-[10px] opacity-40 hover:opacity-100 tracking-widest transition-opacity uppercase"
+                            >
+                                Terms & Privacy
+                            </button>
                         </motion.div>
                     </div>
                 </div>
