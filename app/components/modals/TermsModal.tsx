@@ -22,11 +22,11 @@ const TermsModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="flex-shrink-0 px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
-                            <h2 className="text-2xl font-serif tracking-in-expand">Terms & Privacy</h2>
+                        <div className="flex-shrink-0 px-4 py-4 md:px-8 md:py-6 border-b border-gray-100 flex justify-between items-center bg-white relative z-20">
+                            <h2 className="text-xl md:text-2xl font-serif tracking-in-expand text-black">Terms & Privacy</h2>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-gray-100 transition-colors rounded-full"
+                                className="p-2 hover:bg-gray-100 transition-colors rounded-full text-black"
                             >
                                 <X size={24} />
                             </button>
