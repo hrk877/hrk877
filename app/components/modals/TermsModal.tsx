@@ -40,7 +40,7 @@ const TermsModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                                 <p className="opacity-80">
                                     HRK.877へようこそ。ここは有機的な曲線と、少しの遊び心でできたデジタル空間です。
                                     <br />
-                                    あなたがこの場所（877hand、Museum、Letter、AI等）を利用するとき、私たちはいくつかの約束を共有します。
+                                    本サービスを利用することで、あなたはこの空間のルール（本規約）に同意したものとみなされます。
                                 </p>
                             </section>
 
