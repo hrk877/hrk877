@@ -173,7 +173,10 @@ const Museum = () => {
                                 viewport={{ once: true, margin: "-50px" }}
                                 className="group cursor-pointer"
                             >
-                                <div className="aspect-[3/4] bg-black relative overflow-hidden mb-6 flex items-center justify-center">
+                                <div
+                                    className="aspect-[3/4] bg-black relative overflow-hidden mb-6 flex items-center justify-center"
+                                    onContextMenu={(e) => e.preventDefault()}
+                                >
                                     <div className="absolute inset-0 bg-[#FAC800] opacity-0 group-hover:opacity-10 transition-opacity duration-500" />
                                     {art.image ? (
                                         <Image
@@ -182,7 +185,8 @@ const Museum = () => {
                                             fill
                                             priority={i < 4}
                                             sizes="(max-width: 768px) 100vw, 50vw"
-                                            className="object-cover"
+                                            className="object-cover pointer-events-none select-none"
+                                            onDragStart={(e) => e.preventDefault()}
                                         />
                                     ) : (
                                         <ModernBananaSVG
