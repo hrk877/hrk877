@@ -187,6 +187,7 @@ const Museum = () => {
                                             sizes="(max-width: 768px) 100vw, 50vw"
                                             className="object-cover pointer-events-none select-none"
                                             onDragStart={(e) => e.preventDefault()}
+                                            style={{ WebkitTouchCallout: "none" }}
                                         />
                                     ) : (
                                         <ModernBananaSVG
