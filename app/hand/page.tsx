@@ -364,14 +364,12 @@ function App() {
 
     // Sequence Logic: 8-7-7 (Indices: 0, 1, 2 of "877")
     const tapSequenceIndex = useRef(0)
-    const targetSequence = ["8", "7", "7"]
 
-    const handleCharTap = (char: string) => {
-        const currentIndex = tapSequenceIndex.current
-        const expectedChar = targetSequence[currentIndex]
+    const handleCharTap = (index: number) => {
+        const requiredIndex = tapSequenceIndex.current
 
-        if (char === expectedChar) {
-            if (currentIndex === targetSequence.length - 1) {
+        if (index === requiredIndex) {
+            if (requiredIndex === 2) { // 0 -> 1 -> 2 matches the "877" indices
                 // Success
                 if (user && !user.isAnonymous) {
                     setEditingPost(null)
@@ -381,11 +379,13 @@ function App() {
                 }
                 tapSequenceIndex.current = 0
             } else {
-                tapSequenceIndex.current = currentIndex + 1
+                tapSequenceIndex.current = requiredIndex + 1
             }
         } else {
             // Reset
-            if (char === "8") {
+            // If the user tapped "8" (index 0) while we were expecting something else,
+            // treat it as the start of a new sequence.
+            if (index === 0) {
                 tapSequenceIndex.current = 1
             } else {
                 tapSequenceIndex.current = 0
@@ -478,7 +478,7 @@ function App() {
                                         whileTap={{ y: -20, rotate: index % 2 === 0 ? 5 : -5, transition: { duration: 0.3 } }}
                                         onPointerDown={(e) => {
                                             e.preventDefault()
-                                            handleCharTap(char)
+                                            handleCharTap(index)
                                         }}
                                     >
                                         {char}
