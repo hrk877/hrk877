@@ -108,11 +108,30 @@ const JournalDetailPage = ({
                         transition={{ delay: 0.4 }}
                         className="prose prose-lg max-w-none"
                     >
-                        {post.content.split("\n").map((paragraph, idx) => (
-                            <p key={idx} className="text-lg md:text-xl leading-relaxed mb-6 font-serif opacity-80">
-                                {paragraph}
-                            </p>
-                        ))}
+                        {post.content.split(/(!\[image\]\(.*?\))/g).map((part, index) => {
+                            const imageMatch = part.match(/!\[image\]\((.*?)\)/)
+                            if (imageMatch) {
+                                return (
+                                    <div key={index} className="my-8 md:my-12 -mx-4 md:-mx-8">
+                                        <img
+                                            src={imageMatch[1]}
+                                            alt="Post content"
+                                            className="w-full h-auto object-cover rounded-none"
+                                        />
+                                    </div>
+                                )
+                            }
+
+                            // Render text paragraphs
+                            return part.split("\n").map((paragraph, pIndex) => {
+                                if (!paragraph.trim()) return null
+                                return (
+                                    <p key={`${index}-${pIndex}`} className="text-lg md:text-xl leading-relaxed mb-6 font-serif opacity-80">
+                                        {paragraph}
+                                    </p>
+                                )
+                            })
+                        })}
                     </motion.article>
                 </div>
             </main>

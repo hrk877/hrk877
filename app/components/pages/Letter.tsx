@@ -80,9 +80,17 @@ const Letter = () => {
         <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20 flex flex-col">
             <TopNavigation />
             <div className="w-full max-w-7xl mx-auto relative flex-1 flex flex-col">
-                <div className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
-                    <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">LETTER</h1>
-                </div>
+                <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
+                    <div>
+                        <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">LETTER</h1>
+                    </div>
+                    <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
+                        <p className="font-mono text-lg md:text-xs opacity-60">
+                            YOUR LETTER IS SENT<br />
+                            COMPLETELY ANONYMOUSLY.
+                        </p>
+                    </div>
+                </header>
 
                 <div className="w-full max-w-2xl mx-auto flex-1 flex flex-col">
 
@@ -96,15 +104,12 @@ const Letter = () => {
                             <textarea
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                className="letter-input w-full min-h-[40vh] bg-transparent focus:outline-none placeholder:text-black/20"
+                                className="letter-input w-full min-h-[30vh] bg-transparent focus:outline-none placeholder:text-black/20"
                                 autoFocus
                             />
                         </motion.div>
 
-                        <div className="mt-8 flex flex-row justify-between items-end md:items-center">
-                            <p className="font-mono text-[10px] md:text-xs opacity-40 tracking-widest max-w-[60%] leading-relaxed">
-                                YOUR LETTER IS SENT<br className="block md:hidden" /> COMPLETELY ANONYMOUSLY.
-                            </p>
+                        <div className="mt-8 flex flex-row justify-end items-center">
                             <button
                                 onClick={handleSend}
                                 disabled={!message.trim() || loading}

@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
+import { getStorage } from "firebase/storage"
 
 // ============================================
 // Firebase Configuration
@@ -19,8 +20,9 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
 const auth = getAuth(app)
 const db = getFirestore(app)
+const storage = getStorage(app)
 
 // Firestoreのパスに使用するApp ID
 const appId = "1:977524735776:web:d76bfaaa526cc96b366145"
 
-export { app, auth, db, appId }
+export { app, auth, db, storage, appId }

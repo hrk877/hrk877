@@ -146,7 +146,7 @@ export default function JournalPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             onClick={() => handleOpenPost(post)}
-                            className="group border-t border-black/20 py-6 cursor-pointer hover:bg-black hover:text-[#FAC800] transition-colors duration-300 relative overflow-hidden px-4 md:px-6 -mx-4 md:mx-0"
+                            className="group border-t border-black/20 first:border-t-0 py-6 cursor-pointer hover:bg-black hover:text-[#FAC800] transition-colors duration-300 relative overflow-hidden px-4 md:px-6 -mx-4 md:mx-0"
                         >
                             <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-12 relative z-10 p-2">
                                 <span className="font-mono text-xs md:text-xs opacity-40 w-24 shrink-0">{post.date}</span>
