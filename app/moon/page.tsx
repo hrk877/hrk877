@@ -286,6 +286,14 @@ export default function MoonPage() {
                         >
                             <TargetVisual isFound={isFound} />
 
+                            {isFound && (
+                                <div className="absolute top-full mt-4 flex flex-col items-center">
+                                    <div className="text-[#FAC800] font-serif tracking-[0.2em] text-lg animate-pulse whitespace-nowrap">
+                                        MOON FOUND
+                                    </div>
+                                </div>
+                            )}
+
 
                         </div>
                     </div>
