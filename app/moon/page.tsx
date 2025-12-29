@@ -366,7 +366,7 @@ function TargetVisual({ isFound }: { isFound: boolean }) {
     return (
         <svg
             viewBox="0 0 100 100"
-            className={`w-full h-full drop-shadow-[0_0_15px_rgba(250,200,0,0.3)] transition-all duration-300 ${isFound ? "text-[#FAC800] scale-110" : "text-[#FAC800]/60 scale-100"}`}
+            className={`w-full h-full transition-all duration-300 ${isFound ? "text-[#FAC800] scale-110" : "text-[#FAC800]/60 scale-100"}`}
         >
             {/* Simple Elegant Circle */}
             <circle
