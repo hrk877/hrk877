@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
-import TopNavigation from "../layout/TopNavigation"
+import HamburgerMenu from "../navigation/HamburgerMenu"
 import { getBananaResponse } from "@/app/actions/gemini"
 import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
@@ -113,16 +113,16 @@ const BananaAI = () => {
 
     return (
         <div className="h-[100dvh] bg-[#FAC800] text-black flex flex-col overflow-hidden">
-            <div className="flex-none pt-20 md:pt-24 px-4 md:px-6">
-                <TopNavigation />
-                <div className="w-full max-w-3xl mx-auto">
-                    <header className="mb-4 md:mb-6 border-b border-black pb-4 md:pb-6 relative">
+            <HamburgerMenu />
+            <div className="flex-none pt-24 md:pt-32 px-4 md:px-6">
+                <div className="w-full max-w-7xl mx-auto">
+                    <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
                         <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
                     </header>
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 w-full max-w-3xl mx-auto px-4 md:px-6 flex flex-col">
+            <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 md:px-6 flex flex-col">
                 <div
                     ref={scrollRef}
                     className="flex-1 overflow-y-auto space-y-6 md:space-y-12 pr-2 md:pr-4 scrollbar-hide"
@@ -138,18 +138,25 @@ const BananaAI = () => {
                             <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">
                                 {msg.role === "user" ? "YOU" : "877 AI"}
                             </span>
-                            <div
-                                className={`max-w-[85%] ${msg.role === "user"
-                                    ? "text-right font-mono text-base md:text-xs leading-relaxed tracking-wide opacity-70"
-                                    : "text-left font-serif text-lg md:text-xl leading-relaxed tracking-tight"
-                                    }`}
-                            >
-                                {msg.text.split("\n").map((line, idx) => (
-                                    <span key={idx} className="block min-h-[1em]">
-                                        {line}
-                                    </span>
-                                ))}
-                            </div>
+                            {msg.role === "user" ? (
+                                <div
+                                    className="max-w-[85%] text-right font-mono text-base md:text-xs leading-relaxed tracking-wide opacity-70"
+                                >
+                                    {msg.text.split("\n").map((line, idx) => (
+                                        <span key={idx} className="block min-h-[1em]">
+                                            {line}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="font-serif text-xl md:text-2xl font-light leading-relaxed max-w-[95%] tracking-wide">
+                                    {msg.text.split("\n").map((line, idx) => (
+                                        <span key={idx} className="block min-h-[1em] mb-2 last:mb-0">
+                                            {line}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     ))}
                     {isTyping && (
@@ -179,7 +186,7 @@ const BananaAI = () => {
                             ref={inputRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Type your inquiry..."
+                            placeholder="Ask the banana."
                             disabled={isTyping}
                             className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none disabled:opacity-50"
                         />

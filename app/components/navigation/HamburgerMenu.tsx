@@ -18,6 +18,7 @@ const MENU_ITEMS = [
     {
         label: "LAB",
         children: [
+            { label: "AI", href: "/ai" },
             { label: "SPIN", href: "/spin" },
         ]
     },
@@ -89,6 +90,7 @@ export default function HamburgerMenu() {
         switch (currentView) {
             case "LAB":
                 return [
+                    { label: "AI", href: "/ai" },
                     { label: "SPIN", href: "/spin" },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]

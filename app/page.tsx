@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { AnimatePresence } from "framer-motion"
+import { useState, useRef } from "react"
 import { signInAnonymously, signOut } from "firebase/auth"
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from "firebase/firestore"
-import { auth, db, appId } from "@/lib/firebase"
+import { auth } from "@/lib/firebase"
 import { useAuth } from "./components/providers/AuthProvider"
 
 // Components
@@ -16,12 +14,9 @@ import Footer from "./components/layout/Footer"
 import Hero from "./components/sections/Hero"
 import Philosophy from "./components/sections/Philosophy"
 import Knowledge from "./components/sections/Knowledge"
-import Journal from "./components/sections/Journal"
 
 // Modals
 import AdminLoginModal from "./components/modals/AdminLoginModal"
-import BlogEditor, { type BlogPost } from "./components/modals/BlogEditor"
-import JournalDetailPage from "./components/modals/JournalDetailPage"
 
 // ============================================
 // Main App Component
@@ -30,35 +25,8 @@ export default function Hrk877App() {
   const { user, isAdmin } = useAuth()
   const [isLoginOpen, setIsLoginOpen] = useState(false)
 
-  // Blog State
-  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
-  const [allPosts, setAllPosts] = useState<BlogPost[]>([])
-  const [editingPost, setEditingPost] = useState<BlogPost | null>(null)
-  const [isBlogEditorOpen, setIsBlogEditorOpen] = useState(false)
-
   const clickCountRef = useRef(0)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    if (!db) return
-
-    const postsRef = collection(db, "artifacts", appId, "public", "data", "posts")
-    const q = query(postsRef, orderBy("createdAt", "desc"))
-    const unsubscribe = onSnapshot(
-      q,
-      (querySnapshot) => {
-        const fetchedPosts: BlogPost[] = []
-        querySnapshot.forEach((docSnap) => {
-          fetchedPosts.push({ id: docSnap.id, ...docSnap.data() } as BlogPost)
-        })
-        setAllPosts(fetchedPosts)
-      },
-      (err) => {
-        console.log("Error fetching posts for navigation:", err)
-      },
-    )
-    return () => unsubscribe()
-  }, [])
 
   const handleSecretClick = () => {
     clickCountRef.current += 1
@@ -79,54 +47,10 @@ export default function Hrk877App() {
     await signInAnonymously(auth)
   }
 
-  const handleOpenPost = (post: BlogPost) => {
-    setSelectedPost(post)
-  }
-
-  const handleDeletePost = async (id: string) => {
-    if (!db) return
-    try {
-      await deleteDoc(doc(db, "artifacts", appId, "public", "data", "posts", id))
-    } catch (err) {
-      console.error("Error deleting:", err)
-      alert("Error deleting post.")
-    }
-  }
-
-  const handleEditPost = (post: BlogPost) => {
-    setEditingPost(post)
-    setIsBlogEditorOpen(true)
-    setSelectedPost(null)
-  }
-
   return (
     <div className="min-h-screen bg-[#FAC800] text-black selection:bg-black selection:text-[#FAC800]">
       <div className="noise-overlay" />
       <AdminLoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-
-      <BlogEditor
-        isOpen={isBlogEditorOpen}
-        onClose={() => {
-          setIsBlogEditorOpen(false)
-          setEditingPost(null)
-        }}
-        user={user}
-        editingPost={editingPost}
-      />
-
-      <AnimatePresence>
-        {selectedPost && allPosts.length > 0 && (
-          <JournalDetailPage
-            post={selectedPost}
-            posts={allPosts}
-            onClose={() => setSelectedPost(null)}
-            onNavigate={(post) => setSelectedPost(post)}
-            isAdmin={isAdmin}
-            onDelete={handleDeletePost}
-            onEdit={handleEditPost}
-          />
-        )}
-      </AnimatePresence>
 
       <main>
         <TopNavigation />
@@ -139,14 +63,6 @@ export default function Hrk877App() {
           <ParallaxText baseVelocity={2}>KNOWLEDGE — HISTORY — TRIVIA — </ParallaxText>
         </div>
         <Knowledge />
-        <Journal
-          isAdmin={isAdmin}
-          onOpenPost={handleOpenPost}
-          onNewPost={() => {
-            setEditingPost(null)
-            setIsBlogEditorOpen(true)
-          }}
-        />
         <Footer
           isAdmin={isAdmin}
           handleSecretClick={handleSecretClick}

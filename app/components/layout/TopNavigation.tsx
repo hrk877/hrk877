@@ -14,8 +14,8 @@ const TopNavigation = () => {
                     <span className="relative z-10 group-hover:text-black/60 transition-colors">MUSEUM</span>
                     <span className="absolute bottom-0 left-0 w-full h-[1px] bg-black transform scale-x-0 group-hover:scale-x-100 transition-transform origin-right group-hover:origin-left duration-300" />
                 </Link>
-                <Link href="/ai" className="relative group overflow-hidden py-1">
-                    <span className="relative z-10 group-hover:text-black/60 transition-colors">AI</span>
+                <Link href="/journal" className="relative group overflow-hidden py-1">
+                    <span className="relative z-10 group-hover:text-black/60 transition-colors">JOURNAL</span>
                     <span className="absolute bottom-0 left-0 w-full h-[1px] bg-black transform scale-x-0 group-hover:scale-x-100 transition-transform origin-right group-hover:origin-left duration-300" />
                 </Link>
                 <Link href="/letter" className="relative group overflow-hidden py-1">

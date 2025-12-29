@@ -79,40 +79,43 @@ const Letter = () => {
     return (
         <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20 flex flex-col">
             <TopNavigation />
-            <div className="w-full max-w-2xl mx-auto relative flex-1 flex flex-col">
-                <div className="mb-8 md:mb-12 border-b border-black pb-6 relative">
+            <div className="w-full max-w-7xl mx-auto relative flex-1 flex flex-col">
+                <div className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
                     <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">LETTER</h1>
                 </div>
 
-                <div className="flex-1 flex flex-col">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative flex-1">
-                        <div
-                            className="absolute inset-0 pointer-events-none opacity-5"
-                            style={{ backgroundImage: "linear-gradient(transparent 95%, #000 95%)", backgroundSize: "100% 3rem" }}
-                        />
+                <div className="w-full max-w-2xl mx-auto flex-1 flex flex-col">
 
-                        <textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            className="letter-input w-full min-h-[40vh] bg-transparent focus:outline-none placeholder:text-black/20"
-                            autoFocus
-                        />
-                    </motion.div>
+                    <div className="flex-1 flex flex-col">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative flex-1">
+                            <div
+                                className="absolute inset-0 pointer-events-none opacity-5"
+                                style={{ backgroundImage: "linear-gradient(transparent 95%, #000 95%)", backgroundSize: "100% 3rem" }}
+                            />
 
-                    <div className="mt-8 flex flex-row justify-between items-end md:items-center">
-                        <p className="font-mono text-[10px] md:text-xs opacity-40 tracking-widest max-w-[60%] leading-relaxed">
-                            YOUR LETTER IS SENT<br className="block md:hidden" /> COMPLETELY ANONYMOUSLY.
-                        </p>
-                        <button
-                            onClick={handleSend}
-                            disabled={!message.trim() || loading}
-                            className="group relative px-8 py-4 overflow-hidden border border-black rounded-full hover:border-black transition-colors disabled:opacity-20 disabled:hover:border-black/10 touch-manipulation active:scale-95"
-                        >
-                            <span className="relative z-10 font-mono text-sm md:text-xs tracking-[0.2em] group-hover:text-white group-active:text-white transition-colors duration-500">
-                                {loading ? "SEALING..." : "SEND LETTER"}
-                            </span>
-                            <div className="absolute inset-0 bg-black transform scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform origin-left duration-500" />
-                        </button>
+                            <textarea
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                className="letter-input w-full min-h-[40vh] bg-transparent focus:outline-none placeholder:text-black/20"
+                                autoFocus
+                            />
+                        </motion.div>
+
+                        <div className="mt-8 flex flex-row justify-between items-end md:items-center">
+                            <p className="font-mono text-[10px] md:text-xs opacity-40 tracking-widest max-w-[60%] leading-relaxed">
+                                YOUR LETTER IS SENT<br className="block md:hidden" /> COMPLETELY ANONYMOUSLY.
+                            </p>
+                            <button
+                                onClick={handleSend}
+                                disabled={!message.trim() || loading}
+                                className="group relative px-8 py-4 overflow-hidden border border-black rounded-full hover:border-black transition-colors disabled:opacity-20 disabled:hover:border-black/10 touch-manipulation active:scale-95"
+                            >
+                                <span className="relative z-10 font-mono text-sm md:text-xs tracking-[0.2em] group-hover:text-white group-active:text-white transition-colors duration-500">
+                                    {loading ? "SEALING..." : "SEND LETTER"}
+                                </span>
+                                <div className="absolute inset-0 bg-black transform scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform origin-left duration-500" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

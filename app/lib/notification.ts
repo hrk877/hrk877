@@ -44,7 +44,7 @@ ${SITE_URL}/museum`
 行間にある静けさを、共に味わってみませんか。
 
 Read the Journal
-${SITE_URL}`
+${SITE_URL}/journal`
                 break
         }
 
