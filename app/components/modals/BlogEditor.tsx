@@ -3,12 +3,11 @@
 // Let's replace the imports and the component body.
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Image as ImageIcon } from "lucide-react"
+import { X } from "lucide-react"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
-import { db, appId, storage } from "@/lib/firebase"
+import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
 import { notifyCommunity } from "@/app/lib/notification"
 
@@ -35,9 +34,6 @@ const BlogEditor = ({
     const [title, setTitle] = useState("")
     const [content, setContent] = useState("")
     const [loading, setLoading] = useState(false)
-    const [uploading, setUploading] = useState(false)
-    const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Proper scroll locking mechanism that preserves position
     useEffect(() => {
@@ -72,62 +68,6 @@ const BlogEditor = ({
             setContent("")
         }
     }, [editingPost, isOpen])
-
-    const handleImageClick = () => {
-        fileInputRef.current?.click()
-    }
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (!files || files.length === 0 || !storage) return
-
-        setUploading(true)
-        try {
-            const uploadPromises = Array.from(files).map(async (file) => {
-                const uniqueId = Math.random().toString(36).substring(7)
-                const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
-                const storageRef = ref(storage, `uploads/${Date.now()}_${uniqueId}_${cleanName}`)
-
-                try {
-                    await uploadBytes(storageRef, file)
-                    return await getDownloadURL(storageRef)
-                } catch (err) {
-                    console.warn("Upload failed, checking for localhost fallback", err)
-                    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-                        // Fallback for localhost testing
-                        alert(`Localhost Note: Using placeholder for "${file.name}" because Cloud Storage CORS is blocking uploads. Real uploads will work on the deployed site.`)
-                        return "https://placehold.co/600x400/FAC800/000000?text=Uploaded+Image"
-                    }
-                    throw err
-                }
-            })
-
-            const urls = await Promise.all(uploadPromises)
-
-            // Insert into textarea
-            const textarea = textareaRef.current
-            const insertion = urls.map((url) => `\n![image](${url})\n`).join("")
-
-            if (textarea) {
-                const start = textarea.selectionStart
-                const end = textarea.selectionEnd
-                const text = content
-                const before = text.substring(0, start)
-                const after = text.substring(end)
-
-                const newContent = before + insertion + after
-                setContent(newContent)
-            } else {
-                setContent((prev) => prev + insertion)
-            }
-        } catch (err) {
-            console.error("Upload failed details:", err)
-            alert(`Upload failed: ${(err as any).message}`)
-        } finally {
-            setUploading(false)
-            if (fileInputRef.current) fileInputRef.current.value = ""
-        }
-    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -202,37 +142,18 @@ const BlogEditor = ({
                                     />
                                 </div>
                                 <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <label className="block text-xs font-mono opacity-40 tracking-widest">CONTENT</label>
-                                        <button
-                                            type="button"
-                                            onClick={handleImageClick}
-                                            disabled={uploading}
-                                            className="flex items-center gap-2 text-xs font-mono border border-black/20 px-3 py-1 rounded-full hover:bg-black hover:text-[#FAC800] transition-colors disabled:opacity-50"
-                                        >
-                                            <ImageIcon size={14} /> {uploading ? "UPLOADING..." : "ADD IMAGE"}
-                                        </button>
-                                    </div>
+                                    <label className="block text-xs font-mono opacity-40 mb-2 tracking-widest">CONTENT</label>
                                     <textarea
-                                        ref={textareaRef}
                                         placeholder="Write your thoughts..."
                                         className="admin-textarea"
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
                                         required
                                     />
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileChange}
-                                        className="hidden"
-                                        accept="image/*"
-                                        multiple
-                                    />
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={loading || uploading}
+                                    disabled={loading}
                                     className="bg-black text-[#FAC800] py-4 px-6 mt-4 hover:bg-[#333] transition-colors font-mono text-base md:text-sm tracking-widest disabled:opacity-50 active:scale-95 touch-manipulation"
                                 >
                                     {loading ? "SAVING..." : editingPost ? "UPDATE" : "PUBLISH"}
