@@ -286,17 +286,7 @@ export default function MoonPage() {
                         >
                             <TargetVisual isFound={isFound} />
 
-                            {/* Distance / Name Label */}
-                            <div className="absolute top-full mt-4 flex flex-col items-center">
-                                <span className="text-xs bg-black/50 px-2 py-1 rounded tracking-widest backdrop-blur-sm border border-[#FAC800]/30">
-                                    MOON
-                                </span>
-                                {!isFound && (
-                                    <span className="text-[10px] mt-1 opacity-70">
-                                        {azDiff > 0 ? "← LEFT" : "RIGHT →"} / {pitchDiff > 0 ? "↓ DOWN" : "UP ↑"}
-                                    </span>
-                                )}
-                            </div>
+
                         </div>
                     </div>
                 )}
@@ -368,16 +358,16 @@ function TargetVisual({ isFound }: { isFound: boolean }) {
             {/* Outer Circle (Border) */}
             <div
                 className={`
-                    rounded-full border border-[#FAC800] transition-all duration-300 ease-out
-                    ${isFound ? "w-[90%] h-[90%] border-2 shadow-[0_0_20px_rgba(250,200,0,0.5)] scale-110" : "w-[96%] h-[96%] border opacity-60 scale-100"}
+                    rounded-full border border-[#FAC800] transition-colors duration-300
+                    ${isFound ? "w-[90%] h-[90%] border-2" : "w-[90%] h-[90%] border opacity-60"}
                 `}
             />
 
             {/* Center Dot */}
             <div
                 className={`
-                    absolute rounded-full bg-[#FAC800] transition-all duration-300
-                    ${isFound ? "w-2 h-2 shadow-[0_0_10px_#FAC800]" : "w-1 h-1 opacity-60"}
+                    absolute rounded-full bg-[#FAC800]
+                    ${isFound ? "w-2 h-2" : "w-1 h-1 opacity-60"}
                 `}
             />
         </div>
