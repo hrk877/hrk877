@@ -6,10 +6,6 @@ import Link from "next/link"
 import { Camera } from "lucide-react"
 import SunCalc from "suncalc"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
-import { Canvas } from "@react-three/fiber"
-import { Environment } from "@react-three/drei"
-import { BananaModel } from "../components/3d/BananaModel"
-import { Suspense } from "react"
 
 export default function MoonPage() {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -182,16 +178,7 @@ export default function MoonPage() {
         requestAccess()
     }
 
-    // AR Element Position (Pixels relative to center)
-    // FOV approx 60?
-    // 1 degree approx X pixels
-    // Let's rely on CSS translates 
-    // If azDiff is +10 degrees (Right), we move object +X px? No, if target is right, we move object Left?
-    // No, if target is at 100, and we look at 90, target is at +10 relative to center.
-    // Screen width is e.g. 60 deg ?
-    const fov = 60
-    const xOffset = (azDiff / (fov / 2)) * 50 // % of screen half width
-    const yOffset = -(pitchDiff / (fov / 2)) * 50 // % of screen half height (inverted because up is negative Y in CSS usually, but translate works differently)
+
 
     return (
         <main className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-center text-[#FAC800] font-mono select-none">
@@ -278,34 +265,11 @@ export default function MoonPage() {
                     className="absolute inset-0 w-full h-full object-cover opacity-50 z-0 pointer-events-none"
                 />
 
-                {/* Floating AR Layer */}
+                {/* Static Center Target Layer */}
                 {isARMode && (
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none perspective-[1000px]">
-                        {/* The Floating Banana */}
-                        <div
-                            className="absolute top-1/2 left-1/2 w-48 h-48 -ml-24 -mt-24 flex items-center justify-center transition-transform duration-100 ease-out will-change-transform"
-                            style={{
-                                transform: `translate(${xOffset}vw, ${-yOffset}vh) scale(${isFound ? 1.5 : 1})`
-                            }}
-                        >
-                            <div className="w-full h-full relative">
-                                <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-                                    <Suspense fallback={null}>
-                                        <ambientLight intensity={1} />
-                                        <pointLight position={[10, 10, 10]} intensity={1} />
-                                        <BananaModel />
-                                        <Environment preset="sunset" />
-                                    </Suspense>
-                                </Canvas>
-                            </div>
-
-                            {isFound && (
-                                <div className="absolute top-full mt-4 flex flex-col items-center">
-                                    <div className="text-[#FAC800] font-serif tracking-[0.2em] text-lg animate-pulse whitespace-nowrap">
-                                        MOON FOUND
-                                    </div>
-                                </div>
-                            )}
+                    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                        <div className="w-48 h-48 relative flex items-center justify-center">
+                            <TargetVisual isFound={isFound} />
                         </div>
                     </div>
                 )}
@@ -323,16 +287,17 @@ export default function MoonPage() {
                     </div>
 
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-12 pb-20">
-                        <div className="flex-1 flex flex-col items-center justify-center">
+                        {/* Moon Found Indicator (Below Target or Overlay) */}
+                        <div className="mt-80 flex flex-col items-center justify-center">
                             {isFound && (
                                 <div className="text-center animate-pulse">
-                                    <div className="text-4xl font-serif font-light mb-2">MOON FOUND</div>
-                                    <div className="text-xs tracking-[0.5em] opacity-80">ALIGNMENT LOCKED</div>
+                                    <div className="text-2xl md:text-4xl font-serif font-light mb-2 text-[#FAC800]">MOON FOUND</div>
+                                    <div className="text-xs tracking-[0.5em] opacity-80 text-[#FAC800]">ALIGNMENT LOCKED</div>
                                 </div>
                             )}
                         </div>
 
-                        <div className="w-full text-center">
+                        <div className="absolute bottom-10 w-full text-center">
                             <div className="text-[10px] tracking-[0.5em] opacity-30">
                                 AZ: {moonBearing.toFixed(0)}° EL: {moonAlt.toFixed(0)}°
                             </div>
