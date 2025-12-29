@@ -358,7 +358,7 @@ function TargetVisual({ isFound, rotation }: { isFound: boolean, rotation?: numb
                 >
                     <div className="absolute top-0 -mt-2">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="fill-[#FAC800]">
-                            <path d="M12 2L20 18L12 15L4 18L12 2Z" />
+                            <path d="M12 2L20 18L4 18Z" />
                         </svg>
                     </div>
                 </div>
