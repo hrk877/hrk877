@@ -86,8 +86,8 @@ const Letter = () => {
                     </div>
                     <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
                         <p className="font-mono text-lg md:text-xs opacity-60">
-                            YOUR LETTER IS SENT<br />
-                            COMPLETELY ANONYMOUSLY.
+                            Your letter is sent<br />
+                            completely anonymously.
                         </p>
                     </div>
                 </header>
