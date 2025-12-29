@@ -6,6 +6,10 @@ import Link from "next/link"
 import { Camera } from "lucide-react"
 import SunCalc from "suncalc"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
+import { Canvas } from "@react-three/fiber"
+import { Environment } from "@react-three/drei"
+import { BananaModel } from "../components/3d/BananaModel"
+import { Suspense } from "react"
 
 export default function MoonPage() {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -284,7 +288,16 @@ export default function MoonPage() {
                                 transform: `translate(${xOffset}vw, ${-yOffset}vh) scale(${isFound ? 1.5 : 1})`
                             }}
                         >
-                            <TargetVisual isFound={isFound} />
+                            <div className="w-full h-full relative">
+                                <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+                                    <Suspense fallback={null}>
+                                        <ambientLight intensity={1} />
+                                        <pointLight position={[10, 10, 10]} intensity={1} />
+                                        <BananaModel />
+                                        <Environment preset="sunset" />
+                                    </Suspense>
+                                </Canvas>
+                            </div>
 
                             {isFound && (
                                 <div className="absolute top-full mt-4 flex flex-col items-center">
@@ -293,8 +306,6 @@ export default function MoonPage() {
                                     </div>
                                 </div>
                             )}
-
-
                         </div>
                     </div>
                 )}
