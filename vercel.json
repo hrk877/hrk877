@@ -1,0 +1,8 @@
+{
+    "crons": [
+        {
+            "path": "/api/cron/banana-moon",
+            "schedule": "17 12 * * *"
+        }
+    ]
+}
