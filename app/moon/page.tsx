@@ -364,23 +364,23 @@ function MoonVisual({ phase }: { phase: number }) {
 
 function TargetVisual({ isFound }: { isFound: boolean }) {
     return (
-        <svg
-            viewBox="0 0 100 100"
-            className={`w-full h-full transition-all duration-300 ${isFound ? "text-[#FAC800] scale-110" : "text-[#FAC800]/60 scale-100"}`}
-        >
-            {/* Simple Elegant Circle */}
-            <circle
-                cx="50"
-                cy="50"
-                r="48"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={isFound ? "1.5" : "0.5"}
-                className="transition-all duration-500"
+        <div className="w-full h-full relative flex items-center justify-center pointer-events-none">
+            {/* Outer Circle (Border) */}
+            <div
+                className={`
+                    rounded-full border border-[#FAC800] transition-all duration-300 ease-out
+                    ${isFound ? "w-[90%] h-[90%] border-2 shadow-[0_0_20px_rgba(250,200,0,0.5)] scale-110" : "w-[96%] h-[96%] border opacity-60 scale-100"}
+                `}
             />
-            {/* Minimal Center Dot */}
-            <circle cx="50" cy="50" r={isFound ? "2" : "1"} fill="currentColor" className="transition-all duration-500" />
-        </svg>
+
+            {/* Center Dot */}
+            <div
+                className={`
+                    absolute rounded-full bg-[#FAC800] transition-all duration-300
+                    ${isFound ? "w-2 h-2 shadow-[0_0_10px_#FAC800]" : "w-1 h-1 opacity-60"}
+                `}
+            />
+        </div>
     )
 }
 
