@@ -180,6 +180,9 @@ export default function MoonPage() {
 
 
 
+    // Rotation for the arrow (0 is Up, 90 is Right)
+    const arrowRotation = Math.atan2(azDiff, pitchDiff) * (180 / Math.PI)
+
     return (
         <main className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-center text-[#FAC800] font-mono select-none">
 
@@ -269,7 +272,7 @@ export default function MoonPage() {
                 {isARMode && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                         <div className="w-48 h-48 relative flex items-center justify-center">
-                            <TargetVisual isFound={isFound} />
+                            <TargetVisual isFound={isFound} rotation={arrowRotation} />
                         </div>
                     </div>
                 )}
@@ -336,7 +339,7 @@ function MoonVisual({ phase }: { phase: number }) {
     )
 }
 
-function TargetVisual({ isFound }: { isFound: boolean }) {
+function TargetVisual({ isFound, rotation }: { isFound: boolean, rotation?: number }) {
     return (
         <div className="w-full h-full relative flex items-center justify-center pointer-events-none">
             {/* Outer Circle (Border) */}
@@ -346,6 +349,20 @@ function TargetVisual({ isFound }: { isFound: boolean }) {
                     ${isFound ? "w-[90%] h-[90%] border-2" : "w-[90%] h-[90%] border opacity-60"}
                 `}
             />
+
+            {/* Direction Arrow */}
+            {!isFound && rotation !== undefined && (
+                <div
+                    className="absolute inset-0 w-full h-full flex items-center justify-center"
+                    style={{ transform: `rotate(${rotation}deg)` }}
+                >
+                    <div className="absolute top-0 -mt-2">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="fill-[#FAC800]">
+                            <path d="M12 2L20 18L12 15L4 18L12 2Z" />
+                        </svg>
+                    </div>
+                </div>
+            )}
 
             {/* Center Dot */}
             <div
