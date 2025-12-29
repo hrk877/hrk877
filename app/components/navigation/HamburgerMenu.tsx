@@ -20,6 +20,7 @@ const MENU_ITEMS = [
         children: [
             { label: "AI", href: "/ai" },
             { label: "SPIN", href: "/spin" },
+            { label: "MOON", href: "/moon" },
         ]
     },
     {
@@ -92,6 +93,7 @@ export default function HamburgerMenu() {
                 return [
                     { label: "AI", href: "/ai" },
                     { label: "SPIN", href: "/spin" },
+                    { label: "MOON", href: "/moon" },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
             case "SNS":
