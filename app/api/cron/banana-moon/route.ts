@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const isBananaMoon = roundedAge === 5 || roundedAge === 25;
 
     if (isBananaMoon) {
+        const SITE_URL = "https://877hand.vercel.app";
         const subject = "Banana Moon Day Has Arrived🍌";
         const message = `
 今日はバナナムーンの日。
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
 空を見上げてバナナに願いを込めましょう。
 
 Catch the Moon
-https://877hand.vercel.app/moon`.trim();
+${SITE_URL}/moon`.trim();
 
         console.log(`[Cron] Banana Moon Day detected (Age: ${age.toFixed(2)}). Sending email...`);
 
