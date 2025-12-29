@@ -284,7 +284,7 @@ export default function MoonPage() {
                                 transform: `translate(${xOffset}vw, ${-yOffset}vh) scale(${isFound ? 1.5 : 1})`
                             }}
                         >
-                            <BananaVisual isFound={isFound} />
+                            <TargetVisual isFound={isFound} />
 
                             {/* Distance / Name Label */}
                             <div className="absolute top-full mt-4 flex flex-col items-center">
@@ -302,25 +302,31 @@ export default function MoonPage() {
                 )}
 
                 {/* HUD Layer */}
-                <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 md:p-12 pb-20 pointer-events-none">
-                    <div className="w-full flex justify-end items-start pointer-events-auto">
-                        <button onClick={() => setIsARMode(false)} className="text-xs tracking-[0.2em] border border-[#FAC800]/50 px-4 py-2 hover:bg-[#FAC800] hover:text-black transition-all">
+                <div className="absolute inset-0 z-10 pointer-events-none">
+                    {/* Top Right Close Button (Matches Hamburger Position) */}
+                    <div className="absolute top-12 right-6 mix-blend-difference pointer-events-auto">
+                        <button
+                            onClick={() => setIsARMode(false)}
+                            className="p-4 -mr-4 -mt-4 text-xs font-mono tracking-[0.2em] text-[#FAC800] hover:text-white transition-colors duration-300"
+                        >
                             CLOSE VIEW
                         </button>
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                        {isFound && (
-                            <div className="text-center animate-pulse">
-                                <div className="text-4xl font-serif font-light mb-2">MOON FOUND</div>
-                                <div className="text-xs tracking-[0.5em] opacity-80">ALIGNMENT LOCKED</div>
-                            </div>
-                        )}
-                    </div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-12 pb-20">
+                        <div className="flex-1 flex flex-col items-center justify-center">
+                            {isFound && (
+                                <div className="text-center animate-pulse">
+                                    <div className="text-4xl font-serif font-light mb-2">MOON FOUND</div>
+                                    <div className="text-xs tracking-[0.5em] opacity-80">ALIGNMENT LOCKED</div>
+                                </div>
+                            )}
+                        </div>
 
-                    <div className="w-full text-center">
-                        <div className="text-[10px] tracking-[0.5em] opacity-30">
-                            AZ: {moonBearing.toFixed(0)}° EL: {moonAlt.toFixed(0)}°
+                        <div className="w-full text-center">
+                            <div className="text-[10px] tracking-[0.5em] opacity-30">
+                                AZ: {moonBearing.toFixed(0)}° EL: {moonAlt.toFixed(0)}°
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,24 +362,33 @@ function MoonVisual({ phase }: { phase: number }) {
     )
 }
 
-function BananaVisual({ isFound }: { isFound: boolean }) {
+function TargetVisual({ isFound }: { isFound: boolean }) {
     return (
         <svg
             viewBox="0 0 100 100"
-            className={`w-full h-full drop-shadow-[0_0_20px_rgba(250,200,0,0.6)] transition-all duration-500 ${isFound ? "text-[#FAC800]" : "text-[#FAC800]/50"}`}
+            className={`w-full h-full drop-shadow-[0_0_10px_rgba(250,200,0,0.4)] transition-all duration-300 ${isFound ? "text-[#FAC800]" : "text-[#FAC800]/60"}`}
         >
-            {/* Simple Banana Shape */}
-            <path
-                d="M20,80 Q50,90 80,20 Q60,50 20,60"
-                fill="currentColor"
+            {/* Center Crosshair */}
+            <line x1="50" y1="40" x2="50" y2="60" stroke="currentColor" strokeWidth="0.5" />
+            <line x1="40" y1="50" x2="60" y2="50" stroke="currentColor" strokeWidth="0.5" />
+
+            {/* Corner Brackets */}
+            <path d="M30,35 L30,30 L35,30" fill="none" stroke="currentColor" strokeWidth="1" />
+            <path d="M70,35 L70,30 L65,30" fill="none" stroke="currentColor" strokeWidth="1" />
+            <path d="M30,65 L30,70 L35,70" fill="none" stroke="currentColor" strokeWidth="1" />
+            <path d="M70,65 L70,70 L65,70" fill="none" stroke="currentColor" strokeWidth="1" />
+
+            {/* Outer Ring (expands when found) */}
+            <circle
+                cx="50"
+                cy="50"
+                r={isFound ? "45" : "35"}
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth="0.5"
+                className="transition-all duration-500 ease-out"
+                strokeDasharray={isFound ? "none" : "2 2"}
             />
-            {isFound && (
-                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="animate-spin-slow" />
-            )}
         </svg>
     )
 }
