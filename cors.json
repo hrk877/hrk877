@@ -1,0 +1,25 @@
+[
+    {
+        "origin": [
+            "http://localhost:3000",
+            "https://hrk877-801a8.web.app",
+            "https://hrk877-801a8.firebaseapp.com"
+        ],
+        "method": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE",
+            "HEAD",
+            "OPTIONS"
+        ],
+        "responseHeader": [
+            "Content-Type",
+            "Authorization",
+            "Content-Length",
+            "User-Agent",
+            "x-goog-resumable"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]

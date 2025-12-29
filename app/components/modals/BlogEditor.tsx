@@ -85,9 +85,21 @@ const BlogEditor = ({
         try {
             const uploadPromises = Array.from(files).map(async (file) => {
                 const uniqueId = Math.random().toString(36).substring(7)
-                const storageRef = ref(storage, `uploads/${Date.now()}_${uniqueId}_${file.name}`)
-                await uploadBytes(storageRef, file)
-                return getDownloadURL(storageRef)
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, "_")
+                const storageRef = ref(storage, `uploads/${Date.now()}_${uniqueId}_${cleanName}`)
+
+                try {
+                    await uploadBytes(storageRef, file)
+                    return await getDownloadURL(storageRef)
+                } catch (err) {
+                    console.warn("Upload failed, checking for localhost fallback", err)
+                    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                        // Fallback for localhost testing
+                        alert(`Localhost Note: Using placeholder for "${file.name}" because Cloud Storage CORS is blocking uploads. Real uploads will work on the deployed site.`)
+                        return "https://placehold.co/600x400/FAC800/000000?text=Uploaded+Image"
+                    }
+                    throw err
+                }
             })
 
             const urls = await Promise.all(uploadPromises)
@@ -109,8 +121,8 @@ const BlogEditor = ({
                 setContent((prev) => prev + insertion)
             }
         } catch (err) {
-            console.error("Upload failed", err)
-            alert("Upload failed")
+            console.error("Upload failed details:", err)
+            alert(`Upload failed: ${(err as any).message}`)
         } finally {
             setUploading(false)
             if (fileInputRef.current) fileInputRef.current.value = ""
