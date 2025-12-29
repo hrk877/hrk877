@@ -304,7 +304,7 @@ export default function MoonPage() {
                 {/* HUD Layer */}
                 <div className="absolute inset-0 z-10 pointer-events-none">
                     {/* Top Right Close Button (Matches Hamburger Position) */}
-                    <div className="absolute top-12 right-6 mix-blend-difference pointer-events-auto">
+                    <div className="absolute top-11 right-6 mix-blend-difference pointer-events-auto">
                         <button
                             onClick={() => setIsARMode(false)}
                             className="p-4 -mr-4 -mt-4 text-xs font-mono tracking-[0.2em] text-[#FAC800] hover:text-white transition-colors duration-300"
@@ -366,29 +366,20 @@ function TargetVisual({ isFound }: { isFound: boolean }) {
     return (
         <svg
             viewBox="0 0 100 100"
-            className={`w-full h-full drop-shadow-[0_0_10px_rgba(250,200,0,0.4)] transition-all duration-300 ${isFound ? "text-[#FAC800]" : "text-[#FAC800]/60"}`}
+            className={`w-full h-full drop-shadow-[0_0_15px_rgba(250,200,0,0.3)] transition-all duration-300 ${isFound ? "text-[#FAC800] scale-110" : "text-[#FAC800]/60 scale-100"}`}
         >
-            {/* Center Crosshair */}
-            <line x1="50" y1="40" x2="50" y2="60" stroke="currentColor" strokeWidth="0.5" />
-            <line x1="40" y1="50" x2="60" y2="50" stroke="currentColor" strokeWidth="0.5" />
-
-            {/* Corner Brackets */}
-            <path d="M30,35 L30,30 L35,30" fill="none" stroke="currentColor" strokeWidth="1" />
-            <path d="M70,35 L70,30 L65,30" fill="none" stroke="currentColor" strokeWidth="1" />
-            <path d="M30,65 L30,70 L35,70" fill="none" stroke="currentColor" strokeWidth="1" />
-            <path d="M70,65 L70,70 L65,70" fill="none" stroke="currentColor" strokeWidth="1" />
-
-            {/* Outer Ring (expands when found) */}
+            {/* Simple Elegant Circle */}
             <circle
                 cx="50"
                 cy="50"
-                r={isFound ? "45" : "35"}
+                r="48"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="0.5"
-                className="transition-all duration-500 ease-out"
-                strokeDasharray={isFound ? "none" : "2 2"}
+                strokeWidth={isFound ? "1.5" : "0.5"}
+                className="transition-all duration-500"
             />
+            {/* Minimal Center Dot */}
+            <circle cx="50" cy="50" r={isFound ? "2" : "1"} fill="currentColor" className="transition-all duration-500" />
         </svg>
     )
 }
