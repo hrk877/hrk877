@@ -3,43 +3,82 @@
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import { Camera } from "lucide-react"
 import SunCalc from "suncalc"
+import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 export default function MoonPage() {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
     const [permissionGranted, setPermissionGranted] = useState(false)
     const [moonData, setMoonData] = useState<any>(null)
-    const [deviceOrientation, setDeviceOrientation] = useState<{ alpha: number, beta: number, gamma: number } | null>(null)
     const [heading, setHeading] = useState<number>(0)
-    const [isFound, setIsFound] = useState(false)
+    const [devicePitch, setDevicePitch] = useState<number>(0)
+
+    // 0. Safari Black Theme Color Hack
+    useEffect(() => {
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+        const originalColor = metaThemeColor?.getAttribute("content")
+        metaThemeColor?.setAttribute("content", "#000000")
+        return () => {
+            if (originalColor) metaThemeColor?.setAttribute("content", originalColor)
+        }
+    }, [])
 
     // 1. Initialize Moon Data
     useEffect(() => {
         const updateMoon = () => {
             const now = new Date()
-            // Default to Tokyo if no GPS yet
             const lat = 35.6762
             const lon = 139.6503
 
-            // Should get real GPS here if possible, but let's start with approximation or ask browser
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const phase = SunCalc.getMoonIllumination(now)
-                    const position = SunCalc.getMoonPosition(now, pos.coords.latitude, pos.coords.longitude)
-                    setMoonData({ phase, position })
-                },
-                () => {
-                    // Fallback
-                    const phase = SunCalc.getMoonIllumination(now)
-                    const position = SunCalc.getMoonPosition(now, lat, lon)
-                    setMoonData({ phase, position })
+            const handlePosition = (latitude: number, longitude: number) => {
+                const phase = SunCalc.getMoonIllumination(now)
+                const position = SunCalc.getMoonPosition(now, latitude, longitude)
+
+                // Calculate Moon Age (Approximate synodic month 29.53 days)
+                // SunCalc phase is 0.0 to 1.0. 
+                // However, SunCalc doesn't give direct age in days easily without reference new moon.
+                // Simple approx: phase * 29.53 is NOT correct because phase 0->1 is New->Full->New?
+                // Actually SunCalc: 
+                // phase: 0 (new moon), 0.25 (first quarter), 0.5 (full moon), 0.75 (last quarter)
+                // Age = phase * 29.53 is roughly correct if 0 is New Moon.
+                const age = phase.phase * 29.53
+
+                // Calculate days until next Banana Moon (Age 5 or 25)
+                const targetAges = [5, 25]
+                let daysUntil = 999
+                let nextTarget = 0
+
+                // Simple search for next target
+                // If current age is 3, next 5 is in 2 days.
+                // If current age is 6, next 5 is in ~29 days (next cycle), next 25 is in 19 days.
+
+                // Find nearest future target in current cycle
+                for (let t of targetAges) {
+                    if (age < t) {
+                        const d = t - age
+                        if (d < daysUntil) { daysUntil = d; nextTarget = t; }
+                    }
                 }
+                // If no future target in current cycle (e.g. age 26), wrap around
+                if (daysUntil === 999) {
+                    // Next is 5 (next month)
+                    daysUntil = (29.53 - age) + 5
+                    nextTarget = 5
+                }
+
+                setMoonData({ phase, position, age, daysUntil: Math.ceil(daysUntil), nextTarget })
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude),
+                () => handlePosition(lat, lon)
             )
         }
 
         updateMoon()
-        const timer = setInterval(updateMoon, 60000) // Update every minute
+        const timer = setInterval(updateMoon, 60000)
         return () => clearInterval(timer)
     }, [])
 
@@ -50,6 +89,9 @@ export default function MoonPage() {
                 .then(stream => {
                     setCameraStream(stream)
                     if (videoRef.current) {
+                        videoRef.current.setAttribute("autoplay", "")
+                        videoRef.current.setAttribute("muted", "")
+                        videoRef.current.setAttribute("playsinline", "")
                         videoRef.current.srcObject = stream
                     }
                 })
@@ -62,7 +104,7 @@ export default function MoonPage() {
         }
     }, [permissionGranted, cameraStream])
 
-    // 3. Device Orientation (Compass)
+    // 3. Device Orientation (Compass & Pitch)
     const requestAccess = async () => {
         if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
             try {
@@ -71,154 +113,159 @@ export default function MoonPage() {
                     setPermissionGranted(true)
                     startOrientationListener()
                 } else {
-                    if (permissionState === 'granted') {
-                        setPermissionGranted(true)
-                        startOrientationListener()
-                    } else {
-                        alert("Permission denied. NOTE: iOS requires HTTPS for sensors. If you are on localhost (HTTP), sensors may be blocked.")
-                    }
+                    alert("Permission denied. NOTE: iOS requires HTTPS for sensors.")
                 }
             } catch (error) {
                 console.error(error)
             }
         } else {
-            // Android / Non-iOS 13+
             setPermissionGranted(true)
             startOrientationListener()
         }
     }
 
-    // iOS 13+ and Android have different handle ways, simplified here
     const startOrientationListener = () => {
         window.addEventListener("deviceorientation", (event) => {
-            let alpha = event.alpha // Compass direction (0-360) usually
-            // Webkit (iOS) specific
+            let alpha = event.alpha // Compass direction (0-360) 
             if ((event as any).webkitCompassHeading) {
                 alpha = (event as any).webkitCompassHeading
             }
 
-            if (alpha !== null) {
-                // Smoothing could be applied here
-                setHeading(alpha)
-            }
-            if (event.beta !== null && event.gamma !== null && event.alpha !== null) {
-                setDeviceOrientation({ alpha: alpha || 0, beta: event.beta, gamma: event.gamma })
-            }
+            if (alpha !== null) setHeading(alpha)
+            if (event.beta !== null) setDevicePitch(event.beta) // -180 to 180 (front/back tilt)
         }, true)
     }
 
-    // 4. Calculate Angle to Moon
-    // Heading is where device is looking (0-360, N=0)
-    // Moon Azimuth is radians from South (SunCalc specific), need to convert to 0-360 Compass
+    // 4. AR Projection Logic
 
-    // SunCalc: azimuth: 0 is South, Math.PI * 3/4 is Northwest.
-    // Standard Compass: 0 is North, 90 East, 180 South, 270 West.
-
+    // Moon Position (Azimuth to Compass Bearing)
     const getMoonCompassBearing = () => {
         if (!moonData) return 0
-        // SunCalc azimuth is radians, 0 = South, increasing westward?
-        // Let's verify SunCalc docs or adjust.
-        // Actually SunCalc: azimuth is in radians. 0 is south, increasing westward???? 
-        // Typically Azimuth: 0 = North in navigation. 
-        // SunCalc: "azimuth in radians (direction along the horizon, measured from south to west)"
-        // So South = 0, West = PI/2 (90), North = PI (180), East = 3PI/2 (270)
-
-        const az = moonData.position.azimuth // radians
-        const azDeg = (az * 180) / Math.PI // degrees from south westwards
-
-        // Convert to Compass (0=North, 90=East)
-        // South (180 from North) is 0 in SunCalc.
-        // So Compass = (180 + azDeg) % 360
+        const az = moonData.position.azimuth
+        const azDeg = (az * 180) / Math.PI
+        // South (180 from North) is 0 in SunCalc. Compass = (180 + azDeg) % 360
         let bearing = (180 + azDeg) % 360
         return bearing
     }
 
     const moonBearing = getMoonCompassBearing()
-
-    // Difference between where we look and where moon is
-    // If heading is 0 (North) and Moon is 90 (East), diff is -90.
-    let diff = moonBearing - heading
-    // Normalize to -180 to 180
-    while (diff < -180) diff += 360
-    while (diff > 180) diff -= 360
-
-    // Altitude check (simplified)
     const moonAlt = moonData ? (moonData.position.altitude * 180 / Math.PI) : 0
-    // We could use device pitch (beta) to guide Up/Down too.
 
-    useEffect(() => {
-        // Simple "Found" logic
-        if (Math.abs(diff) < 10) { // Within 10 degrees horizontal
-            setIsFound(true)
-        } else {
-            setIsFound(false)
-        }
-    }, [diff])
+    // Deltas
+    let azDiff = moonBearing - heading
+    while (azDiff < -180) azDiff += 360
+    while (azDiff > 180) azDiff -= 360
+
+    // Pitch Diff (User looks up/down)
+    // Device Pitch (beta): 90 is upright, 0 is flat on table.
+    // When holding phone upright to look at horizon, beta is ~90.
+    // If Moon is at 45 deg elevation, we need to tilt back.
+    // Camera vertical field of view is approx 60 degrees.
+    // Let's approximate simplified interaction:
+    // Just 2D projection on screen center relative.
+
+    // Correction for holding device primarily upright
+    // Beta 90 = Horizon (Aspect 0)
+    const pitchDiff = moonAlt - (devicePitch - 90)
+
+    // Simple "Is Found" logic based on center proximity
+    const isFound = Math.abs(azDiff) < 10 && Math.abs(pitchDiff) < 15 // Rough field of view window
 
     const [isARMode, setIsARMode] = useState(false)
 
-    // AR Start Handler
     const handleStartAR = () => {
         setIsARMode(true)
-        requestAccess() // Trigger permissions
+        requestAccess()
     }
 
-    return (
-        <main className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-center text-[#FAC800] font-mono">
+    // AR Element Position (Pixels relative to center)
+    // FOV approx 60?
+    // 1 degree approx X pixels
+    // Let's rely on CSS translates 
+    // If azDiff is +10 degrees (Right), we move object +X px? No, if target is right, we move object Left?
+    // No, if target is at 100, and we look at 90, target is at +10 relative to center.
+    // Screen width is e.g. 60 deg ?
+    const fov = 60
+    const xOffset = (azDiff / (fov / 2)) * 50 // % of screen half width
+    const yOffset = -(pitchDiff / (fov / 2)) * 50 // % of screen half height (inverted because up is negative Y in CSS usually, but translate works differently)
 
-            {/* 1. INITIAL VIEW (Static Moon) */}
+    return (
+        <main className="relative w-full h-[100dvh] bg-black overflow-hidden flex flex-col items-center justify-center text-[#FAC800] font-mono select-none">
+
+            <div className="absolute top-0 left-0 z-[1000]">
+                <HamburgerMenu />
+            </div>
+
+            {/* 1. INITIAL VIEW */}
             <AnimatePresence>
                 {!isARMode && (
                     <motion.div
                         initial={{ opacity: 1 }}
-                        exit={{ opacity: 0, scale: 2, filter: "blur(10px)" }}
-                        transition={{ duration: 0.8 }}
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black"
+                        exit={{ opacity: 0, scale: 1.2, filter: "blur(20px)" }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-0 z-20 flex flex-col md:flex-row items-center justify-center bg-black p-6 md:p-24"
                     >
-                        {/* Header */}
-                        <div className="absolute top-6 left-6">
-                            <Link href="/" className="text-2xl font-serif tracking-[0.2em] hover:opacity-50 transition-opacity">
-                                BACK
-                            </Link>
-                        </div>
-
-                        {/* Big Moon Visual */}
-                        <div className="flex-1 flex flex-col items-center justify-center gap-8">
-                            <div className="w-64 h-64 md:w-96 md:h-96 relative">
-                                {moonData && <MoonVisual phase={moonData.phase.phase} />}
-                            </div>
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-4xl md:text-6xl font-serif font-light">
-                                    {moonData ? (moonData.phase.phase * 100 < 50 ? (moonData.phase.phase * 2 * 100).toFixed(0) : ((1 - moonData.phase.phase) * 2 * 100).toFixed(0)) + "%" : "--"}
-                                </span>
-                                <span className="text-sm tracking-[0.3em] opacity-70">
-                                    {moonData ? getPhaseName(moonData.phase.phase) : "CALCULATING"}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Start Button */}
-                        <div className="pb-20">
+                        {/* Top Right Camera Button (New AR Trigger) */}
+                        <div className="absolute top-12 right-6 z-50 mix-blend-difference">
                             <button
                                 onClick={handleStartAR}
-                                className="group relative px-8 py-4 bg-transparent overflow-hidden"
+                                className="p-4 -mr-4 -mt-6.5 text-[#FAC800] hover:text-white transition-colors duration-300"
                             >
-                                <span className="relative z-10 text-xl tracking-[0.2em] group-hover:text-black transition-colors duration-500">
-                                    FIND THE MOON
-                                </span>
-                                <div className="absolute inset-x-0 bottom-0 h-[1px] bg-[#FAC800] group-hover:h-full transition-all duration-500 ease-in-out" />
+                                <Camera size={32} strokeWidth={1} />
                             </button>
+                        </div>
+
+                        <div className="flex-1 w-full h-full flex flex-col md:flex-row items-center justify-center relative z-20 gap-4 md:gap-16">
+
+                            {/* Desktop: Left Content (Text) - Explicit Height Match */}
+                            <div className="flex flex-col items-center md:items-end md:justify-between order-2 md:order-1 -mt-25 md:mt-0 md:h-[35vw] md:max-h-[600px] py-4 md:py-0 md:translate-x-28">
+                                <div className="flex flex-col items-center md:items-end gap-1 md:gap-4">
+                                    <span className="text-xl md:text-3xl tracking-[0.2em] font-serif font-light text-[#FAC800] uppercase mb-2 md:mb-0 opacity-80">
+                                        UNTIL
+                                    </span>
+                                    <h1 className="text-5xl md:text-7xl lg:text-[5rem] xl:text-[7rem] font-serif tracking-[0.02em] text-[#FAC800] uppercase opacity-90 text-center md:text-right leading-[0.9]">
+                                        BANANA<br />MOON
+                                    </h1>
+                                </div>
+
+                                <div className="flex flex-col items-center md:items-end leading-none mt-3 md:mt-0 mb-10 md:mb-0">
+                                    {moonData && (Math.abs(Math.round(moonData.age) - 5) < 1 || Math.abs(Math.round(moonData.age) - 25) < 1) ? (
+                                        <span className="text-5xl md:text-8xl lg:text-[8rem] font-serif font-bold tracking-[0.05em] text-[#FAC800] animate-pulse">
+                                            TODAY
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-baseline gap-4">
+                                            <span className="text-7xl md:text-[8rem] lg:text-[10rem] font-serif font-light tracking-[0.02em] text-[#FAC800] leading-none">
+                                                {moonData ? moonData.daysUntil : "-"}
+                                            </span>
+                                            <span className="text-xl md:text-3xl opacity-80 tracking-[0.2em] font-serif font-light">DAYS</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Desktop: Right Content (Moon Visual) */}
+                            <div className="flex-1 w-full flex items-center justify-center md:justify-start relative order-1 md:order-2 md:pl-32">
+                                <div className="relative w-[65vw] h-[65vw] md:w-[35vw] md:h-[35vw] max-w-[400px] max-h-[400px] md:max-w-[600px] md:max-h-[600px] transition-transform duration-[2s] hover:scale-105 mt-0 md:mt-0 mb-0 md:mb-0">
+                                    <div className="absolute inset-0 rounded-full blur-[80px] bg-[#FAC800]/10 scale-125 animate-pulse-slow pointer-events-none"></div>
+                                    {moonData ? (
+                                        <MoonVisual phase={moonData.phase.phase} />
+                                    ) : (
+                                        <div className="w-full h-full rounded-full border border-[#FAC800]/20 animate-spin-slow"></div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* 2. AR VIEW (Camera & Overlay) */}
+            {/* 2. AR VIEW */}
             <motion.div
                 animate={{ opacity: isARMode ? 1 : 0 }}
                 className="absolute inset-0 w-full h-full"
+                style={{ pointerEvents: isARMode ? "auto" : "none" }}
             >
-                {/* Camera Background */}
                 <video
                     ref={videoRef}
                     autoPlay
@@ -227,78 +274,56 @@ export default function MoonPage() {
                     className="absolute inset-0 w-full h-full object-cover opacity-50 z-0 pointer-events-none"
                 />
 
-                {/* UI Layer */}
-                <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 md:p-12 pb-20 pointer-events-none">
+                {/* Floating AR Layer */}
+                {isARMode && (
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none perspective-[1000px]">
+                        {/* The Floating Banana */}
+                        <div
+                            className="absolute top-1/2 left-1/2 w-48 h-48 -ml-24 -mt-24 flex items-center justify-center transition-transform duration-100 ease-out will-change-transform"
+                            style={{
+                                transform: `translate(${xOffset}vw, ${-yOffset}vh) scale(${isFound ? 1.5 : 1})`
+                            }}
+                        >
+                            <BananaVisual isFound={isFound} />
 
-                    {/* Header (Top) */}
-                    <div className="w-full flex justify-between items-start pointer-events-auto">
-                        <button onClick={() => setIsARMode(false)} className="text-2xl font-serif tracking-[0.2em] mix-blend-difference hover:opacity-50 transition-opacity">
-                            CLOSE
-                        </button>
-                        <div className="flex flex-col items-end">
-                            <span className="text-xs opacity-50 tracking-widest">PHASE</span>
-                            <span className="text-xl font-serif">
-                                {moonData ? (moonData.phase.phase * 100).toFixed(0) + "%" : "--"}
-                            </span>
-                            <span className="text-[10px] opacity-70 tracking-widest mt-1">
-                                {moonData ? getPhaseName(moonData.phase.phase) : "LOADING"}
-                            </span>
+                            {/* Distance / Name Label */}
+                            <div className="absolute top-full mt-4 flex flex-col items-center">
+                                <span className="text-xs bg-black/50 px-2 py-1 rounded tracking-widest backdrop-blur-sm border border-[#FAC800]/30">
+                                    MOON
+                                </span>
+                                {!isFound && (
+                                    <span className="text-[10px] mt-1 opacity-70">
+                                        {azDiff > 0 ? "← LEFT" : "RIGHT →"} / {pitchDiff > 0 ? "↓ DOWN" : "UP ↑"}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
+                )}
 
-                    {/* Central Guide (Middle) */}
-                    <div className="flex-1 flex flex-col items-center justify-center pointer-events-auto">
-                        {/* Only show guide if AR Mode is active (and permission arguably granted, though flow handles that) */}
-                        {isARMode && (
-                            <div className="flex flex-col items-center justify-center gap-6">
-                                {/* Arrow */}
-                                <motion.div
-                                    animate={{ rotate: diff }}
-                                    transition={{ type: "spring", stiffness: 50 }}
-                                    className="w-48 h-48 md:w-64 md:h-64 border border-[#FAC800]/30 rounded-full flex items-center justify-center relative backdrop-blur-[2px]"
-                                >
-                                    {/* Central Reticle */}
-                                    <div className="w-2 h-2 bg-[#FAC800] rounded-full" />
+                {/* HUD Layer */}
+                <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 md:p-12 pb-20 pointer-events-none">
+                    <div className="w-full flex justify-end items-start pointer-events-auto">
+                        <button onClick={() => setIsARMode(false)} className="text-xs tracking-[0.2em] border border-[#FAC800]/50 px-4 py-2 hover:bg-[#FAC800] hover:text-black transition-all">
+                            CLOSE VIEW
+                        </button>
+                    </div>
 
-                                    {/* Indicator Arrow */}
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2">
-                                        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[16px] border-b-[#FAC800]" />
-                                    </div>
-
-                                    {/* Moon Visual */}
-                                    {isFound && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className="absolute inset-0 flex items-center justify-center bg-[#FAC800]/10 rounded-full animate-pulse"
-                                        >
-                                            <div className="text-xs text-[#FAC800] mt-24 font-bold tracking-widest">TARGET LOCKED</div>
-                                        </motion.div>
-                                    )}
-                                </motion.div>
-
-                                <div className="flex flex-col items-center gap-1">
-                                    <div className="text-3xl font-serif font-light">
-                                        {isFound ? "LUNA FOUND" : "SEARCHING"}
-                                    </div>
-                                    <div className="text-xs opacity-50 tracking-widest">
-                                        AZ: {moonBearing.toFixed(0)}° / EL: {moonAlt.toFixed(0)}°
-                                    </div>
-                                </div>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                        {isFound && (
+                            <div className="text-center animate-pulse">
+                                <div className="text-4xl font-serif font-light mb-2">MOON FOUND</div>
+                                <div className="text-xs tracking-[0.5em] opacity-80">ALIGNMENT LOCKED</div>
                             </div>
                         )}
                     </div>
 
-                    {/* Footer (Bottom) */}
                     <div className="w-full text-center">
-                        <div className="text-[10px] tracking-[0.5em] opacity-30 animate-pulse">
-                            HRK.877 ORBITAL TRACKER
+                        <div className="text-[10px] tracking-[0.5em] opacity-30">
+                            AZ: {moonBearing.toFixed(0)}° EL: {moonAlt.toFixed(0)}°
                         </div>
                     </div>
                 </div>
-
-                {/* Stylized Overlay */}
-                <div className="absolute inset-0 border-[10px] border-[#FAC800]/5 pointer-events-none" />
             </motion.div>
         </main>
     )
@@ -315,13 +340,40 @@ function getPhaseName(phase: number) {
     return "WANING CRESCENT"
 }
 
-// Simple SVG Moon Visualizer
 function MoonVisual({ phase }: { phase: number }) {
     return (
-        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_20px_rgba(250,200,0,0.3)]">
-            {/* Dark background orb */}
-            <circle cx="50" cy="50" r="48" fill="#111" stroke="#FAC800" strokeWidth="0.5" strokeOpacity="0.3" />
+        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_50px_rgba(250,200,0,0.4)]">
+            <defs>
+                <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                    <stop offset="80%" stopColor="#FAC800" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#FAC800" stopOpacity="0" />
+                </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="48" fill="#1a1a1a" stroke="#FAC800" strokeWidth="0.2" strokeOpacity="0.5" />
             <path d={calculateMoonPath(phase)} fill="#FAC800" />
+            <circle cx="50" cy="50" r="48" fill="url(#sphereShading)" opacity="0.3" pointerEvents="none" />
+        </svg>
+    )
+}
+
+function BananaVisual({ isFound }: { isFound: boolean }) {
+    return (
+        <svg
+            viewBox="0 0 100 100"
+            className={`w-full h-full drop-shadow-[0_0_20px_rgba(250,200,0,0.6)] transition-all duration-500 ${isFound ? "text-[#FAC800]" : "text-[#FAC800]/50"}`}
+        >
+            {/* Simple Banana Shape */}
+            <path
+                d="M20,80 Q50,90 80,20 Q60,50 20,60"
+                fill="currentColor"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            {isFound && (
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" className="animate-spin-slow" />
+            )}
         </svg>
     )
 }
@@ -330,7 +382,6 @@ function calculateMoonPath(phase: number) {
     const r = 48
     const top = `50,${50 - r}`
     const bottom = `50,${50 + r}`
-
     if (phase <= 0.5) {
         const p = phase * 2
         const rx = 48 * Math.abs(1 - 2 * p)
