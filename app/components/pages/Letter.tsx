@@ -8,7 +8,7 @@ import { db, appId } from "@/lib/firebase"
 import { sendEmail } from "@/app/actions/email"
 
 import Link from "next/link"
-import TopNavigation from "../layout/TopNavigation"
+import HamburgerMenu from "../navigation/HamburgerMenu"
 
 const Letter = () => {
     const [message, setMessage] = useState("")
@@ -77,8 +77,8 @@ const Letter = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20 flex flex-col">
-            <TopNavigation />
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 flex flex-col">
+            <HamburgerMenu />
             <div className="w-full max-w-7xl mx-auto relative flex-1 flex flex-col">
                 <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
                     <div>

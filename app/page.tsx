@@ -7,7 +7,7 @@ import { useAuth } from "./components/providers/AuthProvider"
 
 // Components
 import { ParallaxText } from "./components/ui/ParallaxText"
-import TopNavigation from "./components/layout/TopNavigation"
+import HamburgerMenu from "./components/navigation/HamburgerMenu"
 import Footer from "./components/layout/Footer"
 
 // Sections
@@ -53,7 +53,7 @@ export default function Hrk877App() {
       <AdminLoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
       <main>
-        <TopNavigation />
+        <HamburgerMenu />
         <Hero />
         <div className="py-12 md:py-20 bg-white/80 backdrop-blur-md border-y border-black/5 relative z-10">
           <ParallaxText baseVelocity={-2}>PREMIUM BANANA EXPERIENCE — </ParallaxText>

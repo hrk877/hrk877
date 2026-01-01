@@ -8,7 +8,7 @@ import { useAuth } from "../components/providers/AuthProvider"
 import { Plus, ChevronRight } from "lucide-react"
 
 // Components
-import TopNavigation from "../components/layout/TopNavigation"
+import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Modals
 import BlogEditor, { type BlogPost } from "../components/modals/BlogEditor"
@@ -81,8 +81,8 @@ export default function JournalPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20">
-            <TopNavigation />
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
+            <HamburgerMenu />
 
             <BlogEditor
                 isOpen={isBlogEditorOpen}

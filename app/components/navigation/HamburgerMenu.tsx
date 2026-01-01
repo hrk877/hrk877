@@ -13,7 +13,10 @@ import AllowlistModal from "../modals/AllowlistModal"
 import AccessDeniedModal from "../modals/AccessDeniedModal"
 
 const MENU_ITEMS = [
-    { label: "HAND", href: "/hand" },
+    { label: "HOME", href: "/" },
+    { label: "MUSEUM", href: "/museum" },
+    { label: "JOURNAL", href: "/journal" },
+    { label: "LETTER", href: "/letter" },
     { label: "SHOP", href: "/shop" },
     {
         label: "LAB",
@@ -30,8 +33,6 @@ const MENU_ITEMS = [
             { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
         ]
     },
-    { label: "hrk.877", href: "/" },
-    { label: "CONTACT", href: "mailto:877hand@gmail.com", external: true },
 ]
 
 export default function HamburgerMenu() {

@@ -12,7 +12,7 @@ import MuseumEditorModal, { type Artwork } from "../modals/MuseumEditorModal"
 
 import { useAuth } from "../providers/AuthProvider"
 import Link from "next/link"
-import TopNavigation from "../layout/TopNavigation"
+import HamburgerMenu from "../navigation/HamburgerMenu"
 import AdminLoginModal from "../modals/AdminLoginModal"
 
 const Museum = () => {
@@ -106,8 +106,8 @@ const Museum = () => {
     const prevPageMuseum = () => setCurrentPageMuseum(Math.max(currentPageMuseum - 1, 1))
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-20 md:pt-24 pb-20">
-            <TopNavigation />
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
+            <HamburgerMenu />
             <MuseumEditorModal
                 isOpen={isEditorOpen}
                 onClose={() => {
