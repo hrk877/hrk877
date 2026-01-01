@@ -14,10 +14,16 @@ import AccessDeniedModal from "../modals/AccessDeniedModal"
 
 const MENU_ITEMS = [
     { label: "HOME", href: "/" },
-    { label: "MUSEUM", href: "/museum" },
     { label: "JOURNAL", href: "/journal" },
-    { label: "LETTER", href: "/letter" },
+    { label: "MUSEUM", href: "/museum" },
     { label: "SHOP", href: "/shop" },
+    {
+        label: "SNS",
+        children: [
+            { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
+            { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
+        ]
+    },
     {
         label: "LAB",
         children: [
@@ -26,13 +32,7 @@ const MENU_ITEMS = [
             { label: "MOON", href: "/moon" },
         ]
     },
-    {
-        label: "SNS",
-        children: [
-            { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
-            { label: "LINE", href: "https://lin.ee/CYLzSSE", external: true },
-        ]
-    },
+    { label: "LETTER", href: "/letter" },
 ]
 
 export default function HamburgerMenu() {
@@ -113,7 +113,7 @@ export default function HamburgerMenu() {
             {/* Toggle Button */}
             <button
                 onClick={toggleMenu}
-                className="fixed top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
+                className="absolute top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
                 aria-label="Toggle Menu"
             >
                 <div className="flex flex-col gap-[6px] w-8 items-center justify-center">
