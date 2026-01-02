@@ -466,8 +466,8 @@ function App() {
                             <div className="flex items-baseline relative whitespace-nowrap">
 
 
-                                {/* 877hand */}
-                                {"877hand".split("").map((char, index) => (
+                                {/* 877finger */}
+                                {"877finger".split("").map((char, index) => (
                                     <motion.span
                                         key={index}
                                         className="text-[18vw] md:text-[12vw] leading-[0.8] font-semibold tracking-tighter mix-blend-overlay text-black select-none pointer-events-auto cursor-pointer"
