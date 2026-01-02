@@ -24,7 +24,7 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                             className="font-bold text-2xl md:text-3xl cursor-pointer select-none hover:text-white transition-colors"
                             title="5 clicks to login"
                         >
-                            hrk.877
+                            877hand
                         </span>
                         <span className="font-mono text-lg md:text-xs max-w-xs leading-relaxed opacity-60">
                             Digital homage to the yellow curve.
@@ -61,7 +61,7 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                 </div>
                 <div className="flex justify-between items-end font-mono text-base md:text-xs uppercase opacity-40 z-10 pt-4 w-full">
                     <span>
-                        © 2025 HRK.877
+                        © 2025 877hand
                     </span>
                     <span>TOKYO / JAPAN</span>
                 </div>

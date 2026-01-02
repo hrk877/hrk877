@@ -16,23 +16,23 @@ const geistMono = Geist_Mono({
 
 // メタデータをここに集約します
 export const metadata: Metadata = {
-  title: "hrk.877",
+  title: "877hand",
   description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter.",
   // ★★★ 本番環境のURLをここに設定してください（例: https://hrk877.vercel.app）
   metadataBase: new URL("https://hrk877.vercel.app"),
 
   // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {
-    title: "hrk.877",
+    title: "877hand",
     description: "A creative space bending the world with the power of bananas.",
     url: "/",
-    siteName: "hrk.877",
+    siteName: "877hand",
     images: [
       {
         url: "/ogp-image.png", // public/ogp-image.png
         width: 1200,
         height: 630,
-        alt: "hrk.877",
+        alt: "877hand",
       },
     ],
     locale: "ja_JP",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "hrk.877",
+    title: "877hand",
     description: "A creative space bending the world with the power of bananas.",
     images: ["/ogp-image.png"], // public/ogp-image.png
   },
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "hrk.877",
+    title: "877hand",
   },
 };
 

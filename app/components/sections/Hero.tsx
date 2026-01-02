@@ -11,11 +11,11 @@ const Hero = () => {
     const router = useRouter()
     const { scrollY } = useScroll()
     const y2 = useTransform(scrollY, [0, 500], [0, -50])
-    const title = "hrk.877"
+    const title = "877hand"
 
-    // Sequence Logic: Indices 4, 5, 6 for '877'
+    // Sequence Logic: Indices 0, 1, 2 for '877'
     const [tapSequenceIndex, setTapSequenceIndex] = useState(0)
-    const targetSequence = [4, 5, 6]
+    const targetSequence = [0, 1, 2]
 
     const handleCharTap = (index: number) => {
         const expectedIndex = targetSequence[tapSequenceIndex]
@@ -31,7 +31,7 @@ const Hero = () => {
             }
         } else {
             // Incorrect - Reset
-            if (index === 4) {
+            if (index === 0) {
                 setTapSequenceIndex(1)
             } else {
                 setTapSequenceIndex(0)
