@@ -26,7 +26,7 @@ export const notifyCommunity = async (type: 'banana' | 'museum' | 'journal', _co
 その言葉の欠片を、拾い上げてみてください。
 
 Visit the 877hand
-${SITE_URL}/hand`
+${SITE_URL}/finger`
                 break
             case 'museum':
                 subject = "New Art Has Arrived 🍌"

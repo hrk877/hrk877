@@ -7,7 +7,7 @@ import { Physics, useBox, usePointToPointConstraint, useSpring, useSphere } from
 import { useState, useEffect, useRef, createRef, RefObject } from "react"
 import * as THREE from "three"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
-import { Banana } from "../hand/Banana"
+import { Banana } from "../finger/Banana"
 
 // --- Physics Interaction Components (Copied/Adapted from /hand) ---
 

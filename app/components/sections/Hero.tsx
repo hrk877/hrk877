@@ -24,7 +24,7 @@ const Hero = () => {
             // Correct character tapped in sequence
             if (tapSequenceIndex === targetSequence.length - 1) {
                 // Success: Navigate to Hand
-                router.push("/hand")
+                router.push("/finger")
                 setTapSequenceIndex(0)
             } else {
                 setTapSequenceIndex(prev => prev + 1)
