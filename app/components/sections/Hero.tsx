@@ -68,7 +68,7 @@ const Hero = () => {
 
                 <motion.div
                     style={{ y: y2 }}
-                    className="mt-8 md:mt-16 text-center relative z-20 px-2"
+                    className="mt-10 md:mt-20 text-center relative z-20 px-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1, duration: 1 }}
