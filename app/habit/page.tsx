@@ -136,8 +136,8 @@ const BANANA_PIXELS: PixelData[] = [
 
     // Tip (Green/Stem) - Currently set to body by user request
     { x: 5, y: 18, type: 'border' },
-    { x: 6, y: 18, type: 'body', shade: 'medium' },
-    { x: 7, y: 18, type: 'body', shade: 'dark' },
+    { x: 6, y: 18, type: 'body', shade: 'light' },
+    { x: 7, y: 18, type: 'body', shade: 'medium' },
     { x: 8, y: 18, type: 'border' },
 
     { x: 6, y: 19, type: 'border' },
