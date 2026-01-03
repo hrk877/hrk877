@@ -226,13 +226,29 @@ export default function HamburgerMenu({ color }: HamburgerMenuProps) {
                                                 </button>
                                             ) : (
                                                 // Internal Link
-                                                <Link
-                                                    href={item.href!}
-                                                    onClick={toggleMenu}
-                                                    className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
-                                                >
-                                                    {item.label}
-                                                </Link>
+                                                <div className="relative flex items-center justify-center">
+                                                    <Link
+                                                        href={item.href!}
+                                                        onClick={toggleMenu}
+                                                        className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
+                                                    >
+                                                        {item.label}
+                                                    </Link>
+
+                                                    {/* Admin Gear Icon for HABIT */}
+                                                    {item.label === "HABIT" && isAdmin && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault()
+                                                                e.stopPropagation()
+                                                                setIsAllowlistOpen(true)
+                                                            }}
+                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
+                                                        >
+                                                            <Settings size={20} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     ))}
