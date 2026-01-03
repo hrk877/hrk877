@@ -28,6 +28,7 @@ const MENU_ITEMS = [
         label: "LAB",
         children: [
             { label: "AI", href: "/ai" },
+            { label: "HABIT", href: "/habit", restricted: true },
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
         ]
@@ -35,11 +36,13 @@ const MENU_ITEMS = [
     { label: "LETTER", href: "/letter" },
 ]
 
-export default function HamburgerMenu() {
+interface HamburgerMenuProps {
+    color?: string
+}
+
+export default function HamburgerMenu({ color }: HamburgerMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
-
-    // Auth & Access State
     const { user, isAdmin, isWhitelisted } = useAuth()
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
     const [isAllowlistOpen, setIsAllowlistOpen] = useState(false)
@@ -93,6 +96,7 @@ export default function HamburgerMenu() {
             case "LAB":
                 return [
                     { label: "AI", href: "/ai" },
+                    { label: "HABIT", href: "/habit", restricted: true },
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
@@ -113,7 +117,9 @@ export default function HamburgerMenu() {
             {/* Toggle Button */}
             <button
                 onClick={toggleMenu}
-                className="absolute top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] group"
+                style={{ color: color }}
+                className={`absolute top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none group ${color ? '' : 'mix-blend-difference text-[#FAC800]'
+                    }`}
                 aria-label="Toggle Menu"
             >
                 <div className="flex flex-col gap-[6px] w-8 items-center justify-center">
@@ -211,6 +217,13 @@ export default function HamburgerMenu() {
                                                         </button>
                                                     )}
                                                 </div>
+                                            ) : item.restricted && (!isAdmin && !isWhitelisted) ? (
+                                                <button
+                                                    onClick={() => setIsAccessDeniedOpen(true)}
+                                                    className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
+                                                >
+                                                    {item.label}
+                                                </button>
                                             ) : (
                                                 // Internal Link
                                                 <Link
