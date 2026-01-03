@@ -32,28 +32,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const initAuth = async () => {
-            if (!auth) return
-
-            try {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            // If no user is logged in, try to restore or sign in anonymously
+            if (!currentUser) {
                 const initialToken =
                     typeof window !== "undefined"
                         ? (window as unknown as { __initial_auth_token?: string }).__initial_auth_token
                         : undefined
 
                 if (initialToken) {
-                    await signInWithCustomToken(auth, initialToken)
+                    try {
+                        await signInWithCustomToken(auth, initialToken)
+                    } catch (e) {
+                        console.error("Custom token login failed", e)
+                    }
                 } else {
-                    await signInAnonymously(auth)
+                    try {
+                        await signInAnonymously(auth)
+                    } catch (e) {
+                        console.error("Anonymous login failed", e)
+                    }
                 }
-            } catch (e) {
-                console.error("Auth init failed", e)
+                return // Listener will fire again after sign-in
             }
-        }
-
-        initAuth()
-
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             console.log("Auth State Changed:", currentUser?.email, currentUser?.providerData)
             setUser(currentUser)
 
