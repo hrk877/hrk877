@@ -34,8 +34,10 @@ const FONT: { [key: string]: string[] } = {
 
 function generateTextPattern(text: string): Float32Array {
     const points: number[] = []
-    const charWidth = 0.45
-    const spacing = 0.08
+    // Smaller size for mobile
+    const charWidth = 0.25
+    const spacing = 0.04
+    const rowHeight = 0.08
     const totalWidth = text.length * (charWidth + spacing)
     const startX = -totalWidth / 2
 
@@ -49,9 +51,9 @@ function generateTextPattern(text: string): Float32Array {
             for (let col = 0; col < pattern[row].length; col++) {
                 if (pattern[row][col] === '#') {
                     points.push(
-                        charStartX + (col / colCount) * charWidth + (Math.random() - 0.5) * 0.04,
-                        (2 - row) * 0.15 + (Math.random() - 0.5) * 0.04,
-                        (Math.random() - 0.5) * 0.04
+                        charStartX + (col / colCount) * charWidth + (Math.random() - 0.5) * 0.02,
+                        (2 - row) * rowHeight + (Math.random() - 0.5) * 0.02,
+                        (Math.random() - 0.5) * 0.02
                     )
                 }
             }
