@@ -35,29 +35,43 @@ const FONT: { [key: string]: string[] } = {
 function generateTextPattern(text: string): Float32Array {
     const points: number[] = []
     // Smaller size for mobile
-    const charWidth = 0.25
+    const baseCharWidth = 0.25
     const spacing = 0.04
     const rowHeight = 0.08
-    const totalWidth = text.length * (charWidth + spacing)
-    const startX = -totalWidth / 2
 
+    // Calculate actual total width based on each character's real width
+    let totalWidth = 0
+    const charWidths: number[] = []
     for (let i = 0; i < text.length; i++) {
         const char = text[i].toUpperCase()
         const pattern = FONT[char] || FONT[' ']
-        const charStartX = startX + i * (charWidth + spacing)
+        const colCount = pattern[0]?.length || 4
+        // Scale character width based on its column count relative to standard (4 columns)
+        const charWidth = baseCharWidth * (colCount / 4)
+        charWidths.push(charWidth)
+        totalWidth += charWidth + (i < text.length - 1 ? spacing : 0)
+    }
+    const startX = -totalWidth / 2
+
+    let currentX = startX
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i].toUpperCase()
+        const pattern = FONT[char] || FONT[' ']
+        const charWidth = charWidths[i]
         const colCount = pattern[0]?.length || 4
 
         for (let row = 0; row < pattern.length; row++) {
             for (let col = 0; col < pattern[row].length; col++) {
                 if (pattern[row][col] === '#') {
                     points.push(
-                        charStartX + (col / colCount) * charWidth + (Math.random() - 0.5) * 0.02,
+                        currentX + (col / colCount) * charWidth + (Math.random() - 0.5) * 0.02,
                         (2 - row) * rowHeight + (Math.random() - 0.5) * 0.02,
                         (Math.random() - 0.5) * 0.02
                     )
                 }
             }
         }
+        currentX += charWidth + spacing
     }
     return new Float32Array(points)
 }
