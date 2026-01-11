@@ -212,14 +212,10 @@ function ParticleSystem({
                 vel[idx] += dx * DISPERSE_STRENGTH
                 vel[idx + 1] += dy * DISPERSE_STRENGTH
             } else if (gesture === 'point' && fingerTip) {
-                const offset = getSphereOffset(i, PARTICLE_COUNT)
-                const tx = fx + offset.x
-                const ty = fy + offset.y
-                const tz = offset.z
-
-                pos[idx] += (tx - pos[idx]) * SPHERE_COLLECT_SPEED
-                pos[idx + 1] += (ty - pos[idx + 1]) * SPHERE_COLLECT_SPEED
-                pos[idx + 2] += (tz - pos[idx + 2]) * SPHERE_COLLECT_SPEED
+                // Collect all particles to fingertip (shrink to point)
+                pos[idx] += (fx - pos[idx]) * SPHERE_COLLECT_SPEED
+                pos[idx + 1] += (fy - pos[idx + 1]) * SPHERE_COLLECT_SPEED
+                pos[idx + 2] += (0 - pos[idx + 2]) * SPHERE_COLLECT_SPEED
             } else if (textPattern) {
                 const ti = (i * 3) % textPattern.length
                 const tx = textPattern[ti] || 0
@@ -487,15 +483,15 @@ export default function ParticlesPage() {
 
             {!isTracking && (
                 <>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                        <h1 className="text-black font-serif text-4xl md:text-5xl tracking-[0.3em]">
+                    <div className="absolute inset-0 flex items-center justify-center px-6">
+                        <h1 className="text-black font-serif text-3xl sm:text-4xl md:text-5xl tracking-[0.2em] sm:tracking-[0.3em] text-center">
                             PARTICLES
                         </h1>
                     </div>
                     <button
                         onClick={startTracking}
                         disabled={isLoading}
-                        className="absolute bottom-12 left-1/2 -translate-x-1/2 px-8 py-4 bg-black text-[#FAC800] font-mono tracking-widest hover:bg-white hover:text-black disabled:opacity-50"
+                        className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 px-6 sm:px-8 py-3 sm:py-4 bg-black text-[#FAC800] font-mono text-sm sm:text-base tracking-widest hover:bg-white hover:text-black disabled:opacity-50"
                     >
                         {isLoading ? "LOADING..." : "START"}
                     </button>
