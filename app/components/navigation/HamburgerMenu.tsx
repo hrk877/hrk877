@@ -32,7 +32,7 @@ const MENU_ITEMS = [
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
             { label: "PARTICLES", href: "/particles" },
-
+            { label: "TRAINING", href: "/training", restricted: true },
         ]
     },
     { label: "LETTER", href: "/letter" },
@@ -102,7 +102,7 @@ export default function HamburgerMenu({ color }: HamburgerMenuProps) {
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
                     { label: "PARTICLES", href: "/particles" },
-
+                    { label: "TRAINING", href: "/training", restricted: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
             case "SNS":
