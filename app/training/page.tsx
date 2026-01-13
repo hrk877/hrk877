@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "../components/providers/AuthProvider"
-import { doc, collection, addDoc, Timestamp, onSnapshot, query, orderBy, limit } from "firebase/firestore"
+import { doc, collection, addDoc, setDoc, deleteDoc, Timestamp, onSnapshot, query, orderBy, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 import LoginModal from "../components/modals/LoginModal"
@@ -21,6 +21,13 @@ interface TrainingRecord {
     duration: number // seconds
     pace: number // seconds per km
     timestamp: Timestamp
+}
+
+interface ActiveSession {
+    startTime: number // ms since epoch
+    distance: number // km
+    positions: Position[]
+    isRunning: boolean
 }
 
 // Haversine formula to calculate distance between two GPS coordinates
@@ -69,16 +76,60 @@ export default function TrainingPage() {
     const [elapsedTime, setElapsedTime] = useState(0) // in seconds
     const [error, setError] = useState<string | null>(null)
     const [recentRecords, setRecentRecords] = useState<TrainingRecord[]>([])
+    const [hasActiveSession, setHasActiveSession] = useState(false)
 
     const positionsRef = useRef<Position[]>([])
     const watchIdRef = useRef<number | null>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
     const startTimeRef = useRef<number>(0)
-    const pausedTimeRef = useRef<number>(0)
+    const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+    const saveIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
     const isLoggedIn = Boolean(user && !user.isAnonymous)
 
-    // Fetch recent records from Firebase
+    // Wake Lock API - Prevent screen sleep
+    const requestWakeLock = useCallback(async () => {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+                console.log('Wake Lock activated')
+            }
+        } catch (err) {
+            console.log('Wake Lock failed:', err)
+        }
+    }, [])
+
+    const releaseWakeLock = useCallback(() => {
+        if (wakeLockRef.current) {
+            wakeLockRef.current.release()
+            wakeLockRef.current = null
+            console.log('Wake Lock released')
+        }
+    }, [])
+
+    // Save active session to Firebase
+    const saveActiveSession = useCallback(async () => {
+        if (!user || user.isAnonymous) return
+
+        const sessionRef = doc(db, "users", user.uid, "training_active", "current")
+        await setDoc(sessionRef, {
+            startTime: startTimeRef.current,
+            distance: distance,
+            positions: positionsRef.current.slice(-100), // Keep last 100 positions
+            isRunning: isRunning,
+            lastUpdate: Date.now()
+        })
+    }, [user, distance, isRunning])
+
+    // Clear active session from Firebase
+    const clearActiveSession = useCallback(async () => {
+        if (!user || user.isAnonymous) return
+
+        const sessionRef = doc(db, "users", user.uid, "training_active", "current")
+        await deleteDoc(sessionRef).catch(() => { })
+    }, [user])
+
+    // Fetch recent records and check for active session
     useEffect(() => {
         if (authLoading) return
 
@@ -87,10 +138,31 @@ export default function TrainingPage() {
             return
         }
 
+        // Check for active session
+        const sessionRef = doc(db, "users", user.uid, "training_active", "current")
+        const unsubscribeSession = onSnapshot(sessionRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data() as ActiveSession & { lastUpdate: number }
+                // Only restore if session is less than 24 hours old
+                const isRecent = Date.now() - data.lastUpdate < 24 * 60 * 60 * 1000
+                if (isRecent && data.startTime) {
+                    setHasActiveSession(true)
+                    startTimeRef.current = data.startTime
+                    setDistance(data.distance || 0)
+                    positionsRef.current = data.positions || []
+                    // Calculate elapsed time from start
+                    const elapsed = Math.floor((Date.now() - data.startTime) / 1000)
+                    setElapsedTime(elapsed)
+                    setIsPaused(true) // Show resume option
+                }
+            }
+        })
+
+        // Fetch recent records
         const recordsRef = collection(db, "users", user.uid, "training_records")
         const q = query(recordsRef, orderBy("timestamp", "desc"), limit(5))
 
-        const unsubscribe = onSnapshot(q, (snap) => {
+        const unsubscribeRecords = onSnapshot(q, (snap) => {
             const records: TrainingRecord[] = []
             snap.forEach(doc => {
                 records.push({ id: doc.id, ...doc.data() } as TrainingRecord)
@@ -99,13 +171,30 @@ export default function TrainingPage() {
             setLoading(false)
         })
 
-        return () => unsubscribe()
+        return () => {
+            unsubscribeSession()
+            unsubscribeRecords()
+        }
     }, [user, authLoading])
+
+    // Auto-save session every 10 seconds while running
+    useEffect(() => {
+        if (isRunning) {
+            saveIntervalRef.current = setInterval(() => {
+                saveActiveSession()
+            }, 10000)
+        }
+        return () => {
+            if (saveIntervalRef.current) {
+                clearInterval(saveIntervalRef.current)
+            }
+        }
+    }, [isRunning, saveActiveSession])
 
     // Save record to Firebase
     const saveRecord = useCallback(async () => {
         if (!user || user.isAnonymous) return
-        if (distance <= 0) return
+        if (elapsedTime <= 0) return // Only require some time elapsed
 
         const recordsRef = collection(db, "users", user.uid, "training_records")
         await addDoc(recordsRef, {
@@ -136,7 +225,15 @@ export default function TrainingPage() {
         setError(null)
         setIsRunning(true)
         setIsPaused(false)
-        startTimeRef.current = Date.now() - pausedTimeRef.current
+        setHasActiveSession(false)
+
+        // If resuming, keep the original start time
+        if (!startTimeRef.current) {
+            startTimeRef.current = Date.now()
+        }
+
+        // Request Wake Lock
+        requestWakeLock()
 
         // Start timer
         timerRef.current = setInterval(() => {
@@ -177,7 +274,10 @@ export default function TrainingPage() {
                 maximumAge: 0
             }
         )
-    }, [isLoggedIn, isAdmin, isWhitelisted])
+
+        // Save session immediately
+        saveActiveSession()
+    }, [isLoggedIn, isAdmin, isWhitelisted, requestWakeLock, saveActiveSession])
 
     // Stop/Pause tracking
     const stopTracking = useCallback(() => {
@@ -189,34 +289,27 @@ export default function TrainingPage() {
             clearInterval(timerRef.current)
             timerRef.current = null
         }
-        pausedTimeRef.current = Date.now() - startTimeRef.current
         setIsRunning(false)
         setIsPaused(true)
-    }, [])
+        releaseWakeLock()
+        saveActiveSession()
+    }, [releaseWakeLock, saveActiveSession])
 
     // Finish and save
     const finishAndSave = useCallback(async () => {
         stopTracking()
         await saveRecord()
+        await clearActiveSession()
         // Reset
         setDistance(0)
         setElapsedTime(0)
         setIsPaused(false)
+        setHasActiveSession(false)
         positionsRef.current = []
-        pausedTimeRef.current = 0
-    }, [stopTracking, saveRecord])
+        startTimeRef.current = 0
+    }, [stopTracking, saveRecord, clearActiveSession])
 
-    // Reset all
-    const resetTracking = useCallback(() => {
-        stopTracking()
-        setDistance(0)
-        setElapsedTime(0)
-        setIsPaused(false)
-        positionsRef.current = []
-        pausedTimeRef.current = 0
-    }, [stopTracking])
-
-    // Cleanup on unmount
+    // Cleanup on unmount (but save session first)
     useEffect(() => {
         return () => {
             if (watchIdRef.current !== null) {
@@ -225,8 +318,23 @@ export default function TrainingPage() {
             if (timerRef.current) {
                 clearInterval(timerRef.current)
             }
+            if (saveIntervalRef.current) {
+                clearInterval(saveIntervalRef.current)
+            }
+            releaseWakeLock()
         }
-    }, [])
+    }, [releaseWakeLock])
+
+    // Re-request wake lock when page becomes visible
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isRunning) {
+                requestWakeLock()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }, [isRunning, requestWakeLock])
 
     if (authLoading || (loading && isLoggedIn)) {
         return (
@@ -255,6 +363,14 @@ export default function TrainingPage() {
                     <h1 className="text-3xl md:text-5xl font-serif tracking-[0.2em] mb-16">
                         TRAINING
                     </h1>
+                )}
+
+                {/* Running indicator */}
+                {isRunning && (
+                    <div className="absolute top-12 right-6 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span className="text-xs tracking-widest opacity-60">RECORDING</span>
+                    </div>
                 )}
 
                 {/* Stats Display */}
@@ -292,41 +408,44 @@ export default function TrainingPage() {
                 )}
 
                 {/* Controls */}
-                <div className="flex gap-6">
-                    {!isRunning && !isPaused && (
-                        <button
-                            onClick={startTracking}
-                            className="px-10 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
-                        >
-                            START
-                        </button>
-                    )}
-
-                    {isRunning && (
-                        <button
-                            onClick={stopTracking}
-                            className="px-10 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
-                        >
-                            STOP
-                        </button>
-                    )}
-
-                    {isPaused && (
-                        <>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex gap-6">
+                        {!isRunning && !isPaused && (
                             <button
                                 onClick={startTracking}
-                                className="px-8 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
+                                className="px-10 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
                             >
-                                RESUME
+                                START
                             </button>
+                        )}
+
+                        {isRunning && (
                             <button
-                                onClick={finishAndSave}
-                                className="px-8 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
+                                onClick={stopTracking}
+                                className="px-10 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
                             >
-                                SAVE
+                                STOP
                             </button>
-                        </>
-                    )}
+                        )}
+
+                        {isPaused && (
+                            <>
+                                <button
+                                    onClick={startTracking}
+                                    className="px-8 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
+                                >
+                                    RESUME
+                                </button>
+                                <button
+                                    onClick={finishAndSave}
+                                    className="px-8 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
+                                >
+                                    SAVE
+                                </button>
+                            </>
+                        )}
+                    </div>
+
                 </div>
 
                 {/* Recent Records */}
