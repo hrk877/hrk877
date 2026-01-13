@@ -194,7 +194,7 @@ export default function TrainingPage() {
     // Save record to Firebase
     const saveRecord = useCallback(async () => {
         if (!user || user.isAnonymous) return
-        if (elapsedTime <= 0) return // Only require some time elapsed
+        if (distance <= 0) return
 
         const recordsRef = collection(db, "users", user.uid, "training_records")
         await addDoc(recordsRef, {
@@ -408,44 +408,41 @@ export default function TrainingPage() {
                 )}
 
                 {/* Controls */}
-                <div className="flex flex-col items-center gap-4">
-                    <div className="flex gap-6">
-                        {!isRunning && !isPaused && (
+                <div className="flex gap-6">
+                    {!isRunning && !isPaused && (
+                        <button
+                            onClick={startTracking}
+                            className="px-10 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
+                        >
+                            START
+                        </button>
+                    )}
+
+                    {isRunning && (
+                        <button
+                            onClick={stopTracking}
+                            className="px-10 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
+                        >
+                            STOP
+                        </button>
+                    )}
+
+                    {isPaused && (
+                        <>
                             <button
                                 onClick={startTracking}
-                                className="px-10 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
+                                className="px-8 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
                             >
-                                START
+                                RESUME
                             </button>
-                        )}
-
-                        {isRunning && (
                             <button
-                                onClick={stopTracking}
-                                className="px-10 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
+                                onClick={finishAndSave}
+                                className="px-8 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
                             >
-                                STOP
+                                SAVE
                             </button>
-                        )}
-
-                        {isPaused && (
-                            <>
-                                <button
-                                    onClick={startTracking}
-                                    className="px-8 py-4 bg-black text-[#FAC800] font-mono text-lg tracking-widest hover:bg-black/80 transition-colors"
-                                >
-                                    RESUME
-                                </button>
-                                <button
-                                    onClick={finishAndSave}
-                                    className="px-8 py-4 border-2 border-black text-black font-mono text-lg tracking-widest hover:bg-black hover:text-[#FAC800] transition-colors"
-                                >
-                                    SAVE
-                                </button>
-                            </>
-                        )}
-                    </div>
-
+                        </>
+                    )}
                 </div>
 
                 {/* Recent Records */}
