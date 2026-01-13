@@ -241,7 +241,7 @@ export default function MoonPage() {
                             {/* Desktop: Right Content (Moon Visual) */}
                             <div className="flex-1 w-full flex items-center justify-center md:justify-start relative order-1 md:order-2 md:pl-32">
                                 <div className="relative w-[65vw] h-[65vw] md:w-[35vw] md:h-[35vw] max-w-[400px] max-h-[400px] md:max-w-[600px] md:max-h-[600px] transition-transform duration-[2s] hover:scale-105 mt-0 md:mt-0 mb-0 md:mb-0">
-                                    <div className="absolute inset-0 rounded-full blur-[80px] bg-[#FAC800]/10 scale-125 animate-pulse-slow pointer-events-none"></div>
+                                    <div className="absolute inset-0 rounded-full blur-[80px] bg-[#FAC800]/10 scale-125 animate-pulse-slow pointer-events-none will-change-transform" style={{ transform: 'translateZ(0)' }}></div>
                                     {moonData ? (
                                         <MoonVisual phase={moonData.phase.phase} />
                                     ) : (

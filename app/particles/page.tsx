@@ -461,6 +461,11 @@ export default function ParticlesPage() {
         setEyesClosed(false)
     }, [])
 
+    // Auto-start tracking when page loads
+    useEffect(() => {
+        startTracking()
+    }, [])
+
     useEffect(() => {
         return () => {
             stopTracking()
@@ -470,8 +475,8 @@ export default function ParticlesPage() {
     }, [stopTracking])
 
     return (
-        <div className={`fixed inset-0 overflow-hidden touch-none ${isTracking ? 'bg-black' : 'bg-[#FAC800]'}`}>
-            <HamburgerMenu color={isTracking ? "#FAC800" : "#000000"} />
+        <div className="fixed inset-0 overflow-hidden touch-none bg-black">
+            <HamburgerMenu color="#FAC800" />
 
             <video
                 ref={videoRef}
@@ -497,30 +502,10 @@ export default function ParticlesPage() {
                 </Canvas>
             )}
 
-            {!isTracking && (
-                <>
-                    <div className="absolute inset-0 flex items-center justify-center px-6">
-                        <h1 className="text-black font-serif text-3xl sm:text-4xl md:text-5xl tracking-[0.2em] sm:tracking-[0.3em] text-center">
-                            PARTICLES
-                        </h1>
-                    </div>
-                    <button
-                        onClick={startTracking}
-                        disabled={isLoading}
-                        className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 px-6 sm:px-8 py-3 sm:py-4 bg-black text-[#FAC800] font-mono text-sm sm:text-base tracking-widest hover:bg-white hover:text-black disabled:opacity-50"
-                    >
-                        {isLoading ? "LOADING..." : "START"}
-                    </button>
-                </>
-            )}
-
-            {isTracking && (
-                <button
-                    onClick={stopTracking}
-                    className="absolute top-12 right-6 text-[#FAC800]/50 font-mono text-xs hover:text-[#FAC800]"
-                >
-                    STOP
-                </button>
+            {!isTracking && isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[#FAC800] font-mono text-sm tracking-widest">LOADING...</span>
+                </div>
             )}
         </div>
     )
