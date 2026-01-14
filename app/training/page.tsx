@@ -112,7 +112,7 @@ export default function RunningPage() {
     }, [user, authLoading])
 
     const saveRecord = useCallback(async () => {
-        if (!user || user.isAnonymous || distance <= 0) return
+        if (!user || user.isAnonymous) return
         const recordsRef = collection(db, "users", user.uid, "training_records")
         await addDoc(recordsRef, {
             distance,
