@@ -25,6 +25,14 @@ service cloud.firestore {
       
       match /habit_tracker/{trackerId} {
         allow read, write: if isOwner(userId);
+        
+        match /logs/{logId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+      
+      match /training_records/{recordId} {
+        allow read, write: if isOwner(userId);
       }
     }
 
