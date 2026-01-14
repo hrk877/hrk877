@@ -231,7 +231,7 @@ export default function RunningPage() {
             {!isRunning && !isPaused && allRecords.length > 0 && (
                 <button
                     onClick={() => setIsHistoryOpen(true)}
-                    className="absolute top-12 right-6 p-2 text-black/60 hover:text-black transition-colors z-50"
+                    className="absolute top-8.5 right-6 p-2 text-black/60 hover:text-black transition-colors z-50"
                 >
                     <History size={24} strokeWidth={1.5} />
                 </button>
