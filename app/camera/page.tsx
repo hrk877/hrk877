@@ -7,7 +7,7 @@ import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandma
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
-const PARTICLE_COUNT = 500
+const PARTICLE_COUNT = 100
 const TEXT_FORMATION_SPEED = 0.12
 const SPHERE_COLLECT_SPEED = 0.35
 const DISPERSE_STRENGTH = 0.12
@@ -303,6 +303,9 @@ export default function ParticlesPage() {
     const [bananaDetected, setBananaDetected] = useState(false)
     const bananaDetectionCountRef = useRef(0)
 
+    // Camera facing mode
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
+
     // Check if eyes are closed using face blendshapes
     const checkEyesClosed = (result: FaceLandmarkerResult): boolean => {
         if (!result.faceBlendshapes || result.faceBlendshapes.length === 0) return false
@@ -405,7 +408,8 @@ export default function ParticlesPage() {
         }
     }, [])
 
-    const startTracking = async () => {
+    const startTracking = async (mode?: 'user' | 'environment') => {
+        const targetMode = mode ?? facingMode
         if (isLoading) return
         if (!navigator.mediaDevices?.getUserMedia) {
             alert("カメラAPIが利用できません")
@@ -413,9 +417,14 @@ export default function ParticlesPage() {
         }
         if (!handLandmarkerRef.current && !(await initializeLandmarkers())) return
 
+        // Stop existing stream if any
+        if (videoRef.current?.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: 640, height: 480 }
+                video: { facingMode: targetMode, width: 640, height: 480 }
             })
             if (videoRef.current) {
                 videoRef.current.srcObject = stream
@@ -426,6 +435,14 @@ export default function ParticlesPage() {
         } catch (e) {
             console.error(e)
             alert("カメラ起動失敗")
+        }
+    }
+
+    const toggleCamera = async () => {
+        const newMode = facingMode === 'user' ? 'environment' : 'user'
+        setFacingMode(newMode)
+        if (isTracking) {
+            await startTracking(newMode)
         }
     }
 
@@ -544,10 +561,20 @@ export default function ParticlesPage() {
         <div className="fixed inset-0 overflow-hidden touch-none bg-black">
             <HamburgerMenu color="#FAC800" />
 
+            {/* Camera toggle button */}
+            {isTracking && (
+                <button
+                    onClick={toggleCamera}
+                    className="absolute top-8 right-6 z-50 text-[#FAC800] font-mono text-xs tracking-wider opacity-60 hover:opacity-100 transition-opacity"
+                >
+                    {facingMode === 'user' ? '外カメ' : '内カメ'}
+                </button>
+            )}
+
             <video
                 ref={videoRef}
                 className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-25" : "opacity-0"
-                    } transition-opacity scale-x-[-1]`}
+                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 playsInline
                 muted
             />
