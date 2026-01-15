@@ -24,6 +24,7 @@ const FONT: { [key: string]: string[] } = {
     'H': ['#  #', '#  #', '####', '#  #', '#  #'],
     'I': ['###', ' # ', ' # ', ' # ', '###'],
     'L': ['#   ', '#   ', '#   ', '#   ', '####'],
+    'N': ['#  #', '## #', '# ##', '#  #', '#  #'],
     'O': [' ## ', '#  #', '#  #', '#  #', ' ## '],
     'P': ['### ', '#  #', '### ', '#   ', '#   '],
     'S': [' ###', '#   ', ' ## ', '   #', '### '],
@@ -82,9 +83,10 @@ const TEXTS: { [key: string]: Float32Array } = {
     'COOL': generateTextPattern('COOL'),
     'HELLO': generateTextPattern('HELLO'),
     'SLEEP': generateTextPattern('SLEEP'),
+    'BANANA': generateTextPattern('BANANA'),
 }
 
-type GestureType = 'none' | 'peace' | 'point' | 'rock' | 'heart' | 'openHand' | 'fist' | 'sleep'
+type GestureType = 'none' | 'peace' | 'point' | 'rock' | 'heart' | 'openHand' | 'fist' | 'sleep' | 'banana'
 
 // Detect gesture
 function detectSingleHandGesture(landmarks: NormalizedLandmark[]): {
@@ -198,6 +200,7 @@ function ParticleSystem({
             case 'rock': return 'COOL'
             case 'openHand': return 'HELLO'
             case 'sleep': return 'SLEEP'
+            case 'banana': return 'BANANA'
             default: return null
         }
     }
@@ -295,6 +298,11 @@ export default function ParticlesPage() {
     const [disperseCenter, setDisperseCenter] = useState<{ x: number; y: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
 
+    // Banana detection (color-based)
+    const canvasRef = useRef<HTMLCanvasElement | null>(null)
+    const [bananaDetected, setBananaDetected] = useState(false)
+    const bananaDetectionCountRef = useRef(0)
+
     // Check if eyes are closed using face blendshapes
     const checkEyesClosed = (result: FaceLandmarkerResult): boolean => {
         if (!result.faceBlendshapes || result.faceBlendshapes.length === 0) return false
@@ -308,7 +316,12 @@ export default function ParticlesPage() {
     }
 
     useEffect(() => {
-        // Priority: eyes closed > hand gestures
+        // Priority: banana > eyes closed > hand gestures
+        if (bananaDetected) {
+            setGesture('banana')
+            return
+        }
+
         if (eyesClosed) {
             setGesture('sleep')
             return
@@ -353,7 +366,7 @@ export default function ParticlesPage() {
         if (isRock) { setGesture('rock'); lastGestureRef.current = 'rock'; return }
 
         setGesture('none')
-    }, [allLandmarks, isDispersing, eyesClosed])
+    }, [allLandmarks, isDispersing, eyesClosed, bananaDetected])
 
     const initializeLandmarkers = useCallback(async () => {
         try {
@@ -444,6 +457,59 @@ export default function ParticlesPage() {
                     setEyesClosed(checkEyesClosed(faceResult))
                 } catch (e) {
                     console.warn('Face detection error:', e)
+                }
+            }
+
+            // Banana detection using color analysis (run every 15 frames for performance)
+            bananaDetectionCountRef.current++
+            if (bananaDetectionCountRef.current % 15 === 0) {
+                // Create canvas for color analysis if not exists
+                if (!canvasRef.current) {
+                    canvasRef.current = document.createElement('canvas')
+                    canvasRef.current.width = 160
+                    canvasRef.current.height = 120
+                }
+
+                const canvas = canvasRef.current
+                const ctx = canvas.getContext('2d')
+                if (ctx) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                    const data = imageData.data
+
+                    let yellowPixels = 0
+                    const totalPixels = canvas.width * canvas.height
+
+                    // Check for banana-yellow color (HSL: H=45-65, S>50%, L=40-70%)
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i]
+                        const g = data[i + 1]
+                        const b = data[i + 2]
+
+                        // Convert RGB to HSL
+                        const max = Math.max(r, g, b)
+                        const min = Math.min(r, g, b)
+                        const l = (max + min) / 2 / 255
+
+                        if (max !== min) {
+                            const d = (max - min) / 255
+                            const s = l > 0.5 ? d / (2 - max / 255 - min / 255) : d / (max / 255 + min / 255)
+                            let h = 0
+                            if (max === r) h = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6
+                            else if (max === g) h = ((b - r) / (max - min) + 2) / 6
+                            else h = ((r - g) / (max - min) + 4) / 6
+
+                            const hDeg = h * 360
+                            // Banana yellow: H 40-70 degrees, high saturation, medium lightness
+                            if (hDeg >= 40 && hDeg <= 70 && s > 0.4 && l > 0.35 && l < 0.75) {
+                                yellowPixels++
+                            }
+                        }
+                    }
+
+                    // If more than 5% of image is banana-yellow, consider it detected
+                    const yellowRatio = yellowPixels / totalPixels
+                    setBananaDetected(yellowRatio > 0.05)
                 }
             }
         }

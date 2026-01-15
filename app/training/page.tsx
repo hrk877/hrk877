@@ -187,6 +187,71 @@ export default function RunningPage() {
         pausedTimeRef.current = 0
     }, [stopTracking, saveRecord])
 
+    // Auto-save when page is closed or navigated away
+    const autoSaveRef = useRef(false)
+    const distanceRef = useRef(distance)
+    const elapsedTimeRef = useRef(elapsedTime)
+
+    // Keep refs in sync with state
+    useEffect(() => {
+        distanceRef.current = distance
+        elapsedTimeRef.current = elapsedTime
+    }, [distance, elapsedTime])
+
+    const performAutoSave = useCallback(async () => {
+        if (autoSaveRef.current) return // Prevent double save
+        if (!user || user.isAnonymous) return
+        if (distanceRef.current <= 0 || elapsedTimeRef.current <= 0) return
+        if (!isRunning && !isPaused) return // Not in an active session
+
+        autoSaveRef.current = true
+
+        try {
+            const recordsRef = collection(db, "users", user.uid, "training_records")
+            await addDoc(recordsRef, {
+                distance: distanceRef.current,
+                duration: elapsedTimeRef.current,
+                pace: elapsedTimeRef.current / distanceRef.current,
+                timestamp: Timestamp.now(),
+                autoSaved: true // Flag to indicate this was auto-saved
+            })
+        } catch (e) {
+            console.error("Auto-save failed:", e)
+        }
+    }, [user, isRunning, isPaused])
+
+    // Handle page close / tab close
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if ((isRunning || isPaused) && distanceRef.current > 0) {
+                // Perform sync save using sendBeacon if possible
+                performAutoSave()
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [isRunning, isPaused, performAutoSave])
+
+    // Handle visibility change (switching tabs, minimizing)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isRunning) {
+                requestWakeLock()
+            } else if (document.visibilityState === 'hidden') {
+                // Save when tab becomes hidden (user switches away)
+                if ((isRunning || isPaused) && distanceRef.current > 0) {
+                    performAutoSave()
+                }
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }, [isRunning, isPaused, requestWakeLock, performAutoSave])
+
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
@@ -194,14 +259,6 @@ export default function RunningPage() {
             releaseWakeLock()
         }
     }, [releaseWakeLock])
-
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && isRunning) requestWakeLock()
-        }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }, [isRunning, requestWakeLock])
 
     if (authLoading || (loading && isLoggedIn)) {
         return (

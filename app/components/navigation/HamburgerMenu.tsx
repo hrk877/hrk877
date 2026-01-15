@@ -31,7 +31,7 @@ const MENU_ITEMS = [
             { label: "HABIT", href: "/habit", restricted: true },
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
-            { label: "PARTICLES", href: "/particles" },
+            { label: "CAMERA", href: "/camera" },
             { label: "RUNNING", href: "/training", restricted: true },
         ]
     },
@@ -101,7 +101,7 @@ export default function HamburgerMenu({ color }: HamburgerMenuProps) {
                     { label: "HABIT", href: "/habit", restricted: true },
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
-                    { label: "PARTICLES", href: "/particles" },
+                    { label: "CAMERA", href: "/camera" },
                     { label: "RUNNING", href: "/training", restricted: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
