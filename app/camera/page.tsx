@@ -7,7 +7,7 @@ import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandma
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
-const PARTICLE_COUNT = 100
+const PARTICLE_COUNT = 200
 const TEXT_FORMATION_SPEED = 0.12
 const SPHERE_COLLECT_SPEED = 0.35
 const DISPERSE_STRENGTH = 0.12
@@ -524,9 +524,9 @@ export default function ParticlesPage() {
                         }
                     }
 
-                    // If more than 5% of image is banana-yellow, consider it detected
+                    // If more than 1% of image is banana-yellow, consider it detected
                     const yellowRatio = yellowPixels / totalPixels
-                    setBananaDetected(yellowRatio > 0.05)
+                    setBananaDetected(yellowRatio > 0.01)
                 }
             }
         }
@@ -573,7 +573,7 @@ export default function ParticlesPage() {
 
             <video
                 ref={videoRef}
-                className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-25" : "opacity-0"
+                className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
                     } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 playsInline
                 muted
