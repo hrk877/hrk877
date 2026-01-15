@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandmark, FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-vision"
+import { SwitchCamera } from "lucide-react"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
@@ -565,9 +566,10 @@ export default function ParticlesPage() {
             {isTracking && (
                 <button
                     onClick={toggleCamera}
-                    className="absolute top-8 right-6 z-50 text-[#FAC800] font-mono text-xs tracking-wider opacity-60 hover:opacity-100 transition-opacity"
+                    className="absolute top-11 right-6 z-50 text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
+                    aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
                 >
-                    {facingMode === 'user' ? '外カメ' : '内カメ'}
+                    <SwitchCamera size={24} strokeWidth={1.5} />
                 </button>
             )}
 
