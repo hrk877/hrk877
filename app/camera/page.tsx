@@ -633,6 +633,40 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
+            // Get microphone audio
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+            // Create audio context for pitch shifting
+            const audioContext = new AudioContext()
+            const source = audioContext.createMediaStreamSource(audioStream)
+
+            // Create pitch shifter using playback rate (higher = higher pitch)
+            const pitchShift = audioContext.createMediaStreamDestination()
+
+            // Create a buffer source for pitch shifting
+            // We'll use a simple approach: speed up the audio which increases pitch
+            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1)
+            let buffer: Float32Array[] = []
+            const pitchFactor = 1.5 // 1.5x speed = higher pitch
+
+            scriptProcessor.onaudioprocess = (e) => {
+                const inputData = e.inputBuffer.getChannelData(0)
+                const outputData = e.outputBuffer.getChannelData(0)
+
+                // Simple pitch shift by resampling
+                for (let i = 0; i < outputData.length; i++) {
+                    const sourceIndex = Math.floor(i * pitchFactor)
+                    if (sourceIndex < inputData.length) {
+                        outputData[i] = inputData[sourceIndex]
+                    } else {
+                        outputData[i] = 0
+                    }
+                }
+            }
+
+            source.connect(scriptProcessor)
+            scriptProcessor.connect(pitchShift)
+
             // Use canvas stream from display
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
@@ -642,11 +676,14 @@ export default function ParticlesPage() {
             canvas.width = window.innerWidth
             canvas.height = window.innerHeight
 
-            const stream = canvas.captureStream(30) // 30 fps
+            // Store animation ID in a variable accessible to onstop
+            let animationId: number
+            let isCapturing = true
 
             // Capture frames continuously
-            let animationId: number
             const captureFrame = () => {
+                if (!isCapturing) return
+
                 // Draw the entire page content
                 ctx.fillStyle = '#000000'
                 ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -680,22 +717,31 @@ export default function ParticlesPage() {
                     ctx.fillRect(0, 0, canvas.width, canvas.height)
                 }
 
-                if (isRecording) {
-                    animationId = requestAnimationFrame(captureFrame)
-                }
+                animationId = requestAnimationFrame(captureFrame)
             }
 
+            // Start capturing frames
             captureFrame()
+
+            // Create stream from canvas
+            const videoStream = canvas.captureStream(30) // 30 fps
+
+            // Combine video and audio streams
+            const combinedStream = new MediaStream([
+                ...videoStream.getVideoTracks(),
+                ...pitchShift.stream.getAudioTracks()
+            ])
 
             // Try MP4 first for iPhone compatibility, fallback to WebM
             let mimeType = 'video/mp4'
             if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm;codecs=vp8'
+                mimeType = 'video/webm;codecs=vp8,opus'
             }
 
-            const mediaRecorder = new MediaRecorder(stream, {
+            const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 2500000
+                videoBitsPerSecond: 2500000,
+                audioBitsPerSecond: 128000
             })
 
             recordedChunksRef.current = []
@@ -707,6 +753,13 @@ export default function ParticlesPage() {
             }
 
             mediaRecorder.onstop = () => {
+                isCapturing = false
+                if (animationId) cancelAnimationFrame(animationId)
+
+                // Stop audio tracks and close audio context
+                audioStream.getTracks().forEach(track => track.stop())
+                audioContext.close()
+
                 const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
                 const blob = new Blob(recordedChunksRef.current, { type: mimeType })
                 const url = URL.createObjectURL(blob)
@@ -715,9 +768,6 @@ export default function ParticlesPage() {
                 a.download = `camera-recording-${Date.now()}.${extension}`
                 a.click()
                 URL.revokeObjectURL(url)
-
-                // Cleanup
-                if (animationId) cancelAnimationFrame(animationId)
             }
 
             mediaRecorderRef.current = mediaRecorder
