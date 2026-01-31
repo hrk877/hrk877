@@ -687,8 +687,14 @@ export default function ParticlesPage() {
 
             captureFrame()
 
+            // Try MP4 first for iPhone compatibility, fallback to WebM
+            let mimeType = 'video/mp4'
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm;codecs=vp8'
+            }
+
             const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'video/webm;codecs=vp9',
+                mimeType: mimeType,
                 videoBitsPerSecond: 2500000
             })
 
@@ -701,11 +707,12 @@ export default function ParticlesPage() {
             }
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
+                const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
+                const blob = new Blob(recordedChunksRef.current, { type: mimeType })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `camera-recording-${Date.now()}.webm`
+                a.download = `camera-recording-${Date.now()}.${extension}`
                 a.click()
                 URL.revokeObjectURL(url)
 
@@ -847,8 +854,8 @@ export default function ParticlesPage() {
                         aria-label={isRecording ? '録画停止' : '録画開始'}
                     >
                         <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
-                                ? 'w-7 h-7 rounded-sm'
-                                : 'w-16 h-16 rounded-full'
+                            ? 'w-7 h-7 rounded-sm'
+                            : 'w-16 h-16 rounded-full'
                             }`} />
                     </button>
                 </div>
