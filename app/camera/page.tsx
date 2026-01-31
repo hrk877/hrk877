@@ -452,10 +452,6 @@ export default function ParticlesPage() {
     const toggleCamera = async () => {
         const newMode = facingMode === 'user' ? 'environment' : 'user'
         setFacingMode(newMode)
-        if (newMode === 'user') {
-            setIsMosaic(false) // Turn off mosaic when switching to front camera
-            setIsYellow(false) // Turn off yellow filter when switching to front camera
-        }
         if (isTracking) {
             await startTracking(newMode)
         }
@@ -592,8 +588,8 @@ export default function ParticlesPage() {
                 </button>
             )}
 
-            {/* Mosaic toggle button (only for environment camera) */}
-            {isTracking && facingMode === 'environment' && (
+            {/* Mosaic and Yellow filter toggle buttons */}
+            {isTracking && (
                 <>
                     <button
                         onClick={() => setIsMosaic(!isMosaic)}
