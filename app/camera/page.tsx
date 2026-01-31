@@ -619,7 +619,7 @@ export default function ParticlesPage() {
             )}
 
             {/* Mosaic SVG Filter */}
-            <svg style={{ display: 'none' }}>
+            <svg style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}>
                 <defs>
                     <filter id="pixelate" x="0" y="0">
                         <feFlood x="4" y="4" height="2" width="2" />
