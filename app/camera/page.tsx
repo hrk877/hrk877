@@ -782,11 +782,26 @@ export default function ParticlesPage() {
                 const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
                 const blob = new Blob(recordedChunksRef.current, { type: mimeType })
                 const url = URL.createObjectURL(blob)
+
+                // For iOS Safari, use a different approach to trigger download
                 const a = document.createElement('a')
+                a.style.display = 'none'
                 a.href = url
                 a.download = `camera-recording-${Date.now()}.${extension}`
-                a.click()
-                URL.revokeObjectURL(url)
+
+                // Add to DOM, click, and remove
+                document.body.appendChild(a)
+
+                // Use setTimeout to ensure the download starts before cleanup
+                setTimeout(() => {
+                    a.click()
+
+                    // Clean up after a delay
+                    setTimeout(() => {
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(url)
+                    }, 100)
+                }, 0)
             }
 
             mediaRecorderRef.current = mediaRecorder
@@ -814,6 +829,9 @@ export default function ParticlesPage() {
                 clearInterval(recordingTimerRef.current)
                 recordingTimerRef.current = null
             }
+
+            // Note: We don't stop the video camera stream here to avoid bugs
+            // Only the audio stream and MediaRecorder are stopped
         }
     }
 
