@@ -314,6 +314,13 @@ export default function ParticlesPage() {
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
     const facingModeRef = useRef<'user' | 'environment'>('user')
 
+    // Recording state
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordingTime, setRecordingTime] = useState(0)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const recordedChunksRef = useRef<Blob[]>([])
+    const recordingTimerRef = useRef<number | null>(null)
+
     useEffect(() => {
         facingModeRef.current = facingMode
     }, [facingMode])
@@ -619,6 +626,129 @@ export default function ParticlesPage() {
         }
     }, [isMosaic])
 
+    // Recording functions
+    const startRecording = async () => {
+        try {
+            // Get the container element
+            const container = document.querySelector('.fixed.inset-0') as HTMLElement
+            if (!container) return
+
+            // Use canvas stream from display
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            // Set canvas size to window size
+            canvas.width = window.innerWidth
+            canvas.height = window.innerHeight
+
+            const stream = canvas.captureStream(30) // 30 fps
+
+            // Capture frames continuously
+            let animationId: number
+            const captureFrame = () => {
+                // Draw the entire page content
+                ctx.fillStyle = '#000000'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+                // Draw video
+                if (videoRef.current && videoRef.current.readyState >= 2) {
+                    const video = videoRef.current
+                    const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight)
+                    const x = (canvas.width - video.videoWidth * scale) / 2
+                    const y = (canvas.height - video.videoHeight * scale) / 2
+
+                    ctx.save()
+                    if (facingMode === 'user') {
+                        ctx.translate(canvas.width, 0)
+                        ctx.scale(-1, 1)
+                    }
+
+                    if (isMosaic && mosaicCanvasRef.current) {
+                        ctx.drawImage(mosaicCanvasRef.current, x, y, video.videoWidth * scale, video.videoHeight * scale)
+                    } else {
+                        ctx.globalAlpha = 0.5
+                        ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale)
+                        ctx.globalAlpha = 1.0
+                    }
+                    ctx.restore()
+                }
+
+                // Yellow overlay
+                if (isYellow) {
+                    ctx.fillStyle = 'rgba(250, 204, 0, 0.3)'
+                    ctx.fillRect(0, 0, canvas.width, canvas.height)
+                }
+
+                if (isRecording) {
+                    animationId = requestAnimationFrame(captureFrame)
+                }
+            }
+
+            captureFrame()
+
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 2500000
+            })
+
+            recordedChunksRef.current = []
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunksRef.current.push(event.data)
+                }
+            }
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `camera-recording-${Date.now()}.webm`
+                a.click()
+                URL.revokeObjectURL(url)
+
+                // Cleanup
+                if (animationId) cancelAnimationFrame(animationId)
+            }
+
+            mediaRecorderRef.current = mediaRecorder
+            mediaRecorder.start()
+            setIsRecording(true)
+            setRecordingTime(0)
+
+            // Start timer
+            recordingTimerRef.current = window.setInterval(() => {
+                setRecordingTime(prev => prev + 1)
+            }, 1000)
+
+        } catch (error) {
+            console.error('Recording failed:', error)
+            alert('録画の開始に失敗しました')
+        }
+    }
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+
+            if (recordingTimerRef.current) {
+                clearInterval(recordingTimerRef.current)
+                recordingTimerRef.current = null
+            }
+        }
+    }
+
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
     return (
         <div className="fixed inset-0 overflow-hidden touch-none bg-black">
             <HamburgerMenu color="#FAC800" />
@@ -694,6 +824,33 @@ export default function ParticlesPage() {
             {!isTracking && isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-[#FAC800] font-mono text-sm tracking-widest">LOADING...</span>
+                </div>
+            )}
+
+            {/* Recording Button */}
+            {isTracking && (
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-50">
+                    {/* Timer */}
+                    {isRecording && (
+                        <div className="flex items-center gap-2.5 bg-black/70 px-5 py-2.5 rounded-full backdrop-blur-md">
+                            <div className="w-2.5 h-2.5 bg-[#8B0000] rounded-full animate-pulse" />
+                            <span className="text-white font-mono text-sm">
+                                {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Simple Record Button */}
+                    <button
+                        onClick={toggleRecording}
+                        className="flex items-center justify-center transition-all duration-300"
+                        aria-label={isRecording ? '録画停止' : '録画開始'}
+                    >
+                        <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
+                                ? 'w-7 h-7 rounded-sm'
+                                : 'w-16 h-16 rounded-full'
+                            }`} />
+                    </button>
                 </div>
             )}
         </div>
