@@ -700,10 +700,11 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // 1. SIMPLE 0.5x PITCH SHIFTER
-            // Adjusts playback speed to lower the pitch by exactly 2x (1 octave down).
+            // 1. SIMPLE 1.6x RESAMPLING SHIFTER
+            // Raises pitch by 1.6x for the "Minion" effect. 
+            // Simple resampling avoids the "howling" phase artifacts of granular synthesis.
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 1.6 // High-pitched Minion voice
+            const pitchRatio = 1.6
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             let writePos = 0
@@ -717,14 +718,18 @@ export default function ParticlesPage() {
                     const currentWrite = writePos
                     writePos = (writePos + 1) % bufferSize
 
-                    // Simple resampling
-                    output[i] = buffer[Math.floor(readPos) % bufferSize]
+                    // Linear interpolation for clarity
+                    const p = Math.floor(readPos) % bufferSize
+                    const pNext = (p + 1) % bufferSize
+                    const frac = readPos - Math.floor(readPos)
+                    output[i] = buffer[p] * (1 - frac) + buffer[pNext] * frac
+
                     readPos = (readPos + pitchRatio) % bufferSize
 
-                    // Basic pointer management
+                    // Maintain stable safety margin
                     const dist = (currentWrite - readPos + bufferSize) % bufferSize
                     if (dist < 1000 || dist > 40000) {
-                        readPos = (currentWrite - 20000 + bufferSize) % bufferSize
+                        readPos = (currentWrite - 10000 + bufferSize) % bufferSize
                     }
                 }
             }
