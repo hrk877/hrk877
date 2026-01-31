@@ -1045,39 +1045,13 @@ export default function ParticlesPage() {
 
             {/* Camera toggle button */}
             {isTracking && (
-                <div className="absolute top-11 right-6 z-50 flex flex-col items-center gap-6">
-                    <button
-                        onClick={toggleCamera}
-                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                        aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
-                    >
-                        <SwitchCamera size={26} strokeWidth={1.5} />
-                    </button>
-
-                    <button
-                        onClick={() => setCameraMode('standard')}
-                        className={`transition-all duration-300 ${cameraMode === 'standard' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
-                        aria-label="通常モード"
-                    >
-                        <Scan size={26} strokeWidth={1.5} />
-                    </button>
-
-                    <button
-                        onClick={() => setCameraMode('face-mosaic')}
-                        className={`transition-all duration-300 ${cameraMode === 'face-mosaic' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
-                        aria-label="顔モザイクモード"
-                    >
-                        <User size={26} strokeWidth={1.5} />
-                    </button>
-
-                    <button
-                        onClick={() => setCameraMode('human-cutout')}
-                        className={`transition-all duration-300 ${cameraMode === 'human-cutout' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
-                        aria-label="切り抜きモード"
-                    >
-                        <Scissors size={26} strokeWidth={1.5} />
-                    </button>
-                </div>
+                <button
+                    onClick={toggleCamera}
+                    className="absolute top-11 right-6 z-50 text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
+                    aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
+                >
+                    <SwitchCamera size={26} strokeWidth={1.5} />
+                </button>
             )}
 
             {/* Yellow Overlay - Always on */}
