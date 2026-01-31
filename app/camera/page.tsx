@@ -642,46 +642,46 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Multiple filters for dramatic voice change with pitch shift
-            // 1. High-pass filter to remove low frequencies (shifted up for pitch)
-            const highPass = audioContext.createBiquadFilter()
-            highPass.type = 'highpass'
-            highPass.frequency.value = 360 // 300 * 1.2 for pitch shift
+            // Multiple filters for dramatic voice change with low pitch
+            // 1. Low-pass filter to emphasize low frequencies for deeper voice
+            const lowPass = audioContext.createBiquadFilter()
+            lowPass.type = 'lowpass'
+            lowPass.frequency.value = 2000 // Cut high frequencies
 
-            // 2. Formant shift with high shelf for chipmunk-like effect (1.2x pitch)
+            // 2. Bass boost for deeper voice effect
+            const bassBoost = audioContext.createBiquadFilter()
+            bassBoost.type = 'lowshelf'
+            bassBoost.frequency.value = 200 // Boost low frequencies
+            bassBoost.gain.value = 10 // Strong bass boost
+
+            // 3. Formant shift down for lower pitch
             const formantShift = audioContext.createBiquadFilter()
             formantShift.type = 'peaking'
-            formantShift.frequency.value = 2400 // 2000 * 1.2 for higher pitch
+            formantShift.frequency.value = 400 // Lower formant frequency
             formantShift.Q.value = 1
-            formantShift.gain.value = 12 // Strong boost
-
-            // 3. Additional high-frequency boost for pitch effect
-            const pitchBoost = audioContext.createBiquadFilter()
-            pitchBoost.type = 'highshelf'
-            pitchBoost.frequency.value = 1200 // 1000 * 1.2
-            pitchBoost.gain.value = 8
+            formantShift.gain.value = 8
 
             // 4. Add reverb for more disguise
             const convolver = audioContext.createConvolver()
-            const reverbLength = audioContext.sampleRate * 0.5
+            const reverbLength = audioContext.sampleRate * 0.8
             const reverbBuffer = audioContext.createBuffer(2, reverbLength, audioContext.sampleRate)
             for (let channel = 0; channel < 2; channel++) {
                 const channelData = reverbBuffer.getChannelData(channel)
                 for (let i = 0; i < reverbLength; i++) {
-                    channelData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (reverbLength * 0.1))
+                    channelData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (reverbLength * 0.15))
                 }
             }
             convolver.buffer = reverbBuffer
 
             // 5. Gain for volume adjustment
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 1.5
+            gainNode.gain.value = 1.8 // Higher gain for deeper voice
 
-            // Connect the audio processing chain for dramatic effect with pitch shift
-            source.connect(highPass)
-            highPass.connect(formantShift)
-            formantShift.connect(pitchBoost)
-            pitchBoost.connect(convolver)
+            // Connect the audio processing chain for deep voice effect
+            source.connect(lowPass)
+            lowPass.connect(bassBoost)
+            bassBoost.connect(formantShift)
+            formantShift.connect(convolver)
             convolver.connect(gainNode)
             gainNode.connect(pitchShift)
 
