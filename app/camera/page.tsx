@@ -642,20 +642,26 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Multiple filters for dramatic voice change
-            // 1. High-pass filter to remove low frequencies
+            // Multiple filters for dramatic voice change with pitch shift
+            // 1. High-pass filter to remove low frequencies (shifted up for pitch)
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 300
+            highPass.frequency.value = 360 // 300 * 1.2 for pitch shift
 
-            // 2. Formant shift with high shelf for chipmunk-like effect
+            // 2. Formant shift with high shelf for chipmunk-like effect (1.2x pitch)
             const formantShift = audioContext.createBiquadFilter()
             formantShift.type = 'peaking'
-            formantShift.frequency.value = 2000
+            formantShift.frequency.value = 2400 // 2000 * 1.2 for higher pitch
             formantShift.Q.value = 1
             formantShift.gain.value = 12 // Strong boost
 
-            // 3. Add reverb for more disguise
+            // 3. Additional high-frequency boost for pitch effect
+            const pitchBoost = audioContext.createBiquadFilter()
+            pitchBoost.type = 'highshelf'
+            pitchBoost.frequency.value = 1200 // 1000 * 1.2
+            pitchBoost.gain.value = 8
+
+            // 4. Add reverb for more disguise
             const convolver = audioContext.createConvolver()
             const reverbLength = audioContext.sampleRate * 0.5
             const reverbBuffer = audioContext.createBuffer(2, reverbLength, audioContext.sampleRate)
@@ -667,14 +673,15 @@ export default function ParticlesPage() {
             }
             convolver.buffer = reverbBuffer
 
-            // 4. Gain for volume adjustment
+            // 5. Gain for volume adjustment
             const gainNode = audioContext.createGain()
             gainNode.gain.value = 1.5
 
-            // Connect the audio processing chain for dramatic effect
+            // Connect the audio processing chain for dramatic effect with pitch shift
             source.connect(highPass)
             highPass.connect(formantShift)
-            formantShift.connect(convolver)
+            formantShift.connect(pitchBoost)
+            pitchBoost.connect(convolver)
             convolver.connect(gainNode)
             gainNode.connect(pitchShift)
 
