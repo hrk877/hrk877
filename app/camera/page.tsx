@@ -463,20 +463,17 @@ export default function ParticlesPage() {
 
     // Restart camera when page becomes visible again (after download)
     useEffect(() => {
-        const handleVisibilityChange = async () => {
-            if (document.visibilityState === 'visible' && videoRef.current) {
-                // Check if video stream is still active
-                const stream = videoRef.current.srcObject as MediaStream | null
-                if (!stream || !stream.active || stream.getTracks().length === 0) {
-                    // Restart camera without changing isTracking state
-                    await startTracking(facingMode)
-                }
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // If we're returning from a background state (like a download screen),
+                // reload the page to ensure all camera states and effects are properly reset.
+                window.location.reload()
             }
         }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }, [facingMode])
+    }, [])
 
     const startTracking = async (mode?: 'user' | 'environment') => {
         const targetMode = mode ?? facingMode
@@ -707,26 +704,26 @@ export default function ParticlesPage() {
             // 1. Low-pass filter for much deeper sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 1500 // Much lower to cut high frequencies
+            lowPass.frequency.value = 800 // Even lower to cut high frequencies
             lowPass.Q.value = 0.7
 
             // 2. Strong bass boost for very deep voice
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 200 // Lower frequency
+            bassBoost.frequency.value = 100 // Lower frequency
             bassBoost.gain.value = 12 // Much stronger boost
 
             // 3. Low mid-range emphasis
             const midBoost = audioContext.createBiquadFilter()
             midBoost.type = 'peaking'
-            midBoost.frequency.value = 400 // Lower for deeper voice
+            midBoost.frequency.value = 300 // Lower for deeper voice
             midBoost.Q.value = 1.5
             midBoost.gain.value = 6
 
             // 4. Strong high-frequency cut for deep sound
             const highCut = audioContext.createBiquadFilter()
             highCut.type = 'highshelf'
-            highCut.frequency.value = 2000 // Lower cutoff
+            highCut.frequency.value = 1000 // Lower cutoff
             highCut.gain.value = -8 // Stronger reduction
 
             // 5. Compressor for consistent volume
