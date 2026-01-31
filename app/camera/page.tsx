@@ -306,6 +306,11 @@ export default function ParticlesPage() {
 
     // Camera facing mode
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
+    const facingModeRef = useRef<'user' | 'environment'>('user')
+
+    useEffect(() => {
+        facingModeRef.current = facingMode
+    }, [facingMode])
 
     // Check if eyes are closed using face blendshapes
     const checkEyesClosed = (result: FaceLandmarkerResult): boolean => {
@@ -379,26 +384,28 @@ export default function ParticlesPage() {
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
             )
 
-            // Initialize hand landmarker
-            handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-                    delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numHands: 2
-            })
+            const [handLandmarker, faceLandmarker] = await Promise.all([
+                HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numHands: 2
+                }),
+                FaceLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numFaces: 1,
+                    outputFaceBlendshapes: true
+                })
+            ])
 
-            // Initialize face landmarker for eye detection
-            faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-                    delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numFaces: 1,
-                outputFaceBlendshapes: true
-            })
+            handLandmarkerRef.current = handLandmarker
+            faceLandmarkerRef.current = faceLandmarker
 
             setIsLoading(false)
             return true
@@ -481,53 +488,58 @@ export default function ParticlesPage() {
             // Banana detection using color analysis (run every 15 frames for performance)
             bananaDetectionCountRef.current++
             if (bananaDetectionCountRef.current % 15 === 0) {
-                // Create canvas for color analysis if not exists
-                if (!canvasRef.current) {
-                    canvasRef.current = document.createElement('canvas')
-                    canvasRef.current.width = 160
-                    canvasRef.current.height = 120
-                }
-
-                const canvas = canvasRef.current
-                const ctx = canvas.getContext('2d')
-                if (ctx) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-                    const data = imageData.data
-
-                    let yellowPixels = 0
-                    const totalPixels = canvas.width * canvas.height
-
-                    // Check for banana-yellow color (HSL: H=45-65, S>50%, L=40-70%)
-                    for (let i = 0; i < data.length; i += 4) {
-                        const r = data[i]
-                        const g = data[i + 1]
-                        const b = data[i + 2]
-
-                        // Convert RGB to HSL
-                        const max = Math.max(r, g, b)
-                        const min = Math.min(r, g, b)
-                        const l = (max + min) / 2 / 255
-
-                        if (max !== min) {
-                            const d = (max - min) / 255
-                            const s = l > 0.5 ? d / (2 - max / 255 - min / 255) : d / (max / 255 + min / 255)
-                            let h = 0
-                            if (max === r) h = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6
-                            else if (max === g) h = ((b - r) / (max - min) + 2) / 6
-                            else h = ((r - g) / (max - min) + 4) / 6
-
-                            const hDeg = h * 360
-                            // Banana yellow: H 40-70 degrees, high saturation, medium lightness
-                            if (hDeg >= 40 && hDeg <= 70 && s > 0.4 && l > 0.35 && l < 0.75) {
-                                yellowPixels++
-                            }
-                        }
+                // Only detect banana in environment mode
+                if (facingModeRef.current !== 'environment') {
+                    setBananaDetected(false)
+                } else {
+                    // Create canvas for color analysis if not exists
+                    if (!canvasRef.current) {
+                        canvasRef.current = document.createElement('canvas')
+                        canvasRef.current.width = 160
+                        canvasRef.current.height = 120
                     }
 
-                    // If more than 1% of image is banana-yellow, consider it detected
-                    const yellowRatio = yellowPixels / totalPixels
-                    setBananaDetected(yellowRatio > 0.01)
+                    const canvas = canvasRef.current
+                    const ctx = canvas.getContext('2d')
+                    if (ctx) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                        const data = imageData.data
+
+                        let yellowPixels = 0
+                        const totalPixels = canvas.width * canvas.height
+
+                        // Check for banana-yellow color (HSL: H=45-65, S>50%, L=40-70%)
+                        for (let i = 0; i < data.length; i += 4) {
+                            const r = data[i]
+                            const g = data[i + 1]
+                            const b = data[i + 2]
+
+                            // Convert RGB to HSL
+                            const max = Math.max(r, g, b)
+                            const min = Math.min(r, g, b)
+                            const l = (max + min) / 2 / 255
+
+                            if (max !== min) {
+                                const d = (max - min) / 255
+                                const s = l > 0.5 ? d / (2 - max / 255 - min / 255) : d / (max / 255 + min / 255)
+                                let h = 0
+                                if (max === r) h = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6
+                                else if (max === g) h = ((b - r) / (max - min) + 2) / 6
+                                else h = ((r - g) / (max - min) + 4) / 6
+
+                                const hDeg = h * 360
+                                // Banana yellow: H 40-70 degrees, high saturation, medium lightness
+                                if (hDeg >= 40 && hDeg <= 70 && s > 0.4 && l > 0.35 && l < 0.75) {
+                                    yellowPixels++
+                                }
+                            }
+                        }
+
+                        // If more than 1% of image is banana-yellow, consider it detected
+                        const yellowRatio = yellowPixels / totalPixels
+                        setBananaDetected(yellowRatio > 0.01)
+                    }
                 }
             }
         }
