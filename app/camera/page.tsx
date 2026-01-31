@@ -699,14 +699,17 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
 
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 0.9 // Subtle low pitch
+            const pitchRatio = 1.1 // Subtle high pitch
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
-            const crossFadeSamples = 512 // ~11ms fade to hide the jump
-            const jumpDist = 2048 // Jump back distance
+            const fadeLength = 1024 // Increased for "stronger" seamlessness
+            const jumpDist = 4096 // Jump back distance
 
             let writePos = 0
             let readPos = 0
+            let fadeReadPos = 0
+            let fadeCounter = 0
+            let isFading = false
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
@@ -716,26 +719,46 @@ export default function ParticlesPage() {
                     const currentWrite = writePos
                     writePos = (writePos + 1) % bufferSize
 
-                    // The trick: If read is about to catch write, we jump it back.
-                    // To do this smoothly, we detect the jump point and crossfade.
+                    // Simple jump trigger (distance between write and read pointers)
                     const dist = (currentWrite - readPos + bufferSize) % bufferSize
-
-                    if (dist < 1000) { // Safety threshold to trigger jump
-                        const jumpFrom = readPos
-                        const jumpTo = (readPos - jumpDist + bufferSize) % bufferSize
-
-                        // Apply crossfade over the next few samples (inline simplified here for clarity/performance)
-                        // In reality, we crossfade the read output
-                        readPos = jumpTo
+                    if (!isFading && dist < 1500) {
+                        isFading = true
+                        fadeCounter = 0
+                        fadeReadPos = readPos
+                        readPos = (readPos - jumpDist + bufferSize) % bufferSize
                     }
 
-                    // Linear interpolation for crystal clear audio
-                    const p1 = Math.floor(readPos) % bufferSize
-                    const p2 = (p1 + 1) % bufferSize
-                    const frac = readPos - Math.floor(readPos)
-                    output[i] = buffer[p1] * (1 - frac) + buffer[p2] * frac
+                    if (isFading) {
+                        const alpha = fadeCounter / fadeLength
 
-                    readPos = (readPos + pitchRatio) % bufferSize
+                        // Sample from current readPos (new grain)
+                        const p1_new = Math.floor(readPos) % bufferSize
+                        const p2_new = (p1_new + 1) % bufferSize
+                        const frac_new = readPos - Math.floor(readPos)
+                        const sNew = buffer[p1_new] * (1 - frac_new) + buffer[p2_new] * frac_new
+
+                        // Sample from fadeReadPos (old grain)
+                        const p1_old = Math.floor(fadeReadPos) % bufferSize
+                        const p2_old = (p1_old + 1) % bufferSize
+                        const frac_old = fadeReadPos - Math.floor(fadeReadPos)
+                        const sOld = buffer[p1_old] * (1 - frac_old) + buffer[p2_old] * frac_old
+
+                        output[i] = sOld * (1 - alpha) + sNew * alpha
+
+                        readPos = (readPos + pitchRatio) % bufferSize
+                        fadeReadPos = (fadeReadPos + pitchRatio) % bufferSize
+                        fadeCounter++
+
+                        if (fadeCounter >= fadeLength) {
+                            isFading = false
+                        }
+                    } else {
+                        const p1 = Math.floor(readPos) % bufferSize
+                        const p2 = (p1 + 1) % bufferSize
+                        const frac = readPos - Math.floor(readPos)
+                        output[i] = buffer[p1] * (1 - frac) + buffer[p2] * frac
+                        readPos = (readPos + pitchRatio) % bufferSize
+                    }
                 }
             }
 
