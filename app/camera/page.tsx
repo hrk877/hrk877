@@ -307,6 +307,9 @@ export default function ParticlesPage() {
     const [bananaDetected, setBananaDetected] = useState(false)
     const bananaDetectionCountRef = useRef(0)
 
+    // Mosaic effect canvas
+    const mosaicCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
     // Camera facing mode
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
     const facingModeRef = useRef<'user' | 'environment'>('user')
@@ -565,6 +568,60 @@ export default function ParticlesPage() {
         startTracking()
     }, [])
 
+    // Mosaic effect rendering
+    useEffect(() => {
+        let animationId: number | null = null
+
+        const renderMosaic = () => {
+            if (!isMosaic || !videoRef.current || !mosaicCanvasRef.current || !isTracking) {
+                animationId = requestAnimationFrame(renderMosaic)
+                return
+            }
+
+            const video = videoRef.current
+            const canvas = mosaicCanvasRef.current
+            const ctx = canvas.getContext('2d')
+
+            if (!ctx || video.readyState < 2) {
+                animationId = requestAnimationFrame(renderMosaic)
+                return
+            }
+
+            // Set canvas size to match video
+            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+            }
+
+            const blockSize = 10 // Mosaic block size
+
+            // Draw mosaic effect
+            for (let y = 0; y < canvas.height; y += blockSize) {
+                for (let x = 0; x < canvas.width; x += blockSize) {
+                    // Sample color from center of block
+                    const px = Math.min(x + blockSize / 2, canvas.width - 1)
+                    const py = Math.min(y + blockSize / 2, canvas.height - 1)
+
+                    // Draw video frame temporarily to sample color
+                    ctx.drawImage(video, px, py, 1, 1, 0, 0, 1, 1)
+                    const pixel = ctx.getImageData(0, 0, 1, 1).data
+
+                    // Fill block with sampled color
+                    ctx.fillStyle = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`
+                    ctx.fillRect(x, y, blockSize, blockSize)
+                }
+            }
+
+            animationId = requestAnimationFrame(renderMosaic)
+        }
+
+        animationId = requestAnimationFrame(renderMosaic)
+
+        return () => {
+            if (animationId) cancelAnimationFrame(animationId)
+        }
+    }, [isMosaic, isTracking])
+
     useEffect(() => {
         return () => {
             stopTracking()
@@ -614,26 +671,19 @@ export default function ParticlesPage() {
                 <div className="absolute inset-0 z-40 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
             )}
 
-            {/* Mosaic SVG Filter */}
-            <svg style={{ display: 'none' }}>
-                <defs>
-                    <filter id="pixelate" x="0" y="0">
-                        <feFlood x="4" y="4" height="2" width="2" />
-                        <feComposite width="20" height="20" />
-                        <feTile result="a" />
-                        <feComposite in="SourceGraphic" in2="a" operator="in" />
-                        <feMorphology operator="dilate" radius="10" />
-                    </filter>
-                </defs>
-            </svg>
-
             <video
                 ref={videoRef}
-                className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
+                className={`absolute inset-0 w-full h-full object-cover ${isTracking ? (isMosaic ? "opacity-0" : "opacity-50") : "opacity-0"
                     } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-                style={{ filter: isMosaic ? 'url(#pixelate)' : 'none' }}
                 playsInline
                 muted
+            />
+
+            {/* Mosaic Canvas */}
+            <canvas
+                ref={mosaicCanvasRef}
+                className={`absolute inset-0 w-full h-full object-cover ${isTracking && isMosaic ? "opacity-50" : "opacity-0"
+                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
             />
 
             {isTracking && (
