@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandmark, FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-vision"
-import { SwitchCamera } from "lucide-react"
+import { SwitchCamera, Grid3x3 } from "lucide-react"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
@@ -299,6 +299,8 @@ export default function ParticlesPage() {
     const [disperseCenter, setDisperseCenter] = useState<{ x: number; y: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
 
+    const [isMosaic, setIsMosaic] = useState(false)
+
     // Banana detection (color-based)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const [bananaDetected, setBananaDetected] = useState(false)
@@ -449,6 +451,7 @@ export default function ParticlesPage() {
     const toggleCamera = async () => {
         const newMode = facingMode === 'user' ? 'environment' : 'user'
         setFacingMode(newMode)
+        if (newMode === 'user') setIsMosaic(false) // Turn off mosaic when switching to front camera
         if (isTracking) {
             await startTracking(newMode)
         }
@@ -585,10 +588,35 @@ export default function ParticlesPage() {
                 </button>
             )}
 
+            {/* Mosaic toggle button (only for environment camera) */}
+            {isTracking && facingMode === 'environment' && (
+                <button
+                    onClick={() => setIsMosaic(!isMosaic)}
+                    className={`absolute top-24 right-6 z-50 text-[#FAC800] transition-opacity ${isMosaic ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                    aria-label="モザイクフィルター切り替え"
+                >
+                    <Grid3x3 size={24} strokeWidth={1.5} />
+                </button>
+            )}
+
+            {/* Mosaic SVG Filter */}
+            <svg style={{ display: 'none' }}>
+                <defs>
+                    <filter id="pixelate" x="0" y="0">
+                        <feFlood x="2" y="2" height="2" width="2" />
+                        <feComposite width="10" height="10" />
+                        <feTile result="a" />
+                        <feComposite in="SourceGraphic" in2="a" operator="in" />
+                        <feMorphology operator="dilate" radius="5" />
+                    </filter>
+                </defs>
+            </svg>
+
             <video
                 ref={videoRef}
                 className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
                     } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                style={{ filter: isMosaic ? 'url(#pixelate)' : 'none' }}
                 playsInline
                 muted
             />
