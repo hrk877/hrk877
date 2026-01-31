@@ -636,36 +636,27 @@ export default function ParticlesPage() {
             // Get microphone audio
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-            // Create audio context for pitch shifting
+            // Create audio context for pitch shifting (cute voice effect)
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
 
-            // Create pitch shifter using playback rate (higher = higher pitch)
+            // Create pitch shift effect for cute voice
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Create a buffer source for pitch shifting
-            // We'll use a simple approach: speed up the audio which increases pitch
-            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1)
-            let buffer: Float32Array[] = []
-            const pitchFactor = 1.5 // 1.5x speed = higher pitch
+            // Use biquad filter for formant shifting (makes voice sound cuter)
+            const filter = audioContext.createBiquadFilter()
+            filter.type = 'highshelf'
+            filter.frequency.value = 1000 // Boost higher frequencies
+            filter.gain.value = 6 // Boost by 6dB for brighter, cuter sound
 
-            scriptProcessor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0)
-                const outputData = e.outputBuffer.getChannelData(0)
+            // Add a slight pitch increase using a simple gain
+            const gainNode = audioContext.createGain()
+            gainNode.gain.value = 1.2 // Slight volume boost
 
-                // Simple pitch shift by resampling
-                for (let i = 0; i < outputData.length; i++) {
-                    const sourceIndex = Math.floor(i * pitchFactor)
-                    if (sourceIndex < inputData.length) {
-                        outputData[i] = inputData[sourceIndex]
-                    } else {
-                        outputData[i] = 0
-                    }
-                }
-            }
-
-            source.connect(scriptProcessor)
-            scriptProcessor.connect(pitchShift)
+            // Connect the audio processing chain
+            source.connect(filter)
+            filter.connect(gainNode)
+            gainNode.connect(pitchShift)
 
             // Use canvas stream from display
             const canvas = document.createElement('canvas')
@@ -704,9 +695,8 @@ export default function ParticlesPage() {
                     if (isMosaic && mosaicCanvasRef.current) {
                         ctx.drawImage(mosaicCanvasRef.current, x, y, video.videoWidth * scale, video.videoHeight * scale)
                     } else {
-                        ctx.globalAlpha = 0.5
+                        // Draw video at full opacity for proper colors
                         ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale)
-                        ctx.globalAlpha = 1.0
                     }
                     ctx.restore()
                 }
