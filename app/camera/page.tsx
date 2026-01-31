@@ -307,6 +307,9 @@ export default function ParticlesPage() {
     const [bananaDetected, setBananaDetected] = useState(false)
     const bananaDetectionCountRef = useRef(0)
 
+    // Mosaic canvas
+    const mosaicCanvasRef = useRef<HTMLCanvasElement>(null)
+
     // Camera facing mode
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
     const facingModeRef = useRef<'user' | 'environment'>('user')
@@ -573,6 +576,49 @@ export default function ParticlesPage() {
         }
     }, [stopTracking])
 
+    // Apply mosaic effect using Canvas
+    useEffect(() => {
+        if (!isMosaic || !videoRef.current || !mosaicCanvasRef.current) return
+
+        const video = videoRef.current
+        const canvas = mosaicCanvasRef.current
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        let animationId: number
+
+        const applyMosaic = () => {
+            if (!isMosaic || !video.readyState || video.readyState < 2) {
+                animationId = requestAnimationFrame(applyMosaic)
+                return
+            }
+
+            // Set canvas size to match video
+            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+            }
+
+            const pixelSize = 10 // Size of mosaic blocks
+
+            // Draw video frame scaled down
+            const w = Math.ceil(canvas.width / pixelSize)
+            const h = Math.ceil(canvas.height / pixelSize)
+
+            ctx.imageSmoothingEnabled = false
+            ctx.drawImage(video, 0, 0, w, h)
+            ctx.drawImage(canvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height)
+
+            animationId = requestAnimationFrame(applyMosaic)
+        }
+
+        applyMosaic()
+
+        return () => {
+            if (animationId) cancelAnimationFrame(animationId)
+        }
+    }, [isMosaic])
+
     return (
         <div className="fixed inset-0 overflow-hidden touch-none bg-black">
             <HamburgerMenu color="#FAC800" />
@@ -614,26 +660,19 @@ export default function ParticlesPage() {
                 <div className="absolute inset-0 z-40 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
             )}
 
-            {/* Mosaic SVG Filter */}
-            <svg style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }} aria-hidden="true">
-                <defs>
-                    <filter id="pixelate" x="0" y="0">
-                        <feFlood x="4" y="4" height="2" width="2" />
-                        <feComposite width="20" height="20" />
-                        <feTile result="a" />
-                        <feComposite in="SourceGraphic" in2="a" operator="in" />
-                        <feMorphology operator="dilate" radius="10" />
-                    </filter>
-                </defs>
-            </svg>
-
             <video
                 ref={videoRef}
                 className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
-                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-                style={{ filter: isMosaic ? 'url(#pixelate)' : 'none' }}
+                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''} ${isMosaic ? 'opacity-0' : ''}`}
                 playsInline
                 muted
+            />
+
+            {/* Mosaic Canvas Overlay */}
+            <canvas
+                ref={mosaicCanvasRef}
+                className={`absolute inset-0 w-full h-full object-cover ${isMosaic && isTracking ? 'opacity-100' : 'opacity-0'
+                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
             />
 
             {isTracking && (
