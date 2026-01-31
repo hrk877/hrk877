@@ -659,76 +659,51 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Robot voice effect using ring modulation and bit crushing
-            // 1. Create oscillator for ring modulation (very low for deep robot effect)
-            const oscillator = audioContext.createOscillator()
-            oscillator.frequency.value = 10 // Very low frequency for deep robot effect (3x lower)
-            oscillator.type = 'square'
-            oscillator.start()
-
-            // 2. Gain for oscillator
-            const oscGain = audioContext.createGain()
-            oscGain.gain.value = 0.5
-            oscillator.connect(oscGain)
-
-            // 3. Create a gain node for ring modulation
-            const ringMod = audioContext.createGain()
-            oscGain.connect(ringMod.gain)
-
-            // 4. Distortion for more robotic sound
-            const distortion = audioContext.createWaveShaper()
-            const samples = 44100
-            const curve = new Float32Array(samples)
-            const deg = Math.PI / 180
-            for (let i = 0; i < samples; i++) {
-                const x = (i * 2) / samples - 1
-                curve[i] = ((3 + 20) * x * 20 * deg) / (Math.PI + 20 * Math.abs(x))
-            }
-            distortion.curve = curve
-            distortion.oversample = '4x'
-
-            // 5. Low-pass filter for deeper, darker sound
+            // Beautiful deep voice transformation
+            // 1. Low-pass filter for smooth, warm sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 600 // Lower frequency for deeper voice
-            lowPass.Q.value = 1
+            lowPass.frequency.value = 3000 // Keep natural voice frequencies
+            lowPass.Q.value = 0.7 // Gentle slope
 
-            // 6. Bass boost for even deeper effect
+            // 2. Bass boost for deeper, richer voice
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 150
-            bassBoost.gain.value = 8
+            bassBoost.frequency.value = 250
+            bassBoost.gain.value = 6 // Moderate boost for warmth
 
-            // 7. Bit crusher effect (reduce sample rate)
-            const crusher = audioContext.createScriptProcessor(4096, 1, 1)
-            let phase = 0
-            const frequency = 8000 // Reduced sample rate for digital sound
-            crusher.onaudioprocess = (e) => {
-                const input = e.inputBuffer.getChannelData(0)
-                const output = e.outputBuffer.getChannelData(0)
-                const step = frequency / audioContext.sampleRate
-                for (let i = 0; i < input.length; i++) {
-                    phase += step
-                    if (phase >= 1) {
-                        phase -= 1
-                        output[i] = input[i]
-                    } else {
-                        output[i] = output[i - 1] || 0
-                    }
-                }
-            }
+            // 3. Mid-range clarity
+            const midBoost = audioContext.createBiquadFilter()
+            midBoost.type = 'peaking'
+            midBoost.frequency.value = 800 // Voice clarity range
+            midBoost.Q.value = 1.5
+            midBoost.gain.value = 4
 
-            // 8. Final gain
+            // 4. Subtle high-frequency roll-off for smoothness
+            const highCut = audioContext.createBiquadFilter()
+            highCut.type = 'highshelf'
+            highCut.frequency.value = 4000
+            highCut.gain.value = -3 // Gentle reduction for smoothness
+
+            // 5. Compressor for consistent volume and richness
+            const compressor = audioContext.createDynamicsCompressor()
+            compressor.threshold.value = -24
+            compressor.knee.value = 30
+            compressor.ratio.value = 4
+            compressor.attack.value = 0.003
+            compressor.release.value = 0.25
+
+            // 6. Final gain for presence
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 2.5 // Higher gain for deeper voice
+            gainNode.gain.value = 1.8
 
-            // Connect the audio processing chain for deep robot voice
-            source.connect(ringMod)
-            ringMod.connect(distortion)
-            distortion.connect(lowPass)
+            // Connect the audio processing chain for beautiful deep voice
+            source.connect(lowPass)
             lowPass.connect(bassBoost)
-            bassBoost.connect(crusher)
-            crusher.connect(gainNode)
+            bassBoost.connect(midBoost)
+            midBoost.connect(highCut)
+            highCut.connect(compressor)
+            compressor.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
@@ -913,7 +888,7 @@ export default function ParticlesPage() {
 
             {/* Yellow Overlay - Always on */}
             {isYellow && (
-                <div className="absolute inset-0 z-40 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
+                <div className="absolute inset-0 z-10 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
             )}
 
             <video
