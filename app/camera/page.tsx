@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandmark, FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-vision"
-import { SwitchCamera, Grid3x3 } from "lucide-react"
+import { SwitchCamera, Grid3x3, Palette } from "lucide-react"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
@@ -300,6 +300,7 @@ export default function ParticlesPage() {
     const lastGestureRef = useRef<GestureType>('none')
 
     const [isMosaic, setIsMosaic] = useState(false)
+    const [isYellow, setIsYellow] = useState(false)
 
     // Banana detection (color-based)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -451,7 +452,10 @@ export default function ParticlesPage() {
     const toggleCamera = async () => {
         const newMode = facingMode === 'user' ? 'environment' : 'user'
         setFacingMode(newMode)
-        if (newMode === 'user') setIsMosaic(false) // Turn off mosaic when switching to front camera
+        if (newMode === 'user') {
+            setIsMosaic(false) // Turn off mosaic when switching to front camera
+            setIsYellow(false) // Turn off yellow filter when switching to front camera
+        }
         if (isTracking) {
             await startTracking(newMode)
         }
@@ -590,13 +594,28 @@ export default function ParticlesPage() {
 
             {/* Mosaic toggle button (only for environment camera) */}
             {isTracking && facingMode === 'environment' && (
-                <button
-                    onClick={() => setIsMosaic(!isMosaic)}
-                    className={`absolute top-24 right-6 z-50 text-[#FAC800] transition-opacity ${isMosaic ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-                    aria-label="モザイクフィルター切り替え"
-                >
-                    <Grid3x3 size={24} strokeWidth={1.5} />
-                </button>
+                <>
+                    <button
+                        onClick={() => setIsMosaic(!isMosaic)}
+                        className={`absolute top-24 right-6 z-50 text-[#FAC800] transition-opacity ${isMosaic ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                        aria-label="モザイクフィルター切り替え"
+                    >
+                        <Grid3x3 size={24} strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                        onClick={() => setIsYellow(!isYellow)}
+                        className={`absolute top-36 right-6 z-50 text-[#FAC800] transition-opacity ${isYellow ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                        aria-label="黄色フィルター切り替え"
+                    >
+                        <Palette size={24} strokeWidth={1.5} />
+                    </button>
+                </>
+            )}
+
+            {/* Yellow Overlay */}
+            {isYellow && (
+                <div className="absolute inset-0 z-40 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
             )}
 
             {/* Mosaic SVG Filter */}
