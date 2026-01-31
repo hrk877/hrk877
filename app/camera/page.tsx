@@ -737,7 +737,7 @@ export default function ParticlesPage() {
             // 6. ACTUAL PITCH SHIFTER (Resampling with Overlap-Add)
             // This actually changes the fundamental frequency of the voice.
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 0.75 // Lower pitch by ~5 semitones
+            const pitchRatio = 0.85 // Slightly higher but still deep (~3 semitones down)
             let readPos = 0
             let writePos = 0
             const internalBuffer = new Float32Array(16384)
