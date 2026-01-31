@@ -700,70 +700,36 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // 0. High-pass filter for clean low-end
-            const highPass = audioContext.createBiquadFilter()
-            highPass.type = 'highpass'
-            highPass.frequency.value = 80
-
-            // 1. CLEAR LOW-PITCH VOICE CHANGER (Resampling Method)
-            // This method shifts the pitch down moderately while keeping speech clear.
+            // 1. SIMPLE 0.5x PITCH SHIFTER
+            // Adjusts playback speed to lower the pitch by exactly 2x (1 octave down).
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 0.85 // Slightly lower than normal (~2 semitones)
+            const pitchRatio = 0.5 // Exactly 2x lower
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
-            const grainSize = 3072 // ~60ms for clarity
-            const overlap = 512    // ~10ms fade to prevent clicks
             let writePos = 0
             let readPos = 0
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
                 const output = e.outputBuffer.getChannelData(0)
-                const len = buffer.length
-
                 for (let i = 0; i < input.length; i++) {
                     buffer[writePos] = input[i]
                     const currentWrite = writePos
-                    writePos = (writePos + 1) % len
+                    writePos = (writePos + 1) % bufferSize
 
-                    const grainPos = readPos % grainSize
+                    // Simple resampling
+                    output[i] = buffer[Math.floor(readPos) % bufferSize]
+                    readPos = (readPos + pitchRatio) % bufferSize
 
-                    if (grainPos < overlap) {
-                        // Smooth crossfade jump
-                        const fade = grainPos / overlap
-                        const p1 = Math.floor(readPos) % len
-                        const jumpOffset = (currentWrite - grainSize + len) % len
-                        const p2 = Math.floor(jumpOffset + grainPos) % len
-                        output[i] = buffer[p1] * (1 - fade) + buffer[p2] * fade
-                    } else {
-                        // Resampling with linear interpolation for smoothness
-                        const p = Math.floor(readPos) % len
-                        const pNext = (p + 1) % len
-                        const frac = readPos - Math.floor(readPos)
-                        output[i] = buffer[p] * (1 - frac) + buffer[pNext] * frac
-                    }
-
-                    readPos = (readPos + pitchRatio) % len
-
-                    // Maintain stable safety margin
-                    const dist = (currentWrite - readPos + len) % len
-                    if (dist < 1000 || dist > 30000) {
-                        readPos = (currentWrite - 10000 + len) % len
+                    // Basic pointer management
+                    const dist = (currentWrite - readPos + bufferSize) % bufferSize
+                    if (dist < 1000 || dist > 40000) {
+                        readPos = (currentWrite - 20000 + bufferSize) % bufferSize
                     }
                 }
             }
 
-            // 2. Natural tone filtering
-            const lowPass = audioContext.createBiquadFilter()
-            lowPass.type = 'lowpass'
-            lowPass.frequency.value = 4000 // Keep high frequencies for clarity
-
-            // 3. Professional Compressor
-            const compressor = audioContext.createDynamicsCompressor()
-            compressor.threshold.value = -24
-            compressor.ratio.value = 4
-
-            // 4. Final gain
+            // 2. Final gain
             const gainNode = audioContext.createGain()
             gainNode.gain.value = 2.0
 
@@ -771,12 +737,9 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Connect the chain (Clear Deep Voice Path)
-            source.connect(highPass)
-            highPass.connect(shifter)
-            shifter.connect(lowPass)
-            lowPass.connect(compressor)
-            compressor.connect(gainNode)
+            // Connect the simple chain
+            source.connect(shifter)
+            shifter.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
