@@ -691,61 +691,18 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
-            // Get microphone audio
+            // Use original microphone audio without processing
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-            // Create audio context for robot voice transformation
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
-
             const pitchShift = audioContext.createMediaStreamDestination()
-
-            // 1. SIMPLE 1.6x RESAMPLING SHIFTER
-            // Raises pitch by 1.6x for the "Minion" effect. 
-            // Simple resampling avoids the "howling" phase artifacts of granular synthesis.
-            const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 1.6
-            const bufferSize = 65536
-            const buffer = new Float32Array(bufferSize)
-            let writePos = 0
-            let readPos = 0
-
-            shifter.onaudioprocess = (e) => {
-                const input = e.inputBuffer.getChannelData(0)
-                const output = e.outputBuffer.getChannelData(0)
-                for (let i = 0; i < input.length; i++) {
-                    buffer[writePos] = input[i]
-                    const currentWrite = writePos
-                    writePos = (writePos + 1) % bufferSize
-
-                    // Linear interpolation for clarity
-                    const p = Math.floor(readPos) % bufferSize
-                    const pNext = (p + 1) % bufferSize
-                    const frac = readPos - Math.floor(readPos)
-                    output[i] = buffer[p] * (1 - frac) + buffer[pNext] * frac
-
-                    readPos = (readPos + pitchRatio) % bufferSize
-
-                    // Maintain stable safety margin
-                    const dist = (currentWrite - readPos + bufferSize) % bufferSize
-                    if (dist < 1000 || dist > 40000) {
-                        readPos = (currentWrite - 10000 + bufferSize) % bufferSize
-                    }
-                }
-            }
-
-            // 2. Final gain
-            const gainNode = audioContext.createGain()
-            gainNode.gain.value = 2.0
 
             if (audioContext.state === 'suspended') {
                 await audioContext.resume()
             }
 
-            // Connect the simple chain
-            source.connect(shifter)
-            shifter.connect(gainNode)
-            gainNode.connect(pitchShift)
+            // Direct connection for original sound
+            source.connect(pitchShift)
 
             // Use canvas stream from display
             const canvas = document.createElement('canvas')
