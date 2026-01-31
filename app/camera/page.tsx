@@ -700,108 +700,62 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Beautiful deep voice transformation
             // 0. High-pass filter to remove "thumps" and plosive pops
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 100 // Cut sub-sonic rumble
+            highPass.frequency.value = 80 // Clean sub-bass rumble
 
-            // 1. Low-pass filter for smooth, warm sound
+            // 1. Deep Low-pass filter
+            // This cuts high-frequency "clarity" for a deep, slightly muffled sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 1500 // Cut high frequencies for a dark, deep sound
-            lowPass.Q.value = 0.8
+            lowPass.frequency.value = 1400
+            lowPass.Q.value = 1.0
 
-            // 2. Moderate bass boost for richer voice
+            // 2. Powerful Bass Boost
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 180
-            bassBoost.gain.value = 8 // Moderate boost for warmth
+            bassBoost.frequency.value = 160
+            bassBoost.gain.value = 14 // Strong boost for deep resonance
 
-            // 3. Low-mid range clarity
+            // 3. Low-mids clarity boost
             const midBoost = audioContext.createBiquadFilter()
             midBoost.type = 'peaking'
             midBoost.frequency.value = 400
-            midBoost.Q.value = 1.2
-            midBoost.gain.value = 5
+            midBoost.Q.value = 0.8
+            midBoost.gain.value = 4
 
-            // 4. Smooth high-frequency cut
+            // 4. Strong High-Cut for anonymity
             const highCut = audioContext.createBiquadFilter()
             highCut.type = 'highshelf'
-            highCut.frequency.value = 2000
-            highCut.gain.value = -6
+            highCut.frequency.value = 2200
+            highCut.gain.value = -12 // Muffle high frequencies for deep feel
 
-            // 5. Compressor for consistent volume and "pro" sound
+            // 5. Compressor for thick, consistent sound
             const compressor = audioContext.createDynamicsCompressor()
-            compressor.threshold.value = -20
+            compressor.threshold.value = -24
             compressor.knee.value = 30
-            compressor.ratio.value = 5
+            compressor.ratio.value = 8
             compressor.attack.value = 0.003
             compressor.release.value = 0.25
 
-            // 6. HIGH-QUALITY CROSS-FADED PITCH SHIFTER
-            const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 0.85
-
-            const grainSize = 2048 // ~40-50ms
-            const overlap = 512    // ~10ms fade
-            let readPos = 0
-            let writePos = 0
-            const buffer = new Float32Array(65536)
-
-            shifter.onaudioprocess = (e) => {
-                const input = e.inputBuffer.getChannelData(0)
-                const output = e.outputBuffer.getChannelData(0)
-                const len = buffer.length
-
-                for (let i = 0; i < input.length; i++) {
-                    buffer[writePos] = input[i]
-                    writePos = (writePos + 1) % len
-
-                    const grainPos = readPos % grainSize
-
-                    if (grainPos < overlap) {
-                        // Crossfade jump zone
-                        const fade = grainPos / overlap
-                        const p1 = Math.floor(readPos) % len
-
-                        // Second pointer jump back to a safe distance from write pointer
-                        const jumpOffset = (writePos - grainSize + len) % len
-                        const p2 = Math.floor(jumpOffset + grainPos) % len
-
-                        output[i] = buffer[p1] * (1 - fade) + buffer[p2] * fade
-                    } else {
-                        output[i] = buffer[Math.floor(readPos) % len]
-                    }
-
-                    readPos = (readPos + pitchRatio) % len
-
-                    // Maintain stable safety margin
-                    const dist = (writePos - readPos + len) % len
-                    if (dist < 1000 || dist > 30000) {
-                        readPos = (writePos - 15000 + len) % len
-                    }
-                }
-            }
-
-            // 7. Final gain for presence
+            // 6. Final gain for presence
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 1.6
+            gainNode.gain.value = 2.4
 
-            // Ensure AudioContext is active (required for Safari/Mobile)
+            // Ensure AudioContext is active
             if (audioContext.state === 'suspended') {
                 await audioContext.resume()
             }
 
-            // Connect the audio processing chain
-            source.connect(highPass) // Connected highPass here
+            // Connect the audio processing chain (Source -> Filters -> Output)
+            source.connect(highPass)
             highPass.connect(lowPass)
             lowPass.connect(bassBoost)
             bassBoost.connect(midBoost)
             midBoost.connect(highCut)
             highCut.connect(compressor)
-            compressor.connect(shifter)
-            shifter.connect(gainNode)
+            compressor.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
