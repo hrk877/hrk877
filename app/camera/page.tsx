@@ -703,7 +703,7 @@ export default function ParticlesPage() {
             // 1. SIMPLE 0.5x PITCH SHIFTER
             // Adjusts playback speed to lower the pitch by exactly 2x (1 octave down).
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 0.9 // Subtle deepening
+            const pitchRatio = 1.6 // High-pitched Minion voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             let writePos = 0
