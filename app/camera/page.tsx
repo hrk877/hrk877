@@ -155,12 +155,14 @@ function ParticleSystem({
     gesture,
     fingerTip,
     isDispersing,
-    disperseCenter
+    disperseCenter,
+    eyePosition
 }: {
     gesture: GestureType
     fingerTip: { x: number; y: number } | null
     isDispersing: boolean
     disperseCenter: { x: number; y: number } | null
+    eyePosition: { x: number; y: number } | null
 }) {
     const pointsRef = useRef<THREE.Points>(null)
     const velocitiesRef = useRef<Float32Array>(new Float32Array(PARTICLE_COUNT * 3))
@@ -244,6 +246,34 @@ function ParticleSystem({
                 pos[idx] += (tx - pos[idx]) * TEXT_FORMATION_SPEED
                 pos[idx + 1] += (ty - pos[idx + 1]) * TEXT_FORMATION_SPEED
                 pos[idx + 2] += (tz - pos[idx + 2]) * TEXT_FORMATION_SPEED
+            } else if (gesture === 'none' && eyePosition) {
+                // Randomly scatter particles across face area when no hand is detected
+                const ex = (eyePosition.x - 0.5) * viewport.width * -1
+                const ey = (0.5 - eyePosition.y) * viewport.height
+
+                // Create random scattered pattern across face
+                // Use particle index as seed for consistent random positions
+                const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453
+                const seed2 = Math.sin(i * 93.9898 + 12.233) * 43758.5453
+                const seed3 = Math.sin(i * 45.1234 + 56.789) * 43758.5453
+
+                const randomX = (seed1 - Math.floor(seed1)) * 2 - 1 // -1 to 1
+                const randomY = (seed2 - Math.floor(seed2)) * 2 - 1
+                const randomZ = (seed3 - Math.floor(seed3)) * 2 - 1
+
+                // Add slight movement over time
+                const moveX = Math.sin(t * 0.3 + i * 0.5) * 0.1
+                const moveY = Math.cos(t * 0.4 + i * 0.7) * 0.1
+                const moveZ = Math.sin(t * 0.5 + i * 0.3) * 0.15
+
+                // Dense horizontal bar effect (censorship bar style) over eyes
+                const targetX = ex + randomX * 1.2 + moveX
+                const targetY = ey + randomY * 0.15 + moveY // Very thin vertically
+                const targetZ = randomZ * 0.1 + moveZ
+
+                pos[idx] += (targetX - pos[idx]) * 0.15 // Faster collection for density
+                pos[idx + 1] += (targetY - pos[idx + 1]) * 0.15
+                pos[idx + 2] += (targetZ - pos[idx + 2]) * 0.15
             } else {
                 pos[idx] += Math.sin(t * 0.3 + i) * 0.001
                 pos[idx + 1] += Math.cos(t * 0.2 + i * 0.5) * 0.001
@@ -297,6 +327,7 @@ export default function ParticlesPage() {
     const [fingerTip, setFingerTip] = useState<{ x: number; y: number } | null>(null)
     const [isDispersing, setIsDispersing] = useState(false)
     const [disperseCenter, setDisperseCenter] = useState<{ x: number; y: number } | null>(null)
+    const [eyePosition, setEyePosition] = useState<{ x: number; y: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
 
     const [isMosaic] = useState(true) // Always on
@@ -352,6 +383,7 @@ export default function ParticlesPage() {
         if (allLandmarks.length === 0) {
             setGesture('none')
             setFingerTip(null)
+            // Keep eye position for particle tracking when no hand
             return
         }
 
@@ -431,20 +463,20 @@ export default function ParticlesPage() {
 
     // Restart camera when page becomes visible again (after download)
     useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && isTracking && videoRef.current) {
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible' && videoRef.current) {
                 // Check if video stream is still active
                 const stream = videoRef.current.srcObject as MediaStream | null
                 if (!stream || !stream.active || stream.getTracks().length === 0) {
-                    // Restart camera
-                    startTracking(facingMode)
+                    // Restart camera without changing isTracking state
+                    await startTracking(facingMode)
                 }
             }
         }
 
         document.addEventListener('visibilitychange', handleVisibilityChange)
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }, [isTracking, facingMode])
+    }, [facingMode])
 
     const startTracking = async (mode?: 'user' | 'environment') => {
         const targetMode = mode ?? facingMode
@@ -509,6 +541,18 @@ export default function ParticlesPage() {
             if (faceLandmarkerRef.current) {
                 try {
                     const faceResult: FaceLandmarkerResult = faceLandmarkerRef.current.detectForVideo(video, timestamp + 1)
+                    if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
+                        const face = faceResult.faceLandmarks[0]
+                        // Get eye position (average of left and right eye centers)
+                        // Left eye: landmark 159, Right eye: landmark 386
+                        if (face[159] && face[386]) {
+                            const leftEye = face[159]
+                            const rightEye = face[386]
+                            const eyeX = (leftEye.x + rightEye.x) / 2
+                            const eyeY = (leftEye.y + rightEye.y) / 2 // Exactly on eyes
+                            setEyePosition({ x: eyeX, y: eyeY })
+                        }
+                    }
                     setEyesClosed(checkEyesClosed(faceResult))
                 } catch (e) {
                     console.warn('Face detection error:', e)
@@ -659,43 +703,43 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Beautiful deep voice transformation
-            // 1. Low-pass filter for smooth, warm sound
+            // Very deep voice transformation
+            // 1. Low-pass filter for much deeper sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 3000 // Keep natural voice frequencies
-            lowPass.Q.value = 0.7 // Gentle slope
+            lowPass.frequency.value = 1500 // Much lower to cut high frequencies
+            lowPass.Q.value = 0.7
 
-            // 2. Bass boost for deeper, richer voice
+            // 2. Strong bass boost for very deep voice
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 250
-            bassBoost.gain.value = 6 // Moderate boost for warmth
+            bassBoost.frequency.value = 200 // Lower frequency
+            bassBoost.gain.value = 12 // Much stronger boost
 
-            // 3. Mid-range clarity
+            // 3. Low mid-range emphasis
             const midBoost = audioContext.createBiquadFilter()
             midBoost.type = 'peaking'
-            midBoost.frequency.value = 800 // Voice clarity range
+            midBoost.frequency.value = 400 // Lower for deeper voice
             midBoost.Q.value = 1.5
-            midBoost.gain.value = 4
+            midBoost.gain.value = 6
 
-            // 4. Subtle high-frequency roll-off for smoothness
+            // 4. Strong high-frequency cut for deep sound
             const highCut = audioContext.createBiquadFilter()
             highCut.type = 'highshelf'
-            highCut.frequency.value = 4000
-            highCut.gain.value = -3 // Gentle reduction for smoothness
+            highCut.frequency.value = 2000 // Lower cutoff
+            highCut.gain.value = -8 // Stronger reduction
 
-            // 5. Compressor for consistent volume and richness
+            // 5. Compressor for consistent volume
             const compressor = audioContext.createDynamicsCompressor()
-            compressor.threshold.value = -24
+            compressor.threshold.value = -20
             compressor.knee.value = 30
-            compressor.ratio.value = 4
+            compressor.ratio.value = 6
             compressor.attack.value = 0.003
             compressor.release.value = 0.25
 
-            // 6. Final gain for presence
+            // 6. Higher gain for deep voice presence
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 1.8
+            gainNode.gain.value = 2.5
 
             // Connect the audio processing chain for beautiful deep voice
             source.connect(lowPass)
@@ -918,6 +962,7 @@ export default function ParticlesPage() {
                         fingerTip={fingerTip}
                         isDispersing={isDispersing}
                         disperseCenter={disperseCenter}
+                        eyePosition={eyePosition}
                     />
                 </Canvas>
             )}
