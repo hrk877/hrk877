@@ -701,17 +701,22 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
 
             // Beautiful deep voice transformation
+            // 0. High-pass filter to remove "thumps" and plosive pops
+            const highPass = audioContext.createBiquadFilter()
+            highPass.type = 'highpass'
+            highPass.frequency.value = 100 // Cut sub-sonic rumble
+
             // 1. Low-pass filter for smooth, warm sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 1200 // Cut high frequencies for a dark, deep sound
+            lowPass.frequency.value = 1500 // Cut high frequencies for a dark, deep sound
             lowPass.Q.value = 0.8
 
-            // 2. Strong bass boost for richer voice
+            // 2. Moderate bass boost for richer voice
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 150
-            bassBoost.gain.value = 10 // Strong boost for warmth
+            bassBoost.frequency.value = 180
+            bassBoost.gain.value = 8 // Moderate boost for warmth
 
             // 3. Low-mid range clarity
             const midBoost = audioContext.createBiquadFilter()
