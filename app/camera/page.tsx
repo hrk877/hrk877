@@ -739,33 +739,47 @@ export default function ParticlesPage() {
             compressor.attack.value = 0.003
             compressor.release.value = 0.25
 
-            // 6. ACTUAL PITCH SHIFTER
+            // 6. HIGH-QUALITY CROSS-FADED PITCH SHIFTER
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
             const pitchRatio = 0.85
+
+            const grainSize = 2048 // ~40-50ms
+            const overlap = 512    // ~10ms fade
             let readPos = 0
             let writePos = 0
-            const internalBuffer = new Float32Array(32768) // Larger buffer
+            const buffer = new Float32Array(65536)
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
                 const output = e.outputBuffer.getChannelData(0)
+                const len = buffer.length
+
                 for (let i = 0; i < input.length; i++) {
-                    internalBuffer[writePos] = input[i]
-                    writePos = (writePos + 1) % internalBuffer.length
+                    buffer[writePos] = input[i]
+                    writePos = (writePos + 1) % len
 
-                    const intPos = Math.floor(readPos)
-                    const next = (intPos + 1) % internalBuffer.length
-                    const frac = readPos - intPos
+                    const grainPos = readPos % grainSize
 
-                    output[i] = internalBuffer[intPos] * (1 - frac) + internalBuffer[next] * frac
+                    if (grainPos < overlap) {
+                        // Crossfade jump zone
+                        const fade = grainPos / overlap
+                        const p1 = Math.floor(readPos) % len
 
-                    readPos += pitchRatio
-                    if (readPos >= internalBuffer.length) readPos -= internalBuffer.length
+                        // Second pointer jump back to a safe distance from write pointer
+                        const jumpOffset = (writePos - grainSize + len) % len
+                        const p2 = Math.floor(jumpOffset + grainPos) % len
 
-                    // Maintain stable safety distance
-                    const dist = (writePos - readPos + internalBuffer.length) % internalBuffer.length
-                    if (dist < 1000 || dist > 20000) {
-                        readPos = (writePos - 10000 + internalBuffer.length) % internalBuffer.length
+                        output[i] = buffer[p1] * (1 - fade) + buffer[p2] * fade
+                    } else {
+                        output[i] = buffer[Math.floor(readPos) % len]
+                    }
+
+                    readPos = (readPos + pitchRatio) % len
+
+                    // Maintain stable safety margin
+                    const dist = (writePos - readPos + len) % len
+                    if (dist < 1000 || dist > 30000) {
+                        readPos = (writePos - 15000 + len) % len
                     }
                 }
             }
