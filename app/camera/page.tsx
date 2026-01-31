@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandmark, FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-vision"
-import { SwitchCamera, Grid3x3, Palette } from "lucide-react"
+import { SwitchCamera, Grid3x3, Palette, User, Scissors, Scan } from "lucide-react"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
@@ -14,6 +14,8 @@ const SPHERE_COLLECT_SPEED = 0.35
 const DISPERSE_STRENGTH = 0.12
 const FRICTION = 0.92
 const SPHERE_RADIUS = 0.4
+
+type CameraMode = 'standard' | 'face-mosaic' | 'human-cutout'
 
 // Font
 const FONT: { [key: string]: string[] } = {
@@ -247,33 +249,32 @@ function ParticleSystem({
                 pos[idx + 1] += (ty - pos[idx + 1]) * TEXT_FORMATION_SPEED
                 pos[idx + 2] += (tz - pos[idx + 2]) * TEXT_FORMATION_SPEED
             } else if (gesture === 'none' && eyePosition) {
-                // Randomly scatter particles across face area when no hand is detected
+                // Circular scatter around face area when no hand is detected
                 const ex = (eyePosition.x - 0.5) * viewport.width * -1
                 const ey = (0.5 - eyePosition.y) * viewport.height
 
-                // Create random scattered pattern across face
-                // Use particle index as seed for consistent random positions
+                // Create random circular pattern
                 const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453
                 const seed2 = Math.sin(i * 93.9898 + 12.233) * 43758.5453
-                const seed3 = Math.sin(i * 45.1234 + 56.789) * 43758.5453
 
-                const randomX = (seed1 - Math.floor(seed1)) * 2 - 1 // -1 to 1
-                const randomY = (seed2 - Math.floor(seed2)) * 2 - 1
-                const randomZ = (seed3 - Math.floor(seed3)) * 2 - 1
+                const randomAngle = (seed1 - Math.floor(seed1)) * Math.PI * 2
+                const randomRadius = (seed2 - Math.floor(seed2)) * 0.8 // Circle radius around face
+
+                const randomX = Math.cos(randomAngle) * randomRadius
+                const randomY = Math.sin(randomAngle) * randomRadius
+                const randomZ = (Math.random() - 0.5) * 0.2
 
                 // Add slight movement over time
-                const moveX = Math.sin(t * 0.3 + i * 0.5) * 0.1
-                const moveY = Math.cos(t * 0.4 + i * 0.7) * 0.1
-                const moveZ = Math.sin(t * 0.5 + i * 0.3) * 0.15
+                const moveX = Math.sin(t * 0.3 + i * 0.5) * 0.05
+                const moveY = Math.cos(t * 0.4 + i * 0.7) * 0.05
 
-                // Dense horizontal bar effect (censorship bar style) over eyes
-                const targetX = ex + randomX * 1.2 + moveX
-                const targetY = ey + randomY * 0.15 + moveY // Very thin vertically
-                const targetZ = randomZ * 0.1 + moveZ
+                const targetX = ex + randomX + moveX
+                const targetY = ey + randomY + moveY
+                const targetZ = randomZ
 
-                pos[idx] += (targetX - pos[idx]) * 0.15 // Faster collection for density
-                pos[idx + 1] += (targetY - pos[idx + 1]) * 0.15
-                pos[idx + 2] += (targetZ - pos[idx + 2]) * 0.15
+                pos[idx] += (targetX - pos[idx]) * 0.1
+                pos[idx + 1] += (targetY - pos[idx + 1]) * 0.1
+                pos[idx + 2] += (targetZ - pos[idx + 2]) * 0.1
             } else {
                 pos[idx] += Math.sin(t * 0.3 + i) * 0.001
                 pos[idx + 1] += Math.cos(t * 0.2 + i * 0.5) * 0.001
@@ -328,10 +329,26 @@ export default function ParticlesPage() {
     const [isDispersing, setIsDispersing] = useState(false)
     const [disperseCenter, setDisperseCenter] = useState<{ x: number; y: number } | null>(null)
     const [eyePosition, setEyePosition] = useState<{ x: number; y: number } | null>(null)
+    const [faceBounds, setFaceBounds] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
 
-    const [isMosaic] = useState(true) // Always on
-    const [isYellow] = useState(true) // Always on
+    const [cameraMode, setCameraMode] = useState<CameraMode>('standard')
+    const [isMosaic, setIsMosaic] = useState(true)
+    const [isYellow, setIsYellow] = useState(true)
+
+    useEffect(() => {
+        // Mode logic
+        if (cameraMode === 'standard') {
+            setIsMosaic(true)
+            setIsYellow(true)
+        } else if (cameraMode === 'face-mosaic') {
+            setIsMosaic(false) // Custom drawing in effect
+            setIsYellow(false)
+        } else if (cameraMode === 'human-cutout') {
+            setIsMosaic(false)
+            setIsYellow(false) // Custom background in effect
+        }
+    }, [cameraMode])
 
     // Banana detection (color-based)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -351,6 +368,11 @@ export default function ParticlesPage() {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const recordedChunksRef = useRef<Blob[]>([])
     const recordingTimerRef = useRef<number | null>(null)
+
+    // Audio context and nodes stored in refs to prevent garbage collection during recording
+    const audioContextRef = useRef<AudioContext | null>(null)
+    const audioStreamRef = useRef<MediaStream | null>(null)
+    const shifterRef = useRef<ScriptProcessorNode | null>(null)
 
     useEffect(() => {
         facingModeRef.current = facingMode
@@ -540,15 +562,36 @@ export default function ParticlesPage() {
                     const faceResult: FaceLandmarkerResult = faceLandmarkerRef.current.detectForVideo(video, timestamp + 1)
                     if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
                         const face = faceResult.faceLandmarks[0]
+
+                        // Calculate face bounding box for specialized modes
+                        let minX = 1, minY = 1, maxX = 0, maxY = 0
+                        face.forEach(pt => {
+                            if (pt.x < minX) minX = pt.x
+                            if (pt.y < minY) minY = pt.y
+                            if (pt.x > maxX) maxX = pt.x
+                            if (pt.y > maxY) maxY = pt.y
+                        })
+
+                        const video = videoRef.current
+                        if (video) {
+                            setFaceBounds({
+                                x: minX * video.videoWidth,
+                                y: minY * video.videoHeight,
+                                width: (maxX - minX) * video.videoWidth,
+                                height: (maxY - minY) * video.videoHeight
+                            })
+                        }
+
                         // Get eye position (average of left and right eye centers)
-                        // Left eye: landmark 159, Right eye: landmark 386
                         if (face[159] && face[386]) {
                             const leftEye = face[159]
                             const rightEye = face[386]
                             const eyeX = (leftEye.x + rightEye.x) / 2
-                            const eyeY = (leftEye.y + rightEye.y) / 2 // Exactly on eyes
+                            const eyeY = (leftEye.y + rightEye.y) / 2
                             setEyePosition({ x: eyeX, y: eyeY })
                         }
+                    } else {
+                        setFaceBounds(null)
                     }
                     setEyesClosed(checkEyesClosed(faceResult))
                 } catch (e) {
@@ -643,7 +686,7 @@ export default function ParticlesPage() {
 
     // Apply mosaic effect using Canvas
     useEffect(() => {
-        if (!isMosaic || !videoRef.current || !mosaicCanvasRef.current) return
+        if (!isTracking || !videoRef.current || !mosaicCanvasRef.current) return
 
         const video = videoRef.current
         const canvas = mosaicCanvasRef.current
@@ -653,7 +696,7 @@ export default function ParticlesPage() {
         let animationId: number
 
         const applyMosaic = () => {
-            if (!isMosaic || !video.readyState || video.readyState < 2) {
+            if (!video.readyState || video.readyState < 2) {
                 animationId = requestAnimationFrame(applyMosaic)
                 return
             }
@@ -664,15 +707,61 @@ export default function ParticlesPage() {
                 canvas.height = video.videoHeight
             }
 
-            const pixelSize = 10 // Size of mosaic blocks
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-            // Draw video frame scaled down
-            const w = Math.ceil(canvas.width / pixelSize)
-            const h = Math.ceil(canvas.height / pixelSize)
+            if (cameraMode === 'standard' && isMosaic) {
+                const pixelSize = 10
+                const w = Math.ceil(canvas.width / pixelSize)
+                const h = Math.ceil(canvas.height / pixelSize)
+                ctx.imageSmoothingEnabled = false
+                ctx.drawImage(video, 0, 0, w, h)
+                ctx.drawImage(canvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height)
+            } else if (cameraMode === 'face-mosaic' && faceBounds) {
+                // Background clear
+                ctx.drawImage(video, 0, 0)
 
-            ctx.imageSmoothingEnabled = false
-            ctx.drawImage(video, 0, 0, w, h)
-            ctx.drawImage(canvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height)
+                // Draw mosaic ONLY on face area
+                const tempCanvas = document.createElement('canvas')
+                tempCanvas.width = canvas.width
+                tempCanvas.height = canvas.height
+                const tCtx = tempCanvas.getContext('2d')
+                if (tCtx) {
+                    const pixelSize = 8
+                    const fw = Math.ceil(faceBounds.width / pixelSize)
+                    const fh = Math.ceil(faceBounds.height / pixelSize)
+
+                    tCtx.imageSmoothingEnabled = false
+                    tCtx.drawImage(video, faceBounds.x, faceBounds.y, faceBounds.width, faceBounds.height, 0, 0, fw, fh)
+
+                    ctx.drawImage(tempCanvas, 0, 0, fw, fh, faceBounds.x, faceBounds.y, faceBounds.width, faceBounds.height)
+                }
+            } else if (cameraMode === 'human-cutout') {
+                // Background Yellow
+                ctx.fillStyle = '#FAC800'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+                // Cut out person (Simplified: everything within person's bounding box + padding)
+                // In a perfect world we'd use Segmentation, but face bounds + padding is a good start
+                if (faceBounds) {
+                    const personH = faceBounds.height * 3.5
+                    const personW = faceBounds.width * 2.5
+                    const personX = faceBounds.x - (personW - faceBounds.width) / 2
+                    const personY = faceBounds.y - faceBounds.height * 0.5
+
+                    ctx.drawImage(video, personX, personY, personW, personH, personX, personY, personW, personH)
+                } else {
+                    // Fallback: draw video at center if no face detected
+                    const scale = 0.8
+                    const w = canvas.width * scale
+                    const h = canvas.height * scale
+                    const x = (canvas.width - w) / 2
+                    const y = (canvas.height - h) / 2
+                    ctx.drawImage(video, x, y, w, h)
+                }
+            } else {
+                // Fallback / Modes that just need video
+                ctx.drawImage(video, 0, 0)
+            }
 
             animationId = requestAnimationFrame(applyMosaic)
         }
@@ -682,7 +771,7 @@ export default function ParticlesPage() {
         return () => {
             if (animationId) cancelAnimationFrame(animationId)
         }
-    }, [isMosaic])
+    }, [isTracking, cameraMode, isMosaic, faceBounds])
 
     // Recording functions
     const startRecording = async () => {
@@ -691,14 +780,17 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
-            // 1. SEAMLESS 1.2x PITCH SHIFTER
-            // Raises pitch by 1.2x while using crossfading to prevent stuttering/doubling.
+            // 1. SEAMLESS 1.1x PITCH SHIFTER
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
             const pitchShift = audioContext.createMediaStreamDestination()
-
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
+
+            // PIN TO REFS (Prevents GC during recording)
+            audioStreamRef.current = audioStream
+            audioContextRef.current = audioContext
+            shifterRef.current = shifter
             const pitchRatio = 1.1 // Subtle high pitch
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
@@ -867,9 +959,21 @@ export default function ParticlesPage() {
                 isCapturing = false
                 if (animationId) cancelAnimationFrame(animationId)
 
-                // Stop audio tracks and close audio context
-                audioStream.getTracks().forEach(track => track.stop())
-                await audioContext.close()
+                // Stop audio tracks and close audio context using refs
+                if (audioStreamRef.current) {
+                    audioStreamRef.current.getTracks().forEach(track => track.stop())
+                    audioStreamRef.current = null
+                }
+
+                if (shifterRef.current) {
+                    shifterRef.current.disconnect()
+                    shifterRef.current = null
+                }
+
+                if (audioContextRef.current) {
+                    await audioContextRef.current.close()
+                    audioContextRef.current = null
+                }
 
                 const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
                 const blob = new Blob(recordedChunksRef.current, { type: mimeType })
@@ -941,13 +1045,39 @@ export default function ParticlesPage() {
 
             {/* Camera toggle button */}
             {isTracking && (
-                <button
-                    onClick={toggleCamera}
-                    className="absolute top-11 right-6 z-50 text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                    aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
-                >
-                    <SwitchCamera size={24} strokeWidth={1.5} />
-                </button>
+                <div className="absolute top-11 right-6 z-50 flex flex-col items-center gap-6">
+                    <button
+                        onClick={toggleCamera}
+                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
+                        aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
+                    >
+                        <SwitchCamera size={26} strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                        onClick={() => setCameraMode('standard')}
+                        className={`transition-all duration-300 ${cameraMode === 'standard' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
+                        aria-label="通常モード"
+                    >
+                        <Scan size={26} strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                        onClick={() => setCameraMode('face-mosaic')}
+                        className={`transition-all duration-300 ${cameraMode === 'face-mosaic' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
+                        aria-label="顔モザイクモード"
+                    >
+                        <User size={26} strokeWidth={1.5} />
+                    </button>
+
+                    <button
+                        onClick={() => setCameraMode('human-cutout')}
+                        className={`transition-all duration-300 ${cameraMode === 'human-cutout' ? 'text-[#FAC800] opacity-100 scale-110' : 'text-white opacity-40 hover:opacity-70'}`}
+                        aria-label="切り抜きモード"
+                    >
+                        <Scissors size={26} strokeWidth={1.5} />
+                    </button>
+                </div>
             )}
 
             {/* Yellow Overlay - Always on */}
