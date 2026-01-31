@@ -700,61 +700,89 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // 0. High-pass filter to remove "thumps" and plosive pops
+            // 0. High-pass filter for clean low-end
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 80 // Clean sub-bass rumble
+            highPass.frequency.value = 100
 
-            // 1. Deep Low-pass filter
-            // This cuts high-frequency "clarity" for a deep, slightly muffled sound
-            const lowPass = audioContext.createBiquadFilter()
-            lowPass.type = 'lowpass'
-            lowPass.frequency.value = 1400
-            lowPass.Q.value = 1.0
+            // 1. Voice Changer Distortion (Grit)
+            const distortion = audioContext.createWaveShaper()
+            const makeDistortionCurve = (amount: number) => {
+                const k = typeof amount === 'number' ? amount : 50
+                const curve = new Float32Array(44100)
+                for (let i = 0; i < 44100; ++i) {
+                    const x = i * 2 / 44100 - 1
+                    curve[i] = (3 + k) * x * 20 * (Math.PI / 180) / (Math.PI + k * Math.abs(x))
+                }
+                return curve
+            }
+            distortion.curve = makeDistortionCurve(60)
+            distortion.oversample = '4x'
 
-            // 2. Powerful Bass Boost
+            // 2. MONSTER VOICE PITCH SHIFTER (Sine-Windowed)
+            const shifter = audioContext.createScriptProcessor(4096, 1, 1)
+            const pitchRatio = 0.6 // Extra deep monster pitch
+            const bufferSize = 65536
+            const buffer = new Float32Array(bufferSize)
+            const grainSize = 2560
+            let writePos = 0
+            let readPos1 = 0
+            let readPos2 = grainSize / 2
+
+            shifter.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0)
+                const output = e.outputBuffer.getChannelData(0)
+                for (let i = 0; i < input.length; i++) {
+                    buffer[writePos] = input[i]
+                    const currentWrite = writePos
+                    writePos = (writePos + 1) % bufferSize
+
+                    const gPos1 = readPos1 % grainSize
+                    const window1 = Math.sin((gPos1 / grainSize) * Math.PI)
+                    const s1 = buffer[Math.floor(readPos1) % bufferSize] * window1
+
+                    const gPos2 = (readPos2 + grainSize / 2) % grainSize
+                    const window2 = Math.sin((gPos2 / grainSize) * Math.PI)
+                    const s2 = buffer[Math.floor(readPos2) % bufferSize] * window2
+
+                    output[i] = (s1 + s2)
+                    readPos1 = (readPos1 + pitchRatio) % bufferSize
+                    readPos2 = (readPos2 + pitchRatio) % bufferSize
+
+                    if (((currentWrite - readPos1 + bufferSize) % bufferSize) < 1000) {
+                        readPos1 = (currentWrite - 15000 + bufferSize) % bufferSize
+                    }
+                    if (((currentWrite - readPos2 + bufferSize) % bufferSize) < 1000) {
+                        readPos2 = (currentWrite - (15000 + grainSize / 2) + bufferSize) % bufferSize
+                    }
+                }
+            }
+
+            // 3. Extra Bass Boost
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 160
-            bassBoost.gain.value = 14 // Strong boost for deep resonance
+            bassBoost.frequency.value = 180
+            bassBoost.gain.value = 16
 
-            // 3. Low-mids clarity boost
-            const midBoost = audioContext.createBiquadFilter()
-            midBoost.type = 'peaking'
-            midBoost.frequency.value = 400
-            midBoost.Q.value = 0.8
-            midBoost.gain.value = 4
-
-            // 4. Strong High-Cut for anonymity
-            const highCut = audioContext.createBiquadFilter()
-            highCut.type = 'highshelf'
-            highCut.frequency.value = 2200
-            highCut.gain.value = -12 // Muffle high frequencies for deep feel
-
-            // 5. Compressor for thick, consistent sound
+            // 4. Hard Compressor
             const compressor = audioContext.createDynamicsCompressor()
-            compressor.threshold.value = -24
-            compressor.knee.value = 30
-            compressor.ratio.value = 8
-            compressor.attack.value = 0.003
-            compressor.release.value = 0.25
+            compressor.threshold.value = -30
+            compressor.ratio.value = 12
 
-            // 6. Final gain for presence
+            // 5. Final gain for presence
             const gainNode = audioContext.createGain()
             gainNode.gain.value = 2.4
 
-            // Ensure AudioContext is active
             if (audioContext.state === 'suspended') {
                 await audioContext.resume()
             }
 
-            // Connect the audio processing chain (Source -> Filters -> Output)
+            // Connect the chain (Monster Voice Path)
             source.connect(highPass)
-            highPass.connect(lowPass)
-            lowPass.connect(bassBoost)
-            bassBoost.connect(midBoost)
-            midBoost.connect(highCut)
-            highCut.connect(compressor)
+            highPass.connect(distortion)
+            distortion.connect(shifter)
+            shifter.connect(bassBoost)
+            bassBoost.connect(compressor)
             compressor.connect(gainNode)
             gainNode.connect(pitchShift)
 
