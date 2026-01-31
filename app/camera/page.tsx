@@ -636,26 +636,46 @@ export default function ParticlesPage() {
             // Get microphone audio
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-            // Create audio context for pitch shifting (cute voice effect)
+            // Create audio context for voice transformation (unrecognizable voice)
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
 
-            // Create pitch shift effect for cute voice
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Use biquad filter for formant shifting (makes voice sound cuter)
-            const filter = audioContext.createBiquadFilter()
-            filter.type = 'highshelf'
-            filter.frequency.value = 1000 // Boost higher frequencies
-            filter.gain.value = 6 // Boost by 6dB for brighter, cuter sound
+            // Multiple filters for dramatic voice change
+            // 1. High-pass filter to remove low frequencies
+            const highPass = audioContext.createBiquadFilter()
+            highPass.type = 'highpass'
+            highPass.frequency.value = 300
 
-            // Add a slight pitch increase using a simple gain
+            // 2. Formant shift with high shelf for chipmunk-like effect
+            const formantShift = audioContext.createBiquadFilter()
+            formantShift.type = 'peaking'
+            formantShift.frequency.value = 2000
+            formantShift.Q.value = 1
+            formantShift.gain.value = 12 // Strong boost
+
+            // 3. Add reverb for more disguise
+            const convolver = audioContext.createConvolver()
+            const reverbLength = audioContext.sampleRate * 0.5
+            const reverbBuffer = audioContext.createBuffer(2, reverbLength, audioContext.sampleRate)
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = reverbBuffer.getChannelData(channel)
+                for (let i = 0; i < reverbLength; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (reverbLength * 0.1))
+                }
+            }
+            convolver.buffer = reverbBuffer
+
+            // 4. Gain for volume adjustment
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 1.2 // Slight volume boost
+            gainNode.gain.value = 1.5
 
-            // Connect the audio processing chain
-            source.connect(filter)
-            filter.connect(gainNode)
+            // Connect the audio processing chain for dramatic effect
+            source.connect(highPass)
+            highPass.connect(formantShift)
+            formantShift.connect(convolver)
+            convolver.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
@@ -701,10 +721,12 @@ export default function ParticlesPage() {
                     ctx.restore()
                 }
 
-                // Yellow overlay
+                // Yellow overlay - match display opacity
                 if (isYellow) {
-                    ctx.fillStyle = 'rgba(250, 204, 0, 0.3)'
+                    ctx.fillStyle = 'rgba(250, 204, 0, 0.5)'
+                    ctx.globalCompositeOperation = 'overlay'
                     ctx.fillRect(0, 0, canvas.width, canvas.height)
+                    ctx.globalCompositeOperation = 'source-over'
                 }
 
                 animationId = requestAnimationFrame(captureFrame)
