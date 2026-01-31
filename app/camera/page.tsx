@@ -429,6 +429,23 @@ export default function ParticlesPage() {
         }
     }, [])
 
+    // Restart camera when page becomes visible again (after download)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isTracking && videoRef.current) {
+                // Check if video stream is still active
+                const stream = videoRef.current.srcObject as MediaStream | null
+                if (!stream || !stream.active || stream.getTracks().length === 0) {
+                    // Restart camera
+                    startTracking(facingMode)
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }, [isTracking, facingMode])
+
     const startTracking = async (mode?: 'user' | 'environment') => {
         const targetMode = mode ?? facingMode
         if (isLoading) return
@@ -643,9 +660,9 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
 
             // Robot voice effect using ring modulation and bit crushing
-            // 1. Create oscillator for ring modulation (robot effect)
+            // 1. Create oscillator for ring modulation (very low for deep robot effect)
             const oscillator = audioContext.createOscillator()
-            oscillator.frequency.value = 30 // Low frequency for robot effect
+            oscillator.frequency.value = 10 // Very low frequency for deep robot effect (3x lower)
             oscillator.type = 'square'
             oscillator.start()
 
@@ -670,13 +687,19 @@ export default function ParticlesPage() {
             distortion.curve = curve
             distortion.oversample = '4x'
 
-            // 5. Band-pass filter for telephone-like quality
-            const bandPass = audioContext.createBiquadFilter()
-            bandPass.type = 'bandpass'
-            bandPass.frequency.value = 1000
-            bandPass.Q.value = 2
+            // 5. Low-pass filter for deeper, darker sound
+            const lowPass = audioContext.createBiquadFilter()
+            lowPass.type = 'lowpass'
+            lowPass.frequency.value = 600 // Lower frequency for deeper voice
+            lowPass.Q.value = 1
 
-            // 6. Bit crusher effect (reduce sample rate)
+            // 6. Bass boost for even deeper effect
+            const bassBoost = audioContext.createBiquadFilter()
+            bassBoost.type = 'lowshelf'
+            bassBoost.frequency.value = 150
+            bassBoost.gain.value = 8
+
+            // 7. Bit crusher effect (reduce sample rate)
             const crusher = audioContext.createScriptProcessor(4096, 1, 1)
             let phase = 0
             const frequency = 8000 // Reduced sample rate for digital sound
@@ -695,15 +718,16 @@ export default function ParticlesPage() {
                 }
             }
 
-            // 7. Final gain
+            // 8. Final gain
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 2.0
+            gainNode.gain.value = 2.5 // Higher gain for deeper voice
 
-            // Connect the audio processing chain for robot voice
+            // Connect the audio processing chain for deep robot voice
             source.connect(ringMod)
             ringMod.connect(distortion)
-            distortion.connect(bandPass)
-            bandPass.connect(crusher)
+            distortion.connect(lowPass)
+            lowPass.connect(bassBoost)
+            bassBoost.connect(crusher)
             crusher.connect(gainNode)
             gainNode.connect(pitchShift)
 
@@ -712,9 +736,16 @@ export default function ParticlesPage() {
             const ctx = canvas.getContext('2d')
             if (!ctx) return
 
-            // Set canvas size to window size
+            // Set canvas size to 9:16 aspect ratio for iPhone
+            const aspectRatio = 9 / 16
             canvas.width = window.innerWidth
-            canvas.height = window.innerHeight
+            canvas.height = Math.round(window.innerWidth / aspectRatio)
+
+            // If height exceeds window height, adjust based on height instead
+            if (canvas.height > window.innerHeight) {
+                canvas.height = window.innerHeight
+                canvas.width = Math.round(window.innerHeight * aspectRatio)
+            }
 
             // Store animation ID in a variable accessible to onstop
             let animationId: number
