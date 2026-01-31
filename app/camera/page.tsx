@@ -700,51 +700,90 @@ export default function ParticlesPage() {
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Very deep voice transformation
-            // 1. Low-pass filter for much deeper sound
+            // Beautiful deep voice transformation
+            // 1. Low-pass filter for smooth, warm sound
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 800 // Even lower to cut high frequencies
-            lowPass.Q.value = 0.7
+            lowPass.frequency.value = 1200 // Cut high frequencies for a dark, deep sound
+            lowPass.Q.value = 0.8
 
-            // 2. Strong bass boost for very deep voice
+            // 2. Strong bass boost for richer voice
             const bassBoost = audioContext.createBiquadFilter()
             bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 100 // Lower frequency
-            bassBoost.gain.value = 12 // Much stronger boost
+            bassBoost.frequency.value = 150
+            bassBoost.gain.value = 10 // Strong boost for warmth
 
-            // 3. Low mid-range emphasis
+            // 3. Low-mid range clarity
             const midBoost = audioContext.createBiquadFilter()
             midBoost.type = 'peaking'
-            midBoost.frequency.value = 300 // Lower for deeper voice
-            midBoost.Q.value = 1.5
-            midBoost.gain.value = 6
+            midBoost.frequency.value = 400
+            midBoost.Q.value = 1.2
+            midBoost.gain.value = 5
 
-            // 4. Strong high-frequency cut for deep sound
+            // 4. Smooth high-frequency cut
             const highCut = audioContext.createBiquadFilter()
             highCut.type = 'highshelf'
-            highCut.frequency.value = 1000 // Lower cutoff
-            highCut.gain.value = -8 // Stronger reduction
+            highCut.frequency.value = 2000
+            highCut.gain.value = -6
 
-            // 5. Compressor for consistent volume
+            // 5. Compressor for consistent volume and "pro" sound
             const compressor = audioContext.createDynamicsCompressor()
             compressor.threshold.value = -20
             compressor.knee.value = 30
-            compressor.ratio.value = 6
+            compressor.ratio.value = 5
             compressor.attack.value = 0.003
             compressor.release.value = 0.25
 
-            // 6. Higher gain for deep voice presence
-            const gainNode = audioContext.createGain()
-            gainNode.gain.value = 2.5
+            // 6. ACTUAL PITCH SHIFTER (Resampling with Overlap-Add)
+            // This actually changes the fundamental frequency of the voice.
+            const shifter = audioContext.createScriptProcessor(4096, 1, 1)
+            const pitchRatio = 0.75 // Lower pitch by ~5 semitones
+            let readPos = 0
+            let writePos = 0
+            const internalBuffer = new Float32Array(16384)
 
-            // Connect the audio processing chain for beautiful deep voice
+            shifter.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0)
+                const output = e.outputBuffer.getChannelData(0)
+                for (let i = 0; i < input.length; i++) {
+                    internalBuffer[writePos] = input[i]
+                    writePos = (writePos + 1) % internalBuffer.length
+
+                    // Linear interpolation for smoother sound
+                    const intPos = Math.floor(readPos)
+                    const frac = readPos - intPos
+                    const next = (intPos + 1) % internalBuffer.length
+
+                    output[i] = internalBuffer[intPos] * (1 - frac) + internalBuffer[next] * frac
+
+                    readPos += pitchRatio
+                    if (readPos >= internalBuffer.length) readPos -= internalBuffer.length
+
+                    // Keep read pointer in a safe distance to manage latency/glitches
+                    const dist = (writePos - readPos + internalBuffer.length) % internalBuffer.length
+                    if (dist > 6000 || dist < 1000) {
+                        readPos = (writePos - 4000 + internalBuffer.length) % internalBuffer.length
+                    }
+                }
+            }
+
+            // 7. Final gain for presence
+            const gainNode = audioContext.createGain()
+            gainNode.gain.value = 2.2
+
+            // Ensure AudioContext is active (required for Safari/Mobile)
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume()
+            }
+
+            // Connect the audio processing chain
             source.connect(lowPass)
             lowPass.connect(bassBoost)
             bassBoost.connect(midBoost)
             midBoost.connect(highCut)
             highCut.connect(compressor)
-            compressor.connect(gainNode)
+            compressor.connect(shifter)
+            shifter.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
