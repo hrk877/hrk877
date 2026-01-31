@@ -508,13 +508,24 @@ export default function ParticlesPage() {
 
         // Stop existing stream if any
         if (videoRef.current?.srcObject) {
-            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+            const currentStream = videoRef.current.srcObject as MediaStream
+            currentStream.getTracks().forEach(t => {
+                t.stop()
+                currentStream.removeTrack(t)
+            })
+            videoRef.current.srcObject = null
         }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: targetMode, width: 640, height: 480 }
-            })
+            // Use ideal constraints for better mobile compatibility
+            const constraints = {
+                video: {
+                    facingMode: targetMode,
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            }
+            const stream = await navigator.mediaDevices.getUserMedia(constraints)
             if (videoRef.current) {
                 videoRef.current.srcObject = stream
                 await videoRef.current.play()
@@ -522,8 +533,8 @@ export default function ParticlesPage() {
                 detectAll()
             }
         } catch (e) {
-            console.error(e)
-            alert("カメラ起動失敗")
+            console.error("Camera transition error:", e)
+            alert("カメラの切り替えに失敗しました。ブラウザの設定でカメラ許可を確認してください。")
         }
     }
 
@@ -679,6 +690,10 @@ export default function ParticlesPage() {
     useEffect(() => {
         return () => {
             stopTracking()
+            if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop()
+            }
             handLandmarkerRef.current?.close()
             faceLandmarkerRef.current?.close()
         }
@@ -1017,17 +1032,19 @@ export default function ParticlesPage() {
     }
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop()
-            setIsRecording(false)
+        try {
+            if (mediaRecorderRef.current && isRecording) {
+                mediaRecorderRef.current.stop()
+                setIsRecording(false)
 
-            if (recordingTimerRef.current) {
-                clearInterval(recordingTimerRef.current)
-                recordingTimerRef.current = null
+                if (recordingTimerRef.current) {
+                    clearInterval(recordingTimerRef.current)
+                    recordingTimerRef.current = null
+                }
             }
-
-            // Note: We don't stop the video camera stream here to avoid bugs
-            // Only the audio stream and MediaRecorder are stopped
+        } catch (e) {
+            console.error("Stop recording error:", e)
+            setIsRecording(false)
         }
     }
 
