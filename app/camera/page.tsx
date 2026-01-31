@@ -699,7 +699,7 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
 
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
-            const pitchRatio = 1.2 // High pitch
+            const pitchRatio = 1.1 // Subtle high pitch
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const crossFadeSamples = 512 // ~11ms fade to hide the jump
