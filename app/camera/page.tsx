@@ -299,8 +299,8 @@ export default function ParticlesPage() {
     const [disperseCenter, setDisperseCenter] = useState<{ x: number; y: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
 
-    const [isMosaic, setIsMosaic] = useState(false)
-    const [isYellow, setIsYellow] = useState(false)
+    const [isMosaic] = useState(true) // Always on
+    const [isYellow] = useState(true) // Always on
 
     // Banana detection (color-based)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -636,53 +636,75 @@ export default function ParticlesPage() {
             // Get microphone audio
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-            // Create audio context for voice transformation (unrecognizable voice)
+            // Create audio context for robot voice transformation
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
 
             const pitchShift = audioContext.createMediaStreamDestination()
 
-            // Multiple filters for dramatic voice change with low pitch
-            // 1. Low-pass filter to emphasize low frequencies for deeper voice
-            const lowPass = audioContext.createBiquadFilter()
-            lowPass.type = 'lowpass'
-            lowPass.frequency.value = 2000 // Cut high frequencies
+            // Robot voice effect using ring modulation and bit crushing
+            // 1. Create oscillator for ring modulation (robot effect)
+            const oscillator = audioContext.createOscillator()
+            oscillator.frequency.value = 30 // Low frequency for robot effect
+            oscillator.type = 'square'
+            oscillator.start()
 
-            // 2. Bass boost for deeper voice effect
-            const bassBoost = audioContext.createBiquadFilter()
-            bassBoost.type = 'lowshelf'
-            bassBoost.frequency.value = 200 // Boost low frequencies
-            bassBoost.gain.value = 10 // Strong bass boost
+            // 2. Gain for oscillator
+            const oscGain = audioContext.createGain()
+            oscGain.gain.value = 0.5
+            oscillator.connect(oscGain)
 
-            // 3. Formant shift down for lower pitch
-            const formantShift = audioContext.createBiquadFilter()
-            formantShift.type = 'peaking'
-            formantShift.frequency.value = 400 // Lower formant frequency
-            formantShift.Q.value = 1
-            formantShift.gain.value = 8
+            // 3. Create a gain node for ring modulation
+            const ringMod = audioContext.createGain()
+            oscGain.connect(ringMod.gain)
 
-            // 4. Add reverb for more disguise
-            const convolver = audioContext.createConvolver()
-            const reverbLength = audioContext.sampleRate * 0.8
-            const reverbBuffer = audioContext.createBuffer(2, reverbLength, audioContext.sampleRate)
-            for (let channel = 0; channel < 2; channel++) {
-                const channelData = reverbBuffer.getChannelData(channel)
-                for (let i = 0; i < reverbLength; i++) {
-                    channelData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (reverbLength * 0.15))
+            // 4. Distortion for more robotic sound
+            const distortion = audioContext.createWaveShaper()
+            const samples = 44100
+            const curve = new Float32Array(samples)
+            const deg = Math.PI / 180
+            for (let i = 0; i < samples; i++) {
+                const x = (i * 2) / samples - 1
+                curve[i] = ((3 + 20) * x * 20 * deg) / (Math.PI + 20 * Math.abs(x))
+            }
+            distortion.curve = curve
+            distortion.oversample = '4x'
+
+            // 5. Band-pass filter for telephone-like quality
+            const bandPass = audioContext.createBiquadFilter()
+            bandPass.type = 'bandpass'
+            bandPass.frequency.value = 1000
+            bandPass.Q.value = 2
+
+            // 6. Bit crusher effect (reduce sample rate)
+            const crusher = audioContext.createScriptProcessor(4096, 1, 1)
+            let phase = 0
+            const frequency = 8000 // Reduced sample rate for digital sound
+            crusher.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0)
+                const output = e.outputBuffer.getChannelData(0)
+                const step = frequency / audioContext.sampleRate
+                for (let i = 0; i < input.length; i++) {
+                    phase += step
+                    if (phase >= 1) {
+                        phase -= 1
+                        output[i] = input[i]
+                    } else {
+                        output[i] = output[i - 1] || 0
+                    }
                 }
             }
-            convolver.buffer = reverbBuffer
 
-            // 5. Gain for volume adjustment
+            // 7. Final gain
             const gainNode = audioContext.createGain()
-            gainNode.gain.value = 1.8 // Higher gain for deeper voice
+            gainNode.gain.value = 2.0
 
-            // Connect the audio processing chain for deep voice effect
-            source.connect(lowPass)
-            lowPass.connect(bassBoost)
-            bassBoost.connect(formantShift)
-            formantShift.connect(convolver)
-            convolver.connect(gainNode)
+            // Connect the audio processing chain for robot voice
+            source.connect(ringMod)
+            ringMod.connect(distortion)
+            distortion.connect(bandPass)
+            bandPass.connect(crusher)
+            crusher.connect(gainNode)
             gainNode.connect(pitchShift)
 
             // Use canvas stream from display
@@ -771,13 +793,13 @@ export default function ParticlesPage() {
                 }
             }
 
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = async () => {
                 isCapturing = false
                 if (animationId) cancelAnimationFrame(animationId)
 
                 // Stop audio tracks and close audio context
                 audioStream.getTracks().forEach(track => track.stop())
-                audioContext.close()
+                await audioContext.close()
 
                 const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
                 const blob = new Blob(recordedChunksRef.current, { type: mimeType })
@@ -858,28 +880,7 @@ export default function ParticlesPage() {
                 </button>
             )}
 
-            {/* Mosaic and Yellow filter toggle buttons */}
-            {isTracking && (
-                <>
-                    <button
-                        onClick={() => setIsMosaic(!isMosaic)}
-                        className={`absolute top-24 right-6 z-50 text-[#FAC800] transition-opacity ${isMosaic ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-                        aria-label="モザイクフィルター切り替え"
-                    >
-                        <Grid3x3 size={24} strokeWidth={1.5} />
-                    </button>
-
-                    <button
-                        onClick={() => setIsYellow(!isYellow)}
-                        className={`absolute top-36 right-6 z-50 text-[#FAC800] transition-opacity ${isYellow ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-                        aria-label="黄色フィルター切り替え"
-                    >
-                        <Palette size={24} strokeWidth={1.5} />
-                    </button>
-                </>
-            )}
-
-            {/* Yellow Overlay */}
+            {/* Yellow Overlay - Always on */}
             {isYellow && (
                 <div className="absolute inset-0 z-40 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
             )}
