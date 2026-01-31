@@ -603,11 +603,11 @@ export default function ParticlesPage() {
             <svg style={{ display: 'none' }}>
                 <defs>
                     <filter id="pixelate" x="0" y="0">
-                        <feFlood x="2" y="2" height="2" width="2" />
-                        <feComposite width="10" height="10" />
+                        <feFlood x="4" y="4" height="2" width="2" />
+                        <feComposite width="20" height="20" />
                         <feTile result="a" />
                         <feComposite in="SourceGraphic" in2="a" operator="in" />
-                        <feMorphology operator="dilate" radius="5" />
+                        <feMorphology operator="dilate" radius="10" />
                     </filter>
                 </defs>
             </svg>
