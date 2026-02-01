@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import * as THREE from "three"
 import { FilesetResolver, HandLandmarker, HandLandmarkerResult, NormalizedLandmark, FaceLandmarker, FaceLandmarkerResult } from "@mediapipe/tasks-vision"
-import { SwitchCamera, Grid3x3, Palette, User, Scissors, Scan } from "lucide-react"
+import { SwitchCamera, Grid3x3, Calendar, Palette, User, Scissors, Scan } from "lucide-react"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 
 // Constants
@@ -312,6 +312,12 @@ export default function ParticlesPage() {
     const [isMosaic, setIsMosaic] = useState(true)
     const [isYellow, setIsYellow] = useState(true)
     const [mosaicLevel, setMosaicLevel] = useState<1 | 2 | 3>(1) // 1=small, 2=medium, 3=large pixels
+    const [isDateVisible, setIsDateVisible] = useState(false)
+    const dateVisibleRef = useRef(false)
+
+    useEffect(() => {
+        dateVisibleRef.current = isDateVisible
+    }, [isDateVisible])
 
     useEffect(() => {
         // Mode logic
@@ -940,6 +946,33 @@ export default function ParticlesPage() {
                     ctx.globalCompositeOperation = 'source-over'
                 }
 
+                // Date stamp - Custom Font Style
+                if (dateVisibleRef.current) {
+                    const now = new Date()
+                    // Format: 2026.2.1 (no zero padding)
+                    const dateString = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`
+
+                    // Match Hero title font: bold sans-serif
+                    ctx.font = '600 32px sans-serif'
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'top'
+
+                    // Subtle shadow for legibility
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+                    ctx.shadowBlur = 4
+                    ctx.shadowOffsetX = 1
+                    ctx.shadowOffsetY = 1
+
+                    ctx.fillStyle = '#FAC800' // Yellow to match branding
+                    ctx.fillText(dateString, canvas.width / 2, 80) // Adjusted y to 80 to match preview
+
+                    // Reset shadow
+                    ctx.shadowColor = 'transparent'
+                    ctx.shadowBlur = 0
+                    ctx.shadowOffsetX = 0
+                    ctx.shadowOffsetY = 0
+                }
+
                 // Draw Three.js particles canvas on top
                 if (threeCanvasRef.current) {
                     try {
@@ -1055,20 +1088,25 @@ export default function ParticlesPage() {
     }
 
     const stopRecording = () => {
-        try {
-            if (mediaRecorderRef.current && isRecording) {
-                mediaRecorderRef.current.stop()
-                setIsRecording(false)
+        // Immediately update UI to show "stopped" state
+        setIsRecording(false)
 
-                if (recordingTimerRef.current) {
-                    clearInterval(recordingTimerRef.current)
-                    recordingTimerRef.current = null
-                }
-            }
-        } catch (e) {
-            console.error("Stop recording error:", e)
-            setIsRecording(false)
+        if (recordingTimerRef.current) {
+            clearInterval(recordingTimerRef.current)
+            recordingTimerRef.current = null
         }
+
+        // Add a delay before actually stopping the recorder
+        // This ensures the buffer is flushed and the last moment is captured
+        setTimeout(() => {
+            try {
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                    mediaRecorderRef.current.stop()
+                }
+            } catch (e) {
+                console.error("Stop recording error:", e)
+            }
+        }, 1000) // 1 second buffer to catch the end
     }
 
     const toggleRecording = () => {
@@ -1092,16 +1130,23 @@ export default function ParticlesPage() {
                         className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
                         aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
                     >
-                        <SwitchCamera size={26} strokeWidth={1.5} />
+                        <SwitchCamera className="w-8 h-8" strokeWidth={1.5} />
                     </button>
 
                     {/* Grid button - mosaic size */}
                     <button
                         onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
                         className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                        aria-label="モザイクサイズ変更"
                     >
-                        <Grid3x3 size={26} strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
+                        <Grid3x3 className="w-8 h-8" strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
+                    </button>
+
+                    {/* Date toggle button */}
+                    <button
+                        onClick={() => setIsDateVisible(prev => !prev)}
+                        className={`transition-opacity ${isDateVisible ? 'text-[#FAC800] opacity-100' : 'text-[#FAC800] opacity-60 hover:opacity-100'}`}
+                    >
+                        <Calendar className="w-8 h-8" strokeWidth={1.5} />
                     </button>
                 </div>
             )}
@@ -1109,6 +1154,16 @@ export default function ParticlesPage() {
             {/* Yellow Overlay - Always on */}
             {isYellow && (
                 <div className="absolute inset-0 z-10 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
+            )}
+
+            {/* Date Preview Overlay */}
+            {isDateVisible && (
+                <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                    <span className="text-[#FAC800] text-[32px] font-bold font-sans tracking-tight drop-shadow-md select-none"
+                        style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.3)' }}>
+                        {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
+                    </span>
+                </div>
             )}
 
             <video
