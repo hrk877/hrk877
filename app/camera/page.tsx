@@ -1117,7 +1117,7 @@ export default function ParticlesPage() {
 
             {/* Camera controls - top right */}
             {isTracking && (
-                <div className="absolute top-11 right-6 z-50 flex flex-col gap-4">
+                <div className="absolute top-9 right-6 z-50 flex flex-col gap-4">
                     {/* Camera toggle button */}
                     <button
                         onClick={toggleCamera}
