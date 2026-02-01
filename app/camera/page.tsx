@@ -722,50 +722,52 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // FM RADIO EQ - Wider bandwidth than AM, more pleasant
+            // STYLISH VOICE - Subtle pitch shift with character EQ
+            // Creates a distinctive "podcast/DJ" quality voice
             // High-pass: Clean low end
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 180 // Gentle low cut
+            highPass.frequency.value = 150 // Gentle low cut
             highPass.Q.value = 0.5
 
-            // Low-pass: FM quality upper range
+            // Low-pass: Keep it natural but polished
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 5500 // Clean high end
+            lowPass.frequency.value = 7000 // Retain clarity
             lowPass.Q.value = 0.5
 
-            // Presence/clarity boost (reduced to minimize noise)
-            const presenceBoost = audioContext.createBiquadFilter()
-            presenceBoost.type = 'peaking'
-            presenceBoost.frequency.value = 2500 // Clarity sweet spot
-            presenceBoost.Q.value = 1.0
-            presenceBoost.gain.value = 2 // Subtle boost to reduce noise
+            // "Character" mid boost - gives voice a unique signature
+            const midCharacter = audioContext.createBiquadFilter()
+            midCharacter.type = 'peaking'
+            midCharacter.frequency.value = 1800 // Voice character frequency
+            midCharacter.Q.value = 1.5
+            midCharacter.gain.value = 3 // Distinctive mid presence
 
-            // Subtle warmth
+            // Subtle low-mid warmth
             const warmth = audioContext.createBiquadFilter()
             warmth.type = 'peaking'
-            warmth.frequency.value = 400 // Warm low-mids
+            warmth.frequency.value = 350 // Warm body
             warmth.Q.value = 0.8
-            warmth.gain.value = 1 // Minimal boost
+            warmth.gain.value = 1.5
 
-            // "Air" at the top (reduced to minimize hiss)
-            const airBoost = audioContext.createBiquadFilter()
-            airBoost.type = 'highshelf'
-            airBoost.frequency.value = 4000
-            airBoost.gain.value = 1 // Very subtle
+            // Subtle "sparkle" at 3kHz
+            const sparkle = audioContext.createBiquadFilter()
+            sparkle.type = 'peaking'
+            sparkle.frequency.value = 3200 // Articulation/presence
+            sparkle.Q.value = 1.2
+            sparkle.gain.value = 2
 
-            // Output gain (reduced to prevent clipping)
+            // Output gain
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 0.95 // Slightly below unity to prevent clipping
+            outputGain.gain.value = 0.9 // Prevent clipping
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - higher pitch for different voice character
-            const pitchRatio = 1.25 // More noticeably different voice
+            // Voice transformation settings - subtle pitch for natural different voice
+            const pitchRatio = 1.1 // Subtle shift for stylish different voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048 // Longer fade for smoother transitions
@@ -861,13 +863,13 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Warmth -> Shifter -> Presence -> Air -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Warmth -> Shifter -> MidCharacter -> Sparkle -> LowPass -> Gain -> Output
             source.connect(highPass)
             highPass.connect(warmth)
             warmth.connect(shifter)
-            shifter.connect(presenceBoost)
-            presenceBoost.connect(airBoost)
-            airBoost.connect(lowPass)
+            shifter.connect(midCharacter)
+            midCharacter.connect(sparkle)
+            sparkle.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
