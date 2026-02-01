@@ -953,7 +953,7 @@ export default function ParticlesPage() {
                     const dateString = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`
 
                     // Match Hero title font: Cormorant Garamond
-                    ctx.font = '600 32px "Cormorant Garamond", serif'
+                    ctx.font = '600 80px "Cormorant Garamond", serif'
                     ctx.textAlign = 'center'
                     ctx.textBaseline = 'top'
 
@@ -964,7 +964,7 @@ export default function ParticlesPage() {
                     ctx.shadowOffsetY = 0
 
                     ctx.fillStyle = '#FAC800' // Yellow to match branding
-                    ctx.fillText(dateString, canvas.width / 2, 80) // Adjusted y to 80 to match preview
+                    ctx.fillText(dateString, canvas.width / 2, 150) // Adjusted y to 150 for larger font
                 }
 
                 // Draw Three.js particles canvas on top
@@ -1152,8 +1152,8 @@ export default function ParticlesPage() {
 
             {/* Date Preview Overlay */}
             {isDateVisible && (
-                <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-                    <span className="text-[#FAC800] text-[32px] font-semibold tracking-tight select-none"
+                <div className="absolute top-[150px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                    <span className="text-[#FAC800] text-[80px] font-semibold tracking-tight select-none"
                         style={{ fontFamily: "'Cormorant Garamond', serif" }}>
                         {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
                     </span>
