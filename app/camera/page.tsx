@@ -380,6 +380,9 @@ export default function ParticlesPage() {
     const recordingAnimationRef = useRef<number | null>(null)
     const isCapturingRef = useRef<boolean>(false)
 
+    // Three.js canvas ref for capturing particles in recording
+    const threeCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
     useEffect(() => {
         facingModeRef.current = facingMode
     }, [facingMode])
@@ -801,22 +804,56 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
-            // 1. SEAMLESS 1.1x PITCH SHIFTER
+            // STYLISH VOICE CHANGER - Creates a different but natural-sounding voice
+            // Combines pitch shifting with EQ and soft compression for a polished sound
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
+            // Create EQ filters for a polished, stylish sound
+            // High-pass: Remove muddy low frequencies for clarity
+            const highPass = audioContext.createBiquadFilter()
+            highPass.type = 'highpass'
+            highPass.frequency.value = 120 // Cut below 120Hz
+            highPass.Q.value = 0.7
+
+            // Low-pass: Smooth out harsh highs for warmth
+            const lowPass = audioContext.createBiquadFilter()
+            lowPass.type = 'lowpass'
+            lowPass.frequency.value = 8000 // Gentle rolloff above 8kHz
+            lowPass.Q.value = 0.5
+
+            // Presence boost: Add clarity and "air" to the voice
+            const presenceBoost = audioContext.createBiquadFilter()
+            presenceBoost.type = 'peaking'
+            presenceBoost.frequency.value = 3000 // Presence frequencies
+            presenceBoost.Q.value = 1.5
+            presenceBoost.gain.value = 2 // Subtle boost
+
+            // Warmth: Add body to the voice
+            const warmth = audioContext.createBiquadFilter()
+            warmth.type = 'peaking'
+            warmth.frequency.value = 250 // Low-mid warmth
+            warmth.Q.value = 1.0
+            warmth.gain.value = 1.5
+
+            // Gain for output level control
+            const outputGain = audioContext.createGain()
+            outputGain.gain.value = 1.1 // Slight boost
+
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
-            const pitchRatio = 1.1 // Subtle high pitch
+
+            // Voice transformation settings
+            const pitchRatio = 1.18 // Slightly higher for a distinctly different voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
-            const fadeLength = 1024 // Increased for "stronger" seamlessness
-            const jumpDist = 4096 // Jump back distance
+            const fadeLength = 2048 // Longer fade for smoother transitions
+            const jumpDist = 4096
 
             let writePos = 0
             let readPos = 0
@@ -824,15 +861,23 @@ export default function ParticlesPage() {
             let fadeCounter = 0
             let isFading = false
 
+            // Soft compression state (for consistent volume)
+            let envelope = 0
+            const attackTime = 0.01
+            const releaseTime = 0.1
+            const threshold = 0.3
+            const ratio = 3
+
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
                 const output = e.outputBuffer.getChannelData(0)
+                const sampleRate = audioContext.sampleRate
+
                 for (let i = 0; i < input.length; i++) {
                     buffer[writePos] = input[i]
                     const currentWrite = writePos
                     writePos = (writePos + 1) % bufferSize
 
-                    // Simple jump trigger (distance between write and read pointers)
                     const dist = (currentWrite - readPos + bufferSize) % bufferSize
                     if (!isFading && dist < 1500) {
                         isFading = true
@@ -841,22 +886,23 @@ export default function ParticlesPage() {
                         readPos = (readPos - jumpDist + bufferSize) % bufferSize
                     }
 
-                    if (isFading) {
-                        const alpha = fadeCounter / fadeLength
+                    let sample: number
 
-                        // Sample from current readPos (new grain)
+                    if (isFading) {
+                        // Smooth cosine crossfade for natural transitions
+                        const alpha = 0.5 - 0.5 * Math.cos(Math.PI * fadeCounter / fadeLength)
+
                         const p1_new = Math.floor(readPos) % bufferSize
                         const p2_new = (p1_new + 1) % bufferSize
                         const frac_new = readPos - Math.floor(readPos)
                         const sNew = buffer[p1_new] * (1 - frac_new) + buffer[p2_new] * frac_new
 
-                        // Sample from fadeReadPos (old grain)
                         const p1_old = Math.floor(fadeReadPos) % bufferSize
                         const p2_old = (p1_old + 1) % bufferSize
                         const frac_old = fadeReadPos - Math.floor(fadeReadPos)
                         const sOld = buffer[p1_old] * (1 - frac_old) + buffer[p2_old] * frac_old
 
-                        output[i] = sOld * (1 - alpha) + sNew * alpha
+                        sample = sOld * (1 - alpha) + sNew * alpha
 
                         readPos = (readPos + pitchRatio) % bufferSize
                         fadeReadPos = (fadeReadPos + pitchRatio) % bufferSize
@@ -869,9 +915,29 @@ export default function ParticlesPage() {
                         const p1 = Math.floor(readPos) % bufferSize
                         const p2 = (p1 + 1) % bufferSize
                         const frac = readPos - Math.floor(readPos)
-                        output[i] = buffer[p1] * (1 - frac) + buffer[p2] * frac
+                        sample = buffer[p1] * (1 - frac) + buffer[p2] * frac
                         readPos = (readPos + pitchRatio) % bufferSize
                     }
+
+                    // Soft compression for consistent, professional volume
+                    const inputLevel = Math.abs(sample)
+                    const attackCoeff = Math.exp(-1 / (sampleRate * attackTime))
+                    const releaseCoeff = Math.exp(-1 / (sampleRate * releaseTime))
+
+                    if (inputLevel > envelope) {
+                        envelope = attackCoeff * envelope + (1 - attackCoeff) * inputLevel
+                    } else {
+                        envelope = releaseCoeff * envelope + (1 - releaseCoeff) * inputLevel
+                    }
+
+                    let gain = 1.0
+                    if (envelope > threshold) {
+                        const overThreshold = envelope - threshold
+                        const compressed = threshold + overThreshold / ratio
+                        gain = compressed / envelope
+                    }
+
+                    output[i] = sample * gain
                 }
             }
 
@@ -879,9 +945,14 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Connect: Source -> Shifter -> Dest
-            source.connect(shifter)
-            shifter.connect(pitchShift)
+            // Signal chain: Source -> HighPass -> Shifter -> Warmth -> Presence -> LowPass -> Gain -> Output
+            source.connect(highPass)
+            highPass.connect(shifter)
+            shifter.connect(warmth)
+            warmth.connect(presenceBoost)
+            presenceBoost.connect(lowPass)
+            lowPass.connect(outputGain)
+            outputGain.connect(pitchShift)
 
             // Use canvas stream from display - store in refs to prevent GC
             const canvas = document.createElement('canvas')
@@ -947,6 +1018,15 @@ export default function ParticlesPage() {
                     ctx.globalCompositeOperation = 'overlay'
                     ctx.fillRect(0, 0, canvas.width, canvas.height)
                     ctx.globalCompositeOperation = 'source-over'
+                }
+
+                // Draw Three.js particles canvas on top
+                if (threeCanvasRef.current) {
+                    try {
+                        ctx.drawImage(threeCanvasRef.current, 0, 0, canvas.width, canvas.height)
+                    } catch (e) {
+                        // Ignore cross-origin errors if any
+                    }
                 }
 
                 recordingAnimationRef.current = requestAnimationFrame(captureFrame)
@@ -1118,8 +1198,11 @@ export default function ParticlesPage() {
                 <Canvas
                     camera={{ position: [0, 0, 5], fov: 50 }}
                     className="!absolute inset-0"
-                    gl={{ antialias: false, powerPreference: "high-performance" }}
+                    gl={{ antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true }}
                     dpr={1}
+                    onCreated={({ gl }) => {
+                        threeCanvasRef.current = gl.domElement
+                    }}
                 >
                     <ParticleSystem
                         gesture={gesture}
