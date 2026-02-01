@@ -722,52 +722,46 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // STYLISH VOICE - Fashionable sound with balanced character
-            // Clear, warm, with subtle sparkle
+            // WALKIE-TALKIE / TRANSCEIVER VOICE
+            // Narrow bandwidth, mid-focused, compressed radio sound
 
-            // High-pass: Clean low cut
+            // High-pass: Strong low cut (radios have no bass)
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 150 // Clean low end
-            highPass.Q.value = 0.6
+            highPass.frequency.value = 300 // Radio low cut
+            highPass.Q.value = 1.0
 
-            // Low-pass: Natural high end
+            // Low-pass: Narrow bandwidth (radio quality)
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 7500 // Retain clarity
-            lowPass.Q.value = 0.5
+            lowPass.frequency.value = 3000 // Radio high cut
+            lowPass.Q.value = 1.0
 
-            // Warmth: Adds body and richness
-            const warmth = audioContext.createBiquadFilter()
-            warmth.type = 'peaking'
-            warmth.frequency.value = 300 // Low-mid warmth
-            warmth.Q.value = 1.0
-            warmth.gain.value = 2 // Subtle warmth
+            // Mid boost: Nasal radio character
+            const midBoost = audioContext.createBiquadFilter()
+            midBoost.type = 'peaking'
+            midBoost.frequency.value = 1200 // Strong mid presence
+            midBoost.Q.value = 2.0
+            midBoost.gain.value = 8 // Heavy mid boost
 
-            // Presence: Clear, articulate voice
-            const clarity = audioContext.createBiquadFilter()
-            clarity.type = 'peaking'
-            clarity.frequency.value = 2800 // Presence frequency
-            clarity.Q.value = 1.2
-            clarity.gain.value = 3 // Noticeable clarity
+            // "Crackle" character - slight edge
+            const crackle = audioContext.createBiquadFilter()
+            crackle.type = 'peaking'
+            crackle.frequency.value = 2000 // Edge frequency
+            crackle.Q.value = 3.0
+            crackle.gain.value = 4
 
-            // Sparkle: Adds polish and shine
-            const sparkle = audioContext.createBiquadFilter()
-            sparkle.type = 'highshelf'
-            sparkle.frequency.value = 4500
-            sparkle.gain.value = 2 // Subtle sparkle
-
-            // Output gain
+            // Output gain (louder for radio presence)
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 0.95 // Slight reduction to prevent clipping
+            outputGain.gain.value = 1.2
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - slightly higher for stylish voice
-            const pitchRatio = 1.2 // Higher stylish voice
+            // Voice transformation settings - no pitch change for realism
+            const pitchRatio = 1.0 // Natural pitch for radio
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048
@@ -779,12 +773,12 @@ export default function ParticlesPage() {
             let fadeCounter = 0
             let isFading = false
 
-            // Natural compression settings
+            // Radio compression settings - squashed dynamics
             let envelope = 0
-            const attackTime = 0.01 // Natural attack
-            const releaseTime = 0.1 // Natural release
-            const threshold = 0.3 // Normal threshold
-            const ratio = 3 // Gentle compression
+            const attackTime = 0.002 // Fast attack
+            const releaseTime = 0.08 // Quick release
+            const threshold = 0.15 // Low threshold
+            const ratio = 8 // Heavy compression
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
@@ -863,13 +857,12 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Warmth -> Clarity -> Shifter -> Sparkle -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> MidBoost -> Crackle -> Shifter -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(warmth)
-            warmth.connect(clarity)
-            clarity.connect(shifter)
-            shifter.connect(sparkle)
-            sparkle.connect(lowPass)
+            highPass.connect(midBoost)
+            midBoost.connect(crackle)
+            crackle.connect(shifter)
+            shifter.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
