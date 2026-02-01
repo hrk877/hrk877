@@ -335,6 +335,7 @@ export default function ParticlesPage() {
     const [cameraMode, setCameraMode] = useState<CameraMode>('standard')
     const [isMosaic, setIsMosaic] = useState(true)
     const [isYellow, setIsYellow] = useState(true)
+    const [mosaicLevel, setMosaicLevel] = useState<1 | 2 | 3>(1) // 1=small, 2=medium, 3=large pixels
 
     useEffect(() => {
         // Mode logic
@@ -734,7 +735,9 @@ export default function ParticlesPage() {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
             if (cameraMode === 'standard' && isMosaic) {
-                const pixelSize = 10
+                // Mosaic size based on level: 1=10px, 2=20px, 3=35px
+                const pixelSizes = { 1: 10, 2: 20, 3: 35 }
+                const pixelSize = pixelSizes[mosaicLevel]
                 const w = Math.ceil(canvas.width / pixelSize)
                 const h = Math.ceil(canvas.height / pixelSize)
                 ctx.imageSmoothingEnabled = false
@@ -795,7 +798,7 @@ export default function ParticlesPage() {
         return () => {
             if (animationId) cancelAnimationFrame(animationId)
         }
-    }, [isTracking, cameraMode, isMosaic, faceBounds])
+    }, [isTracking, cameraMode, isMosaic, faceBounds, mosaicLevel])
 
     // Recording functions
     const startRecording = async () => {
@@ -804,40 +807,40 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
-            // STYLISH VOICE CHANGER - Creates a different but natural-sounding voice
-            // Combines pitch shifting with EQ and soft compression for a polished sound
+            // RADIO-STYLE VOICE CHANGER - Classic radio/phone quality with pitch shift
+            // Creates a distinct "broadcast" sound that's clearly different but listenable
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // Create EQ filters for a polished, stylish sound
-            // High-pass: Remove muddy low frequencies for clarity
+            // RADIO EQ - Narrow bandwidth for classic broadcast sound
+            // High-pass: Cut low frequencies (radio doesn't transmit bass well)
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 120 // Cut below 120Hz
-            highPass.Q.value = 0.7
+            highPass.frequency.value = 300 // Cut below 300Hz for radio effect
+            highPass.Q.value = 1.0
 
-            // Low-pass: Smooth out harsh highs for warmth
+            // Low-pass: Sharp cut at 3.5kHz for AM radio / telephone quality
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 8000 // Gentle rolloff above 8kHz
-            lowPass.Q.value = 0.5
+            lowPass.frequency.value = 3500 // Classic radio bandwidth
+            lowPass.Q.value = 1.0
 
-            // Presence boost: Add clarity and "air" to the voice
+            // Mid presence boost: Enhance vocal clarity in the radio band
             const presenceBoost = audioContext.createBiquadFilter()
             presenceBoost.type = 'peaking'
-            presenceBoost.frequency.value = 3000 // Presence frequencies
-            presenceBoost.Q.value = 1.5
-            presenceBoost.gain.value = 2 // Subtle boost
+            presenceBoost.frequency.value = 1500 // Mid frequencies for clarity
+            presenceBoost.Q.value = 1.0
+            presenceBoost.gain.value = 4 // Boost mid presence
 
-            // Warmth: Add body to the voice
-            const warmth = audioContext.createBiquadFilter()
-            warmth.type = 'peaking'
-            warmth.frequency.value = 250 // Low-mid warmth
-            warmth.Q.value = 1.0
-            warmth.gain.value = 1.5
+            // Slight "nasal" character typical of radio
+            const nasalBoost = audioContext.createBiquadFilter()
+            nasalBoost.type = 'peaking'
+            nasalBoost.frequency.value = 800 // Nasal frequencies
+            nasalBoost.Q.value = 2.0
+            nasalBoost.gain.value = 3
 
             // Gain for output level control
             const outputGain = audioContext.createGain()
@@ -945,11 +948,11 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Shifter -> Warmth -> Presence -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Nasal -> Shifter -> Presence -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(shifter)
-            shifter.connect(warmth)
-            warmth.connect(presenceBoost)
+            highPass.connect(nasalBoost)
+            nasalBoost.connect(shifter)
+            shifter.connect(presenceBoost)
             presenceBoost.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
@@ -1220,7 +1223,7 @@ export default function ParticlesPage() {
                 </div>
             )}
 
-            {/* Recording Button */}
+            {/* Recording Button and Grid Button */}
             {isTracking && (
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-50">
                     {/* Timer */}
@@ -1233,17 +1236,31 @@ export default function ParticlesPage() {
                         </div>
                     )}
 
-                    {/* Simple Record Button */}
-                    <button
-                        onClick={toggleRecording}
-                        className="flex items-center justify-center transition-all duration-300"
-                        aria-label={isRecording ? '録画停止' : '録画開始'}
-                    >
-                        <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
-                            ? 'w-7 h-7 rounded-sm'
-                            : 'w-16 h-16 rounded-full'
-                            }`} />
-                    </button>
+                    <div className="flex items-center gap-6">
+                        {/* Grid Button - Cycle mosaic levels */}
+                        <button
+                            onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
+                            className="flex items-center justify-center w-12 h-12 rounded-full bg-black/50 backdrop-blur-md border border-[#FAC800]/30 hover:bg-black/70 transition-all"
+                            aria-label="モザイクサイズ変更"
+                        >
+                            <Grid3x3 size={22} className="text-[#FAC800]" strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
+                        </button>
+
+                        {/* Simple Record Button */}
+                        <button
+                            onClick={toggleRecording}
+                            className="flex items-center justify-center transition-all duration-300"
+                            aria-label={isRecording ? '録画停止' : '録画開始'}
+                        >
+                            <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
+                                ? 'w-7 h-7 rounded-sm'
+                                : 'w-16 h-16 rounded-full'
+                                }`} />
+                        </button>
+
+                        {/* Placeholder for symmetry */}
+                        <div className="w-12 h-12" />
+                    </div>
                 </div>
             )}
         </div>
