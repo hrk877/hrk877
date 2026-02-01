@@ -952,25 +952,19 @@ export default function ParticlesPage() {
                     // Format: 2026.2.1 (no zero padding)
                     const dateString = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`
 
-                    // Match Hero title font: bold sans-serif
-                    ctx.font = '600 32px sans-serif'
+                    // Match Hero title font: Cormorant Garamond
+                    ctx.font = '600 32px "Cormorant Garamond", serif'
                     ctx.textAlign = 'center'
                     ctx.textBaseline = 'top'
 
-                    // Subtle shadow for legibility
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-                    ctx.shadowBlur = 4
-                    ctx.shadowOffsetX = 1
-                    ctx.shadowOffsetY = 1
-
-                    ctx.fillStyle = '#FAC800' // Yellow to match branding
-                    ctx.fillText(dateString, canvas.width / 2, 80) // Adjusted y to 80 to match preview
-
-                    // Reset shadow
+                    // No shadow requested
                     ctx.shadowColor = 'transparent'
                     ctx.shadowBlur = 0
                     ctx.shadowOffsetX = 0
                     ctx.shadowOffsetY = 0
+
+                    ctx.fillStyle = '#FAC800' // Yellow to match branding
+                    ctx.fillText(dateString, canvas.width / 2, 80) // Adjusted y to 80 to match preview
                 }
 
                 // Draw Three.js particles canvas on top
@@ -1159,8 +1153,7 @@ export default function ParticlesPage() {
             {/* Date Preview Overlay */}
             {isDateVisible && (
                 <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-                    <span className="text-[#FAC800] text-[32px] font-bold font-sans tracking-tight drop-shadow-md select-none"
-                        style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.3)' }}>
+                    <span className="text-[#FAC800] text-[32px] font-semibold font-serif tracking-tight select-none">
                         {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
                     </span>
                 </div>
