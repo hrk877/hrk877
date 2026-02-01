@@ -374,6 +374,12 @@ export default function ParticlesPage() {
     const audioStreamRef = useRef<MediaStream | null>(null)
     const shifterRef = useRef<ScriptProcessorNode | null>(null)
 
+    // Recording canvas and context stored in refs to prevent GC during recording
+    const recordingCanvasRef = useRef<HTMLCanvasElement | null>(null)
+    const recordingCtxRef = useRef<CanvasRenderingContext2D | null>(null)
+    const recordingAnimationRef = useRef<number | null>(null)
+    const isCapturingRef = useRef<boolean>(false)
+
     useEffect(() => {
         facingModeRef.current = facingMode
     }, [facingMode])
@@ -877,10 +883,14 @@ export default function ParticlesPage() {
             source.connect(shifter)
             shifter.connect(pitchShift)
 
-            // Use canvas stream from display
+            // Use canvas stream from display - store in refs to prevent GC
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
             if (!ctx) return
+
+            // Store in refs to prevent garbage collection during recording
+            recordingCanvasRef.current = canvas
+            recordingCtxRef.current = ctx
 
             // Set canvas size to 9:16 aspect ratio for iPhone
             const aspectRatio = 9 / 16
@@ -893,13 +903,17 @@ export default function ParticlesPage() {
                 canvas.width = Math.round(window.innerHeight * aspectRatio)
             }
 
-            // Store animation ID in a variable accessible to onstop
-            let animationId: number
-            let isCapturing = true
+            // Use ref for capturing state to prevent closure issues
+            isCapturingRef.current = true
 
             // Capture frames continuously
             const captureFrame = () => {
-                if (!isCapturing) return
+                if (!isCapturingRef.current) return
+
+                // Use refs to ensure canvas and ctx are still valid
+                const canvas = recordingCanvasRef.current
+                const ctx = recordingCtxRef.current
+                if (!canvas || !ctx) return
 
                 // Draw the entire page content
                 ctx.fillStyle = '#000000'
@@ -935,7 +949,7 @@ export default function ParticlesPage() {
                     ctx.globalCompositeOperation = 'source-over'
                 }
 
-                animationId = requestAnimationFrame(captureFrame)
+                recordingAnimationRef.current = requestAnimationFrame(captureFrame)
             }
 
             // Start capturing frames
@@ -971,8 +985,15 @@ export default function ParticlesPage() {
             }
 
             mediaRecorder.onstop = async () => {
-                isCapturing = false
-                if (animationId) cancelAnimationFrame(animationId)
+                isCapturingRef.current = false
+                if (recordingAnimationRef.current) {
+                    cancelAnimationFrame(recordingAnimationRef.current)
+                    recordingAnimationRef.current = null
+                }
+
+                // Clear recording canvas refs
+                recordingCanvasRef.current = null
+                recordingCtxRef.current = null
 
                 // Stop audio tracks and close audio context using refs
                 if (audioStreamRef.current) {
@@ -1016,7 +1037,9 @@ export default function ParticlesPage() {
             }
 
             mediaRecorderRef.current = mediaRecorder
-            mediaRecorder.start()
+            // Start with timeslice to periodically flush data and prevent buffer issues
+            // This fixes the issue where recording stops after ~15 seconds
+            mediaRecorder.start(1000)
             setIsRecording(true)
             setRecordingTime(0)
 
