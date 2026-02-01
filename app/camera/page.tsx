@@ -1164,17 +1164,29 @@ export default function ParticlesPage() {
 
     return (
         <div className="fixed inset-0 overflow-hidden touch-none bg-black">
-            <HamburgerMenu color="#FAC800" />
+            <HamburgerMenu color="#000000" />
 
-            {/* Camera toggle button */}
+            {/* Camera controls - top right */}
             {isTracking && (
-                <button
-                    onClick={toggleCamera}
-                    className="absolute top-11 right-6 z-50 text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                    aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
-                >
-                    <SwitchCamera size={26} strokeWidth={1.5} />
-                </button>
+                <div className="absolute top-11 right-6 z-50 flex flex-col gap-4">
+                    {/* Camera toggle button */}
+                    <button
+                        onClick={toggleCamera}
+                        className="text-black opacity-60 hover:opacity-100 transition-opacity"
+                        aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
+                    >
+                        <SwitchCamera size={26} strokeWidth={1.5} />
+                    </button>
+
+                    {/* Grid button - mosaic size */}
+                    <button
+                        onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
+                        className="text-black opacity-60 hover:opacity-100 transition-opacity"
+                        aria-label="モザイクサイズ変更"
+                    >
+                        <Grid3x3 size={26} strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
+                    </button>
+                </div>
             )}
 
             {/* Yellow Overlay - Always on */}
@@ -1223,7 +1235,7 @@ export default function ParticlesPage() {
                 </div>
             )}
 
-            {/* Recording Button and Grid Button */}
+            {/* Recording Button */}
             {isTracking && (
                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-50">
                     {/* Timer */}
@@ -1236,31 +1248,17 @@ export default function ParticlesPage() {
                         </div>
                     )}
 
-                    <div className="flex items-center gap-6">
-                        {/* Grid Button - Cycle mosaic levels */}
-                        <button
-                            onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
-                            className="flex items-center justify-center w-12 h-12 rounded-full bg-black/50 backdrop-blur-md border border-[#FAC800]/30 hover:bg-black/70 transition-all"
-                            aria-label="モザイクサイズ変更"
-                        >
-                            <Grid3x3 size={22} className="text-[#FAC800]" strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
-                        </button>
-
-                        {/* Simple Record Button */}
-                        <button
-                            onClick={toggleRecording}
-                            className="flex items-center justify-center transition-all duration-300"
-                            aria-label={isRecording ? '録画停止' : '録画開始'}
-                        >
-                            <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
-                                ? 'w-7 h-7 rounded-sm'
-                                : 'w-16 h-16 rounded-full'
-                                }`} />
-                        </button>
-
-                        {/* Placeholder for symmetry */}
-                        <div className="w-12 h-12" />
-                    </div>
+                    {/* Simple Record Button */}
+                    <button
+                        onClick={toggleRecording}
+                        className="flex items-center justify-center transition-all duration-300"
+                        aria-label={isRecording ? '録画停止' : '録画開始'}
+                    >
+                        <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
+                            ? 'w-7 h-7 rounded-sm'
+                            : 'w-16 h-16 rounded-full'
+                            }`} />
+                    </button>
                 </div>
             )}
         </div>
