@@ -722,62 +722,42 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // MINION-STYLE VOICE - High pitched, buzzy, cartoonish
-            // Creates a fun, cute, animated character voice
+            // SIMPLE CLEAN VOICE - Easy to listen, lower pitch
+            // Minimal processing for clarity
 
-            // High-pass: Strong low cut (minions have no bass!)
+            // High-pass: Gentle low cut
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 350 // Cut more low end for thinner voice
-            highPass.Q.value = 1.0
+            highPass.frequency.value = 100 // Very gentle low cut
+            highPass.Q.value = 0.5
 
-            // Low-pass: Keep bright character
+            // Low-pass: Keep full range for clarity
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 6500 // Retain clarity
+            lowPass.frequency.value = 8000 // Wide bandwidth
             lowPass.Q.value = 0.5
 
-            // "Buzzy" nasal character - minion signature sound
-            const nasalBuzz = audioContext.createBiquadFilter()
-            nasalBuzz.type = 'peaking'
-            nasalBuzz.frequency.value = 900 // Strong nasal buzz
-            nasalBuzz.Q.value = 3.0 // Very focused
-            nasalBuzz.gain.value = 8 // Intense nasal quality
+            // Subtle presence boost for clarity (not harsh)
+            const clarity = audioContext.createBiquadFilter()
+            clarity.type = 'peaking'
+            clarity.frequency.value = 2500 // Clarity frequency
+            clarity.Q.value = 1.0
+            clarity.gain.value = 2 // Subtle boost
 
-            // Second formant boost - adds "squeaky" quality
-            const squeaky = audioContext.createBiquadFilter()
-            squeaky.type = 'peaking'
-            squeaky.frequency.value = 2200 // Squeaky formant
-            squeaky.Q.value = 2.0
-            squeaky.gain.value = 6 // Strong squeak
-
-            // High presence - crisp, cartoon-like
-            const presence = audioContext.createBiquadFilter()
-            presence.type = 'peaking'
-            presence.frequency.value = 3500 // High presence
-            presence.Q.value = 1.5
-            presence.gain.value = 5 // Bright and punchy
-
-            // High shelf boost - super bright minion sound
-            const bright = audioContext.createBiquadFilter()
-            bright.type = 'highshelf'
-            bright.frequency.value = 4000
-            bright.gain.value = 4 // Very bright, cheerful
-
-            // Output gain (lower to prevent clipping with all boosts)
+            // Output gain
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 0.7 // Prevent clipping
+            outputGain.gain.value = 1.0 // Unity gain
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - high pitch for minion-like voice
-            const pitchRatio = 1.2 // Higher pitch for cute minion effect
+            // Voice transformation settings - lower pitch for deeper voice
+            const pitchRatio = 0.8 // Lower pitch for deep voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
-            const fadeLength = 2048 // Longer fade for smoother transitions
+            const fadeLength = 2048
             const jumpDist = 4096
 
             let writePos = 0
@@ -786,12 +766,12 @@ export default function ParticlesPage() {
             let fadeCounter = 0
             let isFading = false
 
-            // MONOTONE/FLAT settings - aggressive compression for 棒読み effect
+            // Natural compression settings
             let envelope = 0
-            const attackTime = 0.001 // Very fast attack to catch all transients
-            const releaseTime = 0.05 // Fast release for consistent level
-            const threshold = 0.08 // Very low threshold - compress everything
-            const ratio = 12 // Heavy compression ratio for flat sound
+            const attackTime = 0.01 // Natural attack
+            const releaseTime = 0.1 // Natural release
+            const threshold = 0.3 // Normal threshold
+            const ratio = 3 // Gentle compression
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
@@ -870,14 +850,11 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> NasalBuzz -> Squeaky -> Shifter -> Presence -> Bright -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Clarity -> Shifter -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(nasalBuzz)
-            nasalBuzz.connect(squeaky)
-            squeaky.connect(shifter)
-            shifter.connect(presence)
-            presence.connect(bright)
-            bright.connect(lowPass)
+            highPass.connect(clarity)
+            clarity.connect(shifter)
+            shifter.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
