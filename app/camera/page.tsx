@@ -726,38 +726,38 @@ export default function ParticlesPage() {
             // High-pass: Clean low end
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 200 // Less aggressive than AM
-            highPass.Q.value = 0.7
+            highPass.frequency.value = 180 // Gentle low cut
+            highPass.Q.value = 0.5
 
             // Low-pass: FM quality upper range
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 6000 // FM has better high end
-            lowPass.Q.value = 0.7
+            lowPass.frequency.value = 5500 // Clean high end
+            lowPass.Q.value = 0.5
 
-            // Presence/clarity boost
+            // Presence/clarity boost (reduced to minimize noise)
             const presenceBoost = audioContext.createBiquadFilter()
             presenceBoost.type = 'peaking'
             presenceBoost.frequency.value = 2500 // Clarity sweet spot
-            presenceBoost.Q.value = 1.2
-            presenceBoost.gain.value = 5 // Strong presence
+            presenceBoost.Q.value = 1.0
+            presenceBoost.gain.value = 2 // Subtle boost to reduce noise
 
             // Subtle warmth
             const warmth = audioContext.createBiquadFilter()
             warmth.type = 'peaking'
             warmth.frequency.value = 400 // Warm low-mids
-            warmth.Q.value = 1.0
-            warmth.gain.value = 2
+            warmth.Q.value = 0.8
+            warmth.gain.value = 1 // Minimal boost
 
-            // "Air" at the top
+            // "Air" at the top (reduced to minimize hiss)
             const airBoost = audioContext.createBiquadFilter()
             airBoost.type = 'highshelf'
             airBoost.frequency.value = 4000
-            airBoost.gain.value = 3 // Bright, clear top end
+            airBoost.gain.value = 1 // Very subtle
 
-            // Output gain
+            // Output gain (reduced to prevent clipping)
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 1.2 // Slightly louder for presence
+            outputGain.gain.value = 0.95 // Slightly below unity to prevent clipping
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
@@ -1078,7 +1078,7 @@ export default function ParticlesPage() {
 
     return (
         <div className="fixed inset-0 overflow-hidden touch-none bg-black">
-            <HamburgerMenu color="#000000" />
+            <HamburgerMenu color="#FAC800" />
 
             {/* Camera controls - top right */}
             {isTracking && (
@@ -1086,7 +1086,7 @@ export default function ParticlesPage() {
                     {/* Camera toggle button */}
                     <button
                         onClick={toggleCamera}
-                        className="text-black opacity-60 hover:opacity-100 transition-opacity"
+                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
                         aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
                     >
                         <SwitchCamera size={26} strokeWidth={1.5} />
@@ -1095,7 +1095,7 @@ export default function ParticlesPage() {
                     {/* Grid button - mosaic size */}
                     <button
                         onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
-                        className="text-black opacity-60 hover:opacity-100 transition-opacity"
+                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
                         aria-label="モザイクサイズ変更"
                     >
                         <Grid3x3 size={26} strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
