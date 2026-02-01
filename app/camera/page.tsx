@@ -86,10 +86,9 @@ const TEXTS: { [key: string]: Float32Array } = {
     'COOL': generateTextPattern('COOL'),
     'HELLO': generateTextPattern('HELLO'),
     'SLEEP': generateTextPattern('SLEEP'),
-    'BANANA': generateTextPattern('BANANA'),
 }
 
-type GestureType = 'none' | 'peace' | 'point' | 'rock' | 'heart' | 'openHand' | 'fist' | 'sleep' | 'banana'
+type GestureType = 'none' | 'peace' | 'point' | 'rock' | 'heart' | 'openHand' | 'fist' | 'sleep'
 
 // Detect gesture
 function detectSingleHandGesture(landmarks: NormalizedLandmark[]): {
@@ -205,10 +204,12 @@ function ParticleSystem({
             case 'rock': return 'COOL'
             case 'openHand': return 'HELLO'
             case 'sleep': return 'SLEEP'
-            case 'banana': return 'BANANA'
             default: return null
         }
     }
+
+    // Check if particles should be visible (only for active gestures, not 'none')
+    const shouldShowParticles = gesture !== 'none'
 
     useFrame((state) => {
         if (!pointsRef.current) return
@@ -248,36 +249,11 @@ function ParticleSystem({
                 pos[idx] += (tx - pos[idx]) * TEXT_FORMATION_SPEED
                 pos[idx + 1] += (ty - pos[idx + 1]) * TEXT_FORMATION_SPEED
                 pos[idx + 2] += (tz - pos[idx + 2]) * TEXT_FORMATION_SPEED
-            } else if (gesture === 'none' && eyePosition) {
-                // Circular scatter around face area when no hand is detected
-                const ex = (eyePosition.x - 0.5) * viewport.width * -1
-                const ey = (0.5 - eyePosition.y) * viewport.height
-
-                // Create random circular pattern
-                const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453
-                const seed2 = Math.sin(i * 93.9898 + 12.233) * 43758.5453
-
-                const randomAngle = (seed1 - Math.floor(seed1)) * Math.PI * 2
-                const randomRadius = (seed2 - Math.floor(seed2)) * 0.8 // Circle radius around face
-
-                const randomX = Math.cos(randomAngle) * randomRadius
-                const randomY = Math.sin(randomAngle) * randomRadius
-                const randomZ = (Math.random() - 0.5) * 0.2
-
-                // Add slight movement over time
-                const moveX = Math.sin(t * 0.3 + i * 0.5) * 0.05
-                const moveY = Math.cos(t * 0.4 + i * 0.7) * 0.05
-
-                const targetX = ex + randomX + moveX
-                const targetY = ey + randomY + moveY
-                const targetZ = randomZ
-
-                pos[idx] += (targetX - pos[idx]) * 0.1
-                pos[idx + 1] += (targetY - pos[idx + 1]) * 0.1
-                pos[idx + 2] += (targetZ - pos[idx + 2]) * 0.1
             } else {
-                pos[idx] += Math.sin(t * 0.3 + i) * 0.001
-                pos[idx + 1] += Math.cos(t * 0.2 + i * 0.5) * 0.001
+                // When no gesture, keep particles off-screen
+                pos[idx] += (-10 - pos[idx]) * 0.1
+                pos[idx + 1] += (0 - pos[idx + 1]) * 0.1
+                pos[idx + 2] += (0 - pos[idx + 2]) * 0.1
             }
 
             pos[idx] += vel[idx]
@@ -351,11 +327,6 @@ export default function ParticlesPage() {
         }
     }, [cameraMode])
 
-    // Banana detection (color-based)
-    const canvasRef = useRef<HTMLCanvasElement | null>(null)
-    const [bananaDetected, setBananaDetected] = useState(false)
-    const bananaDetectionCountRef = useRef(0)
-
     // Mosaic canvas
     const mosaicCanvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -401,12 +372,7 @@ export default function ParticlesPage() {
     }
 
     useEffect(() => {
-        // Priority: banana > eyes closed > hand gestures
-        if (bananaDetected) {
-            setGesture('banana')
-            return
-        }
-
+        // Priority: eyes closed > hand gestures
         if (eyesClosed) {
             setGesture('sleep')
             return
@@ -415,7 +381,6 @@ export default function ParticlesPage() {
         if (allLandmarks.length === 0) {
             setGesture('none')
             setFingerTip(null)
-            // Keep eye position for particle tracking when no hand
             return
         }
 
@@ -452,7 +417,7 @@ export default function ParticlesPage() {
         if (isRock) { setGesture('rock'); lastGestureRef.current = 'rock'; return }
 
         setGesture('none')
-    }, [allLandmarks, isDispersing, eyesClosed, bananaDetected])
+    }, [allLandmarks, isDispersing, eyesClosed])
 
     const initializeLandmarkers = useCallback(async () => {
         try {
@@ -619,64 +584,6 @@ export default function ParticlesPage() {
                     console.warn('Face detection error:', e)
                 }
             }
-
-            // Banana detection using color analysis (run every 15 frames for performance)
-            bananaDetectionCountRef.current++
-            if (bananaDetectionCountRef.current % 15 === 0) {
-                // Only detect banana in environment mode
-                if (facingModeRef.current !== 'environment') {
-                    setBananaDetected(false)
-                } else {
-                    // Create canvas for color analysis if not exists
-                    if (!canvasRef.current) {
-                        canvasRef.current = document.createElement('canvas')
-                        canvasRef.current.width = 160
-                        canvasRef.current.height = 120
-                    }
-
-                    const canvas = canvasRef.current
-                    const ctx = canvas.getContext('2d')
-                    if (ctx) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-                        const data = imageData.data
-
-                        let yellowPixels = 0
-                        const totalPixels = canvas.width * canvas.height
-
-                        // Check for banana-yellow color (HSL: H=45-65, S>50%, L=40-70%)
-                        for (let i = 0; i < data.length; i += 4) {
-                            const r = data[i]
-                            const g = data[i + 1]
-                            const b = data[i + 2]
-
-                            // Convert RGB to HSL
-                            const max = Math.max(r, g, b)
-                            const min = Math.min(r, g, b)
-                            const l = (max + min) / 2 / 255
-
-                            if (max !== min) {
-                                const d = (max - min) / 255
-                                const s = l > 0.5 ? d / (2 - max / 255 - min / 255) : d / (max / 255 + min / 255)
-                                let h = 0
-                                if (max === r) h = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6
-                                else if (max === g) h = ((b - r) / (max - min) + 2) / 6
-                                else h = ((r - g) / (max - min) + 4) / 6
-
-                                const hDeg = h * 360
-                                // Banana yellow: H 40-70 degrees, high saturation, medium lightness
-                                if (hDeg >= 40 && hDeg <= 70 && s > 0.4 && l > 0.35 && l < 0.75) {
-                                    yellowPixels++
-                                }
-                            }
-                        }
-
-                        // If more than 1% of image is banana-yellow, consider it detected
-                        const yellowRatio = yellowPixels / totalPixels
-                        setBananaDetected(yellowRatio > 0.01)
-                    }
-                }
-            }
         }
         animationFrameRef.current = requestAnimationFrame(detectAll)
     }, [])
@@ -807,52 +714,58 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
-            // RADIO-STYLE VOICE CHANGER - Classic radio/phone quality with pitch shift
-            // Creates a distinct "broadcast" sound that's clearly different but listenable
+            // STYLISH RADIO VOICE - FM broadcast quality with character
+            // More polished than AM, with slight warmth and presence
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // RADIO EQ - Narrow bandwidth for classic broadcast sound
-            // High-pass: Cut low frequencies (radio doesn't transmit bass well)
+            // FM RADIO EQ - Wider bandwidth than AM, more pleasant
+            // High-pass: Clean low end
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 300 // Cut below 300Hz for radio effect
-            highPass.Q.value = 1.0
+            highPass.frequency.value = 200 // Less aggressive than AM
+            highPass.Q.value = 0.7
 
-            // Low-pass: Sharp cut at 3.5kHz for AM radio / telephone quality
+            // Low-pass: FM quality upper range
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 3500 // Classic radio bandwidth
-            lowPass.Q.value = 1.0
+            lowPass.frequency.value = 6000 // FM has better high end
+            lowPass.Q.value = 0.7
 
-            // Mid presence boost: Enhance vocal clarity in the radio band
+            // Presence/clarity boost
             const presenceBoost = audioContext.createBiquadFilter()
             presenceBoost.type = 'peaking'
-            presenceBoost.frequency.value = 1500 // Mid frequencies for clarity
-            presenceBoost.Q.value = 1.0
-            presenceBoost.gain.value = 4 // Boost mid presence
+            presenceBoost.frequency.value = 2500 // Clarity sweet spot
+            presenceBoost.Q.value = 1.2
+            presenceBoost.gain.value = 5 // Strong presence
 
-            // Slight "nasal" character typical of radio
-            const nasalBoost = audioContext.createBiquadFilter()
-            nasalBoost.type = 'peaking'
-            nasalBoost.frequency.value = 800 // Nasal frequencies
-            nasalBoost.Q.value = 2.0
-            nasalBoost.gain.value = 3
+            // Subtle warmth
+            const warmth = audioContext.createBiquadFilter()
+            warmth.type = 'peaking'
+            warmth.frequency.value = 400 // Warm low-mids
+            warmth.Q.value = 1.0
+            warmth.gain.value = 2
 
-            // Gain for output level control
+            // "Air" at the top
+            const airBoost = audioContext.createBiquadFilter()
+            airBoost.type = 'highshelf'
+            airBoost.frequency.value = 4000
+            airBoost.gain.value = 3 // Bright, clear top end
+
+            // Output gain
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 1.1 // Slight boost
+            outputGain.gain.value = 1.2 // Slightly louder for presence
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings
-            const pitchRatio = 1.18 // Slightly higher for a distinctly different voice
+            // Voice transformation settings - higher pitch for different voice character
+            const pitchRatio = 1.25 // More noticeably different voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048 // Longer fade for smoother transitions
@@ -948,12 +861,13 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Nasal -> Shifter -> Presence -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Warmth -> Shifter -> Presence -> Air -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(nasalBoost)
-            nasalBoost.connect(shifter)
+            highPass.connect(warmth)
+            warmth.connect(shifter)
             shifter.connect(presenceBoost)
-            presenceBoost.connect(lowPass)
+            presenceBoost.connect(airBoost)
+            airBoost.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
