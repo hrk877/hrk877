@@ -722,38 +722,45 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // WALKIE-TALKIE / TRANSCEIVER VOICE
-            // Narrow bandwidth, mid-focused, compressed radio sound
+            // EXTREME WALKIE-TALKIE / TRANSCEIVER VOICE (3X INTENSITY)
+            // Super narrow bandwidth, heavy mid boost, crushed sound
 
-            // High-pass: Strong low cut (radios have no bass)
+            // High-pass: Very strong low cut
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 300 // Radio low cut
-            highPass.Q.value = 1.0
+            highPass.frequency.value = 500 // Aggressive low cut
+            highPass.Q.value = 1.5
 
-            // Low-pass: Narrow bandwidth (radio quality)
+            // Low-pass: Super narrow bandwidth
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 3000 // Radio high cut
-            lowPass.Q.value = 1.0
+            lowPass.frequency.value = 2200 // Very narrow high cut
+            lowPass.Q.value = 1.5
 
-            // Mid boost: Nasal radio character
+            // Mid boost 1: Extreme nasal radio character
             const midBoost = audioContext.createBiquadFilter()
             midBoost.type = 'peaking'
-            midBoost.frequency.value = 1200 // Strong mid presence
-            midBoost.Q.value = 2.0
-            midBoost.gain.value = 8 // Heavy mid boost
+            midBoost.frequency.value = 1000 // Core radio frequency
+            midBoost.Q.value = 3.0 // Very narrow
+            midBoost.gain.value = 15 // EXTREME boost
 
-            // "Crackle" character - slight edge
+            // Mid boost 2: Additional nasality
+            const midBoost2 = audioContext.createBiquadFilter()
+            midBoost2.type = 'peaking'
+            midBoost2.frequency.value = 1400
+            midBoost2.Q.value = 2.5
+            midBoost2.gain.value = 10
+
+            // "Crackle" character - harsh edge
             const crackle = audioContext.createBiquadFilter()
             crackle.type = 'peaking'
-            crackle.frequency.value = 2000 // Edge frequency
-            crackle.Q.value = 3.0
-            crackle.gain.value = 4
+            crackle.frequency.value = 1800 // Harsh edge
+            crackle.Q.value = 4.0 // Very focused
+            crackle.gain.value = 8 // Strong crackle
 
-            // Output gain (louder for radio presence)
+            // Output gain (lower to prevent clipping with all boosts)
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 1.2
+            outputGain.gain.value = 0.5
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
@@ -773,12 +780,12 @@ export default function ParticlesPage() {
             let fadeCounter = 0
             let isFading = false
 
-            // Radio compression settings - squashed dynamics
+            // EXTREME radio compression - completely squashed dynamics
             let envelope = 0
-            const attackTime = 0.002 // Fast attack
-            const releaseTime = 0.08 // Quick release
-            const threshold = 0.15 // Low threshold
-            const ratio = 8 // Heavy compression
+            const attackTime = 0.0005 // Ultra fast attack
+            const releaseTime = 0.03 // Very quick release
+            const threshold = 0.05 // Very low threshold
+            const ratio = 20 // Extreme compression
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
@@ -857,10 +864,11 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> MidBoost -> Crackle -> Shifter -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> MidBoost -> MidBoost2 -> Crackle -> Shifter -> LowPass -> Gain -> Output
             source.connect(highPass)
             highPass.connect(midBoost)
-            midBoost.connect(crackle)
+            midBoost.connect(midBoost2)
+            midBoost2.connect(crackle)
             crackle.connect(shifter)
             shifter.connect(lowPass)
             lowPass.connect(outputGain)
