@@ -722,44 +722,51 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // STYLISH VOICE - Subtle pitch shift with character EQ
-            // Creates a distinctive "podcast/DJ" quality voice
-            // High-pass: Clean low end
+            // UNIQUE STYLISH VOICE - Bold EQ for distinctive character
+            // Creates an unmistakably different, fashionable voice signature
+
+            // High-pass: Strong low cut for clarity
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 150 // Gentle low cut
-            highPass.Q.value = 0.5
+            highPass.frequency.value = 220 // Tighter low end
+            highPass.Q.value = 0.7
 
-            // Low-pass: Keep it natural but polished
+            // Low-pass: Slightly narrower for character
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 7000 // Retain clarity
-            lowPass.Q.value = 0.5
+            lowPass.frequency.value = 5800 // Focused high end
+            lowPass.Q.value = 0.6
 
-            // "Character" mid boost - gives voice a unique signature
-            const midCharacter = audioContext.createBiquadFilter()
-            midCharacter.type = 'peaking'
-            midCharacter.frequency.value = 1800 // Voice character frequency
-            midCharacter.Q.value = 1.5
-            midCharacter.gain.value = 3 // Distinctive mid presence
+            // "Nasal" character - distinctive mid-range quality
+            const nasalCharacter = audioContext.createBiquadFilter()
+            nasalCharacter.type = 'peaking'
+            nasalCharacter.frequency.value = 800 // Nasal frequency
+            nasalCharacter.Q.value = 2.5 // Narrow, focused
+            nasalCharacter.gain.value = 5 // Strong character
 
-            // Subtle low-mid warmth
-            const warmth = audioContext.createBiquadFilter()
-            warmth.type = 'peaking'
-            warmth.frequency.value = 350 // Warm body
-            warmth.Q.value = 0.8
-            warmth.gain.value = 1.5
+            // "Scoop" - cut muddy frequencies for clarity
+            const scoop = audioContext.createBiquadFilter()
+            scoop.type = 'peaking'
+            scoop.frequency.value = 1200 // Remove mud
+            scoop.Q.value = 1.5
+            scoop.gain.value = -3 // Cut for unique signature
 
-            // Subtle "sparkle" at 3kHz
-            const sparkle = audioContext.createBiquadFilter()
-            sparkle.type = 'peaking'
-            sparkle.frequency.value = 3200 // Articulation/presence
-            sparkle.Q.value = 1.2
-            sparkle.gain.value = 2
+            // Presence peak - clear, articulate sound
+            const presence = audioContext.createBiquadFilter()
+            presence.type = 'peaking'
+            presence.frequency.value = 2800 // Voice presence
+            presence.Q.value = 1.8
+            presence.gain.value = 4 // Strong presence
+
+            // Upper harmonics - adds "smile" to voice
+            const smile = audioContext.createBiquadFilter()
+            smile.type = 'highshelf'
+            smile.frequency.value = 3500
+            smile.gain.value = 2 // Bright, cheerful quality
 
             // Output gain
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 0.9 // Prevent clipping
+            outputGain.gain.value = 0.85 // Prevent clipping with all boosts
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
@@ -863,13 +870,14 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Warmth -> Shifter -> MidCharacter -> Sparkle -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Nasal -> Scoop -> Shifter -> Presence -> Smile -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(warmth)
-            warmth.connect(shifter)
-            shifter.connect(midCharacter)
-            midCharacter.connect(sparkle)
-            sparkle.connect(lowPass)
+            highPass.connect(nasalCharacter)
+            nasalCharacter.connect(scoop)
+            scoop.connect(shifter)
+            shifter.connect(presence)
+            presence.connect(smile)
+            smile.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
