@@ -767,7 +767,7 @@ export default function ParticlesPage() {
             shifterRef.current = shifter
 
             // Voice transformation settings - slightly higher for stylish voice
-            const pitchRatio = 1.1 // Stylish higher voice
+            const pitchRatio = 1.2 // Higher stylish voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048
