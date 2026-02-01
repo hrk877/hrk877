@@ -773,8 +773,8 @@ export default function ParticlesPage() {
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - subtle pitch for natural different voice
-            const pitchRatio = 1.1 // Subtle shift for stylish different voice
+            // Voice transformation settings - lower pitch for deeper voice
+            const pitchRatio = 0.9 // Lower pitch for distinctive deeper voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048 // Longer fade for smoother transitions
