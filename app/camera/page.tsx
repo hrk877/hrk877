@@ -786,12 +786,12 @@ export default function ParticlesPage() {
             let fadeCounter = 0
             let isFading = false
 
-            // Soft compression state (for consistent volume)
+            // MONOTONE/FLAT settings - aggressive compression for 棒読み effect
             let envelope = 0
-            const attackTime = 0.01
-            const releaseTime = 0.1
-            const threshold = 0.3
-            const ratio = 3
+            const attackTime = 0.001 // Very fast attack to catch all transients
+            const releaseTime = 0.05 // Fast release for consistent level
+            const threshold = 0.08 // Very low threshold - compress everything
+            const ratio = 12 // Heavy compression ratio for flat sound
 
             shifter.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0)
