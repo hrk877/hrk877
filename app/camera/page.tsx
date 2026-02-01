@@ -768,7 +768,7 @@ export default function ParticlesPage() {
             shifterRef.current = shifter
 
             // Voice transformation settings - no pitch change for realism
-            const pitchRatio = 1.0 // Natural pitch for radio
+            const pitchRatio = 0.95 // Slightly lower pitch
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048
