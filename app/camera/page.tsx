@@ -722,39 +722,52 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // SIMPLE CLEAN VOICE - Easy to listen, lower pitch
-            // Minimal processing for clarity
+            // STYLISH VOICE - Fashionable sound with balanced character
+            // Clear, warm, with subtle sparkle
 
-            // High-pass: Gentle low cut
+            // High-pass: Clean low cut
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 100 // Very gentle low cut
-            highPass.Q.value = 0.5
+            highPass.frequency.value = 150 // Clean low end
+            highPass.Q.value = 0.6
 
-            // Low-pass: Keep full range for clarity
+            // Low-pass: Natural high end
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 8000 // Wide bandwidth
+            lowPass.frequency.value = 7500 // Retain clarity
             lowPass.Q.value = 0.5
 
-            // Subtle presence boost for clarity (not harsh)
+            // Warmth: Adds body and richness
+            const warmth = audioContext.createBiquadFilter()
+            warmth.type = 'peaking'
+            warmth.frequency.value = 300 // Low-mid warmth
+            warmth.Q.value = 1.0
+            warmth.gain.value = 2 // Subtle warmth
+
+            // Presence: Clear, articulate voice
             const clarity = audioContext.createBiquadFilter()
             clarity.type = 'peaking'
-            clarity.frequency.value = 2500 // Clarity frequency
-            clarity.Q.value = 1.0
-            clarity.gain.value = 2 // Subtle boost
+            clarity.frequency.value = 2800 // Presence frequency
+            clarity.Q.value = 1.2
+            clarity.gain.value = 3 // Noticeable clarity
+
+            // Sparkle: Adds polish and shine
+            const sparkle = audioContext.createBiquadFilter()
+            sparkle.type = 'highshelf'
+            sparkle.frequency.value = 4500
+            sparkle.gain.value = 2 // Subtle sparkle
 
             // Output gain
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 1.0 // Unity gain
+            outputGain.gain.value = 0.95 // Slight reduction to prevent clipping
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - lower pitch for deeper voice
-            const pitchRatio = 0.8 // Lower pitch for deep voice
+            // Voice transformation settings - slightly higher for stylish voice
+            const pitchRatio = 1.1 // Stylish higher voice
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048
@@ -850,11 +863,13 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Clarity -> Shifter -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> Warmth -> Clarity -> Shifter -> Sparkle -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(clarity)
+            highPass.connect(warmth)
+            warmth.connect(clarity)
             clarity.connect(shifter)
-            shifter.connect(lowPass)
+            shifter.connect(sparkle)
+            sparkle.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
