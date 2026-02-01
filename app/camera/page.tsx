@@ -722,59 +722,59 @@ export default function ParticlesPage() {
             const pitchShift = audioContext.createMediaStreamDestination()
             const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // UNIQUE STYLISH VOICE - Bold EQ for distinctive character
-            // Creates an unmistakably different, fashionable voice signature
+            // MINION-STYLE VOICE - High pitched, buzzy, cartoonish
+            // Creates a fun, cute, animated character voice
 
-            // High-pass: Strong low cut for clarity
+            // High-pass: Strong low cut (minions have no bass!)
             const highPass = audioContext.createBiquadFilter()
             highPass.type = 'highpass'
-            highPass.frequency.value = 220 // Tighter low end
-            highPass.Q.value = 0.7
+            highPass.frequency.value = 350 // Cut more low end for thinner voice
+            highPass.Q.value = 1.0
 
-            // Low-pass: Slightly narrower for character
+            // Low-pass: Keep bright character
             const lowPass = audioContext.createBiquadFilter()
             lowPass.type = 'lowpass'
-            lowPass.frequency.value = 5800 // Focused high end
-            lowPass.Q.value = 0.6
+            lowPass.frequency.value = 6500 // Retain clarity
+            lowPass.Q.value = 0.5
 
-            // "Nasal" character - distinctive mid-range quality
-            const nasalCharacter = audioContext.createBiquadFilter()
-            nasalCharacter.type = 'peaking'
-            nasalCharacter.frequency.value = 800 // Nasal frequency
-            nasalCharacter.Q.value = 2.5 // Narrow, focused
-            nasalCharacter.gain.value = 5 // Strong character
+            // "Buzzy" nasal character - minion signature sound
+            const nasalBuzz = audioContext.createBiquadFilter()
+            nasalBuzz.type = 'peaking'
+            nasalBuzz.frequency.value = 900 // Strong nasal buzz
+            nasalBuzz.Q.value = 3.0 // Very focused
+            nasalBuzz.gain.value = 8 // Intense nasal quality
 
-            // "Scoop" - cut muddy frequencies for clarity
-            const scoop = audioContext.createBiquadFilter()
-            scoop.type = 'peaking'
-            scoop.frequency.value = 1200 // Remove mud
-            scoop.Q.value = 1.5
-            scoop.gain.value = -3 // Cut for unique signature
+            // Second formant boost - adds "squeaky" quality
+            const squeaky = audioContext.createBiquadFilter()
+            squeaky.type = 'peaking'
+            squeaky.frequency.value = 2200 // Squeaky formant
+            squeaky.Q.value = 2.0
+            squeaky.gain.value = 6 // Strong squeak
 
-            // Presence peak - clear, articulate sound
+            // High presence - crisp, cartoon-like
             const presence = audioContext.createBiquadFilter()
             presence.type = 'peaking'
-            presence.frequency.value = 2800 // Voice presence
-            presence.Q.value = 1.8
-            presence.gain.value = 4 // Strong presence
+            presence.frequency.value = 3500 // High presence
+            presence.Q.value = 1.5
+            presence.gain.value = 5 // Bright and punchy
 
-            // Upper harmonics - adds "smile" to voice
-            const smile = audioContext.createBiquadFilter()
-            smile.type = 'highshelf'
-            smile.frequency.value = 3500
-            smile.gain.value = 2 // Bright, cheerful quality
+            // High shelf boost - super bright minion sound
+            const bright = audioContext.createBiquadFilter()
+            bright.type = 'highshelf'
+            bright.frequency.value = 4000
+            bright.gain.value = 4 // Very bright, cheerful
 
-            // Output gain
+            // Output gain (lower to prevent clipping with all boosts)
             const outputGain = audioContext.createGain()
-            outputGain.gain.value = 0.85 // Prevent clipping with all boosts
+            outputGain.gain.value = 0.7 // Prevent clipping
 
             // PIN TO REFS (Prevents GC during recording)
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
             shifterRef.current = shifter
 
-            // Voice transformation settings - lower pitch for deeper voice
-            const pitchRatio = 0.9 // Lower pitch for distinctive deeper voice
+            // Voice transformation settings - high pitch for minion-like voice
+            const pitchRatio = 1.2 // Higher pitch for cute minion effect
             const bufferSize = 65536
             const buffer = new Float32Array(bufferSize)
             const fadeLength = 2048 // Longer fade for smoother transitions
@@ -870,14 +870,14 @@ export default function ParticlesPage() {
                 await audioContext.resume()
             }
 
-            // Signal chain: Source -> HighPass -> Nasal -> Scoop -> Shifter -> Presence -> Smile -> LowPass -> Gain -> Output
+            // Signal chain: Source -> HighPass -> NasalBuzz -> Squeaky -> Shifter -> Presence -> Bright -> LowPass -> Gain -> Output
             source.connect(highPass)
-            highPass.connect(nasalCharacter)
-            nasalCharacter.connect(scoop)
-            scoop.connect(shifter)
+            highPass.connect(nasalBuzz)
+            nasalBuzz.connect(squeaky)
+            squeaky.connect(shifter)
             shifter.connect(presence)
-            presence.connect(smile)
-            smile.connect(lowPass)
+            presence.connect(bright)
+            bright.connect(lowPass)
             lowPass.connect(outputGain)
             outputGain.connect(pitchShift)
 
