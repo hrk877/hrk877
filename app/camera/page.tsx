@@ -1153,7 +1153,8 @@ export default function ParticlesPage() {
             {/* Date Preview Overlay */}
             {isDateVisible && (
                 <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-                    <span className="text-[#FAC800] text-[32px] font-semibold font-serif tracking-tight select-none">
+                    <span className="text-[#FAC800] text-[32px] font-semibold tracking-tight select-none"
+                        style={{ fontFamily: "'Cormorant Garamond', serif" }}>
                         {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
                     </span>
                 </div>
