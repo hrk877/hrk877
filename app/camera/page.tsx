@@ -930,13 +930,10 @@ export default function ParticlesPage() {
             ])
 
             // Prioritize MP4/H.264 for iPhone compatibility
+            // Use generic types to let browser select best profile for the resolution
             const mimeTypes = [
-                'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', // H.264 Main Profile + AAC
-                'video/mp4; codecs="avc1.640028, mp4a.40.2"', // H.264 High Profile
-                'video/mp4; codecs=h264',
                 'video/mp4',
-                'video/webm; codecs=h264', // Chrome can usually do H.264 in WebM
-                'video/webm; codecs=vp9',
+                'video/webm; codecs=h264',
                 'video/webm'
             ]
 
