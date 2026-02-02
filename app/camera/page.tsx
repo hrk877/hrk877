@@ -311,7 +311,7 @@ export default function ParticlesPage() {
     const [cameraMode, setCameraMode] = useState<CameraMode>('standard')
     const [isMosaic, setIsMosaic] = useState(true)
     const [isYellow, setIsYellow] = useState(true)
-    const [mosaicLevel, setMosaicLevel] = useState<1 | 2 | 3>(1) // 1=small, 2=medium, 3=large pixels
+    const [mosaicLevel, setMosaicLevel] = useState<1 | 2 | 0>(1) // 1=small, 2=medium, 0=high clarity
     const [isDateVisible, setIsDateVisible] = useState(false)
     const dateVisibleRef = useRef(false)
 
@@ -648,8 +648,8 @@ export default function ParticlesPage() {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
             if (cameraMode === 'standard' && isMosaic) {
-                // Mosaic size based on level: 1=10px, 2=20px, 3=35px
-                const pixelSizes = { 1: 10, 2: 20, 3: 35 }
+                // Mosaic size based on level: 1=10px, 2=20px, 0=4px (High Clarity)
+                const pixelSizes = { 1: 10, 2: 20, 0: 4 }
                 const pixelSize = pixelSizes[mosaicLevel]
                 const w = Math.ceil(canvas.width / pixelSize)
                 const h = Math.ceil(canvas.height / pixelSize)
@@ -1128,11 +1128,16 @@ export default function ParticlesPage() {
                     </button>
 
                     {/* Grid button - mosaic size */}
+                    {/* Grid button - mosaic size */}
                     <button
-                        onClick={() => setMosaicLevel(prev => prev === 3 ? 1 : (prev + 1) as 1 | 2 | 3)}
+                        onClick={() => setMosaicLevel(prev => {
+                            if (prev === 1) return 2
+                            if (prev === 2) return 0
+                            return 1
+                        })}
                         className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
                     >
-                        <Grid3x3 className="w-8 h-8" strokeWidth={mosaicLevel === 1 ? 1.5 : mosaicLevel === 2 ? 2 : 2.5} />
+                        <Grid3x3 className="w-8 h-8" strokeWidth={mosaicLevel === 0 ? 1 : mosaicLevel === 1 ? 2 : 3} />
                     </button>
 
                     {/* Date toggle button */}
