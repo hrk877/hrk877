@@ -721,91 +721,97 @@ export default function ParticlesPage() {
             const container = document.querySelector('.fixed.inset-0') as HTMLElement
             if (!container) return
 
+            // STYLISH RADIO VOICE - FM broadcast quality with character
+            // More polished than AM, with slight warmth and presence
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             const audioContext = new AudioContext()
             const source = audioContext.createMediaStreamSource(audioStream)
-            const destination = audioContext.createMediaStreamDestination()
+            const pitchShift = audioContext.createMediaStreamDestination()
+            const shifter = audioContext.createScriptProcessor(4096, 1, 1)
 
-            // --- STYLISH MUSEUM VOICE ---
-            // Concept: Spacious, Ethereal, High-Fidelity. 
-            // Like speaking in a modern concrete art gallery.
+            // EXTREME WALKIE-TALKIE / TRANSCEIVER VOICE (3X INTENSITY)
+            // Super narrow bandwidth, heavy mid boost, crushed sound
 
-            // 1. Dynamics Compressor (Polished Broadcast Sound)
-            const compressor = audioContext.createDynamicsCompressor()
-            compressor.threshold.value = -24
-            compressor.knee.value = 30
-            compressor.ratio.value = 12
-            compressor.attack.value = 0.003
-            compressor.release.value = 0.25
+            // High-pass: Very strong low cut
+            const highPass = audioContext.createBiquadFilter()
+            highPass.type = 'highpass'
+            highPass.frequency.value = 500 // Aggressive low cut
+            highPass.Q.value = 1.5
 
-            // 2. Reverb (Convolver) - "The Gallery Space"
-            const convolver = audioContext.createConvolver()
+            // Low-pass: Super narrow bandwidth
+            const lowPass = audioContext.createBiquadFilter()
+            lowPass.type = 'lowpass'
+            lowPass.frequency.value = 2200 // Very narrow high cut
+            lowPass.Q.value = 1.5
 
-            // Generate Impulse Response for a large, slightly bright room
-            const rate = audioContext.sampleRate
-            const length = rate * 3.0 // 3 seconds decay
-            const decay = 2.0
-            const impulse = audioContext.createBuffer(2, length, rate)
-            const left = impulse.getChannelData(0)
-            const right = impulse.getChannelData(1)
+            // Mid boost 1: Extreme nasal radio character
+            const midBoost = audioContext.createBiquadFilter()
+            midBoost.type = 'peaking'
+            midBoost.frequency.value = 1000 // Core radio frequency
+            midBoost.Q.value = 3.0 // Very narrow
+            midBoost.gain.value = 15 // EXTREME boost
 
-            for (let i = 0; i < length; i++) {
-                const n = length - i
-                // Simple exponential decay noise
-                left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay)
-                right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay)
-            }
-            convolver.buffer = impulse
+            // Mid boost 2: Additional nasality
+            const midBoost2 = audioContext.createBiquadFilter()
+            midBoost2.type = 'peaking'
+            midBoost2.frequency.value = 1400
+            midBoost2.Q.value = 2.5
+            midBoost2.gain.value = 10
 
-            const reverbGain = audioContext.createGain()
-            reverbGain.gain.value = 0.4 // Moderate reverb mix
+            // "Crackle" character - harsh edge
+            const crackle = audioContext.createBiquadFilter()
+            crackle.type = 'peaking'
+            crackle.frequency.value = 1800 // Harsh edge
+            crackle.Q.value = 4.0 // Very focused
+            crackle.gain.value = 8 // Strong crackle
 
-            // 3. Delay (Echo) - "Artistic Reflection"
-            const delay = audioContext.createDelay()
-            delay.delayTime.value = 0.4 // 400ms delay
+            // Output gain (lower to prevent clipping with all boosts)
+            const outputGain = audioContext.createGain()
+            // RING MODULATOR (Strong Robot Voice)
+            // Synthesizes voice with a sine wave for a metallic "dalek" effect
 
-            const feedback = audioContext.createGain()
-            feedback.gain.value = 0.3 // 30% feedback
+            // 1. Create Oscillator (The "Carrier")
+            // 50Hz is the classic sci-fi robot growl frequency
+            const oscillator = audioContext.createOscillator()
+            oscillator.type = 'sine'
+            oscillator.frequency.value = 50
 
-            const delayFilter = audioContext.createBiquadFilter()
-            delayFilter.type = 'lowpass'
-            delayFilter.frequency.value = 2000 // Dampen echoes to keep them subtle
+            // 2. Create Gain for modulation
+            // The oscillator will control the volume of this gain node extremely fast
+            const ringModGain = audioContext.createGain()
+            ringModGain.gain.value = 0 // Center at 0
 
-            const delayGain = audioContext.createGain()
-            delayGain.gain.value = 0.2 // Subtle echo
+            // 3. Connect Oscillator to Gain.gain
+            // This is the "Multiplication" or "Synthesis" part
+            oscillator.connect(ringModGain.gain)
+            oscillator.start()
 
-            // 4. Dry Signal Gain
-            const dryGain = audioContext.createGain()
-            dryGain.gain.value = 0.8
+            // Store for cleanup
+            oscillatorRef.current = oscillator
 
-            // --- Routing ---
+            // Signal Chain:
+            // Source -> HighPass -> MidBoost -> MidBoost2 -> Crackle -> RING MOD -> LowPass -> Gain -> Output
 
-            // Input -> Compressor -> All Chains
-            source.connect(compressor)
+            source.connect(highPass)
+            highPass.connect(midBoost)
+            midBoost.connect(midBoost2)
+            midBoost2.connect(crackle)
 
-            // Chain A: Dry
-            compressor.connect(dryGain)
-            dryGain.connect(destination)
+            // Helper Gain to boost input into the modulator (make it louder/ stronger)
+            const inputRunUp = audioContext.createGain()
+            inputRunUp.gain.value = 1.0
 
-            // Chain B: Reverb
-            compressor.connect(convolver)
-            convolver.connect(reverbGain)
-            reverbGain.connect(destination)
+            crackle.connect(inputRunUp)
+            inputRunUp.connect(ringModGain) // Transformation happens here
 
-            // Chain C: Delay Loop
-            compressor.connect(delay)
-            delay.connect(feedback)
-            feedback.connect(delayFilter)
-            delayFilter.connect(delay) // Close loop
-
-            // Delay Output
-            delay.connect(delayGain)
-            delayGain.connect(destination)
-
+            ringModGain.connect(lowPass)
+            lowPass.connect(outputGain)
+            outputGain.connect(pitchShift) // Final output
 
             // Update refs
             audioStreamRef.current = audioStream
             audioContextRef.current = audioContext
+            shifterRef.current = shifter
 
             if (audioContext.state === 'suspended') {
                 await audioContext.resume()
@@ -920,7 +926,7 @@ export default function ParticlesPage() {
             // Combine video and audio streams
             const combinedStream = new MediaStream([
                 ...videoStream.getVideoTracks(),
-                ...destination.stream.getAudioTracks()
+                ...pitchShift.stream.getAudioTracks()
             ])
 
             // Try MP4 first for iPhone compatibility, fallback to WebM
@@ -960,22 +966,19 @@ export default function ParticlesPage() {
                     audioStreamRef.current = null
                 }
 
-                // Clean up oscillators if they exist (though we removed them in this version)
+                if (shifterRef.current) {
+                    shifterRef.current.disconnect()
+                    shifterRef.current = null
+                }
+
                 if (oscillatorRef.current) {
                     try {
                         oscillatorRef.current.stop()
                         oscillatorRef.current.disconnect()
-                    } catch (e) { }
+                    } catch (e) {
+                        // Ignore if already stopped
+                    }
                     oscillatorRef.current = null
-                }
-
-                if (shifterRef.current) {
-                    try {
-                        // @ts-ignore
-                        if (shifterRef.current.stop) shifterRef.current.stop()
-                        shifterRef.current.disconnect()
-                    } catch (e) { }
-                    shifterRef.current = null
                 }
 
                 if (audioContextRef.current) {
