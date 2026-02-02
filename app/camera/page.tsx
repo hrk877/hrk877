@@ -920,9 +920,8 @@ export default function ParticlesPage() {
             // Start capturing frames
             captureFrame()
 
-            // Create stream from canvas
-            // Use 24fps for TikTok compatibility - more stable timestamps
-            const videoStream = canvas.captureStream(24)
+            // Create stream from canvas - 30fps for smooth video
+            const videoStream = canvas.captureStream(30)
 
             // Combine video and audio streams
             const combinedStream = new MediaStream([
@@ -930,15 +929,14 @@ export default function ParticlesPage() {
                 ...pitchShift.stream.getAudioTracks()
             ])
 
-            // TikTok Compatibility Fix:
-            // TikTok requires CFR (Constant Frame Rate) video with proper timestamps.
-            // VP9 codec produces more reliable timestamps than H.264 in WebM container.
-            // Higher bitrate prevents artifacts that can cause stuttering.
+            // iPhone + TikTok Compatibility:
+            // MP4 with H.264 is the most universally compatible format
+            // WebM/VP9 does NOT work on iPhone!
             const mimeTypes = [
-                'video/webm; codecs=vp9',  // Best for TikTok - reliable timestamps
-                'video/webm; codecs=vp8',  // Fallback VP8
-                'video/webm',              // Generic WebM
-                'video/mp4'                // Last resort
+                'video/mp4; codecs=avc1',  // H.264 in MP4 - best iPhone compatibility
+                'video/mp4',               // Generic MP4
+                'video/webm; codecs=h264', // H.264 in WebM container
+                'video/webm'               // Last resort
             ]
 
             let mimeType = ''
@@ -949,15 +947,14 @@ export default function ParticlesPage() {
                 }
             }
 
-            // If no supported type found (very unlikely), fallback
+            // If no supported type found, fallback
             if (!mimeType) mimeType = 'video/webm'
 
-            // High bitrate (8 Mbps) ensures smooth playback on TikTok
-            // TikTok re-encodes anyway, so providing high quality source is important
+            // Higher bitrate for quality - TikTok will re-encode anyway
             const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 8000000, // 8 Mbps for smooth TikTok playback
-                audioBitsPerSecond: 192000   // Higher audio quality
+                videoBitsPerSecond: 5000000, // 5 Mbps
+                audioBitsPerSecond: 128000
             })
 
             recordedChunksRef.current = []
