@@ -929,12 +929,13 @@ export default function ParticlesPage() {
                 ...pitchShift.stream.getAudioTracks()
             ])
 
-            // Prioritize MP4/H.264 for iPhone compatibility
-            // Use generic types to let browser select best profile for the resolution
+            // Prioritize WebM with H.264 for better streaming stability on Chrome -> TikTok
+            // Pure MP4 from Chrome often lacks metadata for strictly linear players (TikTok).
+            // WebM container is more robust for timeslicing.
             const mimeTypes = [
-                'video/mp4',
-                'video/webm; codecs=h264',
-                'video/webm'
+                'video/webm; codecs=h264', // Best balance: H.264 video (iPhone friendly) in WebM container (Chrome friendly)
+                'video/mp4',               // Generic MP4 (might freeze on TikTok)
+                'video/webm'               // Fallback
             ]
 
             let mimeType = ''
@@ -950,7 +951,7 @@ export default function ParticlesPage() {
 
             const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 3500000, // Increased to 3.5Mbps
+                videoBitsPerSecond: 2500000, // Balanced Bitrate
                 audioBitsPerSecond: 128000
             })
 
@@ -1051,8 +1052,9 @@ export default function ParticlesPage() {
             }
 
             mediaRecorderRef.current = mediaRecorder
-            // Start recording WITHOUT timeslice to ensure a single container (fixes TikTok stutter)
-            mediaRecorder.start()
+            // Start with timeslice (1000ms) to ensure continuous data flow
+            // This prevents the "0.5s freeze" issue caused by missing metadata in single-blob Chrome MP4
+            mediaRecorder.start(1000)
             setIsRecording(true)
             setRecordingTime(0)
 
