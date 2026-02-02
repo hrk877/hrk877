@@ -797,7 +797,7 @@ export default function ParticlesPage() {
             midBoost.connect(midBoost2)
             midBoost2.connect(crackle)
 
-            // Helper Gain to boost input into the modulator (make it louder/ stronger)
+            // Helper Gain to boost input into the modulator (make it louder/stronger)
             const inputRunUp = audioContext.createGain()
             inputRunUp.gain.value = 1.0
 
@@ -929,11 +929,27 @@ export default function ParticlesPage() {
                 ...pitchShift.stream.getAudioTracks()
             ])
 
-            // Try MP4 first for iPhone compatibility, fallback to WebM
-            let mimeType = 'video/mp4'
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm;codecs=vp8,opus'
+            // Prioritize MP4/H.264 for iPhone compatibility
+            const mimeTypes = [
+                'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', // H.264 Main Profile + AAC
+                'video/mp4; codecs="avc1.640028, mp4a.40.2"', // H.264 High Profile
+                'video/mp4; codecs=h264',
+                'video/mp4',
+                'video/webm; codecs=h264', // Chrome can usually do H.264 in WebM
+                'video/webm; codecs=vp9',
+                'video/webm'
+            ]
+
+            let mimeType = ''
+            for (const type of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type
+                    break
+                }
             }
+
+            // If no supported type found (very unlikely), fallback
+            if (!mimeType) mimeType = 'video/webm'
 
             const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
@@ -986,15 +1002,41 @@ export default function ParticlesPage() {
                     audioContextRef.current = null
                 }
 
-                const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
+                // Determine extension based on mimeType, favoring .mov for iPhone feel if mp4 is used
+                let extension = 'mov'
+                // If it's explicitly WebM and NOT H.264, maybe keep webm, but user asked for iPhone format.
+                // iPhone handles .mov (H.264/HEVC). 
+                // If the browser forces VP8/VP9, calling it .mov might confuse some players, but often they check valid headers.
+                // However, let's try to stick to valid extensions.
+                if (mimeType.includes('webm') && !mimeType.includes('h264')) {
+                    // Fallback for strict WebM browsers (e.g. Firefox on Windows/Linux sometimes)
+                    // converting .webm to .mov isn't real without re-encoding, but we can try renaming 
+                    // if the user REALLY wants it looks like iPhone. 
+                    // BUT, a .mov with VP8 is weird. 
+                    // Let's settle: if MP4 is supported (Safari/Chrome), we use .MOV.
+                    // If only WebM is supported, we keep .webm to avoid breaking playback.
+                    extension = 'webm'
+                }
+
+                // Force .MOV if it's MP4-based (standard for iPhone Camera)
+                if (mimeType.includes('mp4') || mimeType.includes('h264')) {
+                    extension = 'mov'
+                }
+
                 const blob = new Blob(recordedChunksRef.current, { type: mimeType })
                 const url = URL.createObjectURL(blob)
+
+                // Generate iPhone-style filename: IMG_YYYYMMDD_HHMMSS
+                const now = new Date()
+                const pad = (n: number) => n.toString().padStart(2, '0')
+                const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+                const filename = `IMG_${timestamp}.${extension}`
 
                 // For iOS Safari, use a different approach to trigger download
                 const a = document.createElement('a')
                 a.style.display = 'none'
                 a.href = url
-                a.download = `camera-recording-${Date.now()}.${extension}`
+                a.download = filename
 
                 // Add to DOM, click, and remove
                 document.body.appendChild(a)
