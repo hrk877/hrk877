@@ -953,7 +953,7 @@ export default function ParticlesPage() {
 
             const mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 2500000,
+                videoBitsPerSecond: 3500000, // Increased to 3.5Mbps
                 audioBitsPerSecond: 128000
             })
 
@@ -1054,9 +1054,8 @@ export default function ParticlesPage() {
             }
 
             mediaRecorderRef.current = mediaRecorder
-            // Start with timeslice to periodically flush data and prevent buffer issues
-            // This fixes the issue where recording stops after ~15 seconds
-            mediaRecorder.start(1000)
+            // Start recording WITHOUT timeslice to ensure a single container (fixes TikTok stutter)
+            mediaRecorder.start()
             setIsRecording(true)
             setRecordingTime(0)
 
