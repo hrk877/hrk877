@@ -356,7 +356,7 @@ export default function ParticlesPage() {
     // Recording canvas and context stored in refs to prevent GC during recording
     const recordingCanvasRef = useRef<HTMLCanvasElement | null>(null)
     const recordingCtxRef = useRef<CanvasRenderingContext2D | null>(null)
-    const recordingAnimationRef = useRef<number | null>(null)
+    const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const isCapturingRef = useRef<boolean>(false)
 
     // Three.js canvas ref for capturing particles in recording
@@ -841,7 +841,11 @@ export default function ParticlesPage() {
             // Use ref for capturing state to prevent closure issues
             isCapturingRef.current = true
 
-            // Capture frames continuously
+            // CFR (Constant Frame Rate) capture for TikTok compatibility
+            // Using setInterval instead of requestAnimationFrame for fixed timing
+            const TARGET_FPS = 30
+            const FRAME_INTERVAL = 1000 / TARGET_FPS // 33.33ms
+
             const captureFrame = () => {
                 if (!isCapturingRef.current) return
 
@@ -913,12 +917,11 @@ export default function ParticlesPage() {
                         // Ignore cross-origin errors if any
                     }
                 }
-
-                recordingAnimationRef.current = requestAnimationFrame(captureFrame)
             }
 
-            // Start capturing frames
-            captureFrame()
+            // Start capturing frames at fixed interval (CFR)
+            recordingIntervalRef.current = setInterval(captureFrame, FRAME_INTERVAL)
+            captureFrame() // Capture first frame immediately
 
             // Create stream from canvas - 30fps for smooth video
             const videoStream = canvas.captureStream(30)
@@ -967,9 +970,9 @@ export default function ParticlesPage() {
 
             mediaRecorder.onstop = async () => {
                 isCapturingRef.current = false
-                if (recordingAnimationRef.current) {
-                    cancelAnimationFrame(recordingAnimationRef.current)
-                    recordingAnimationRef.current = null
+                if (recordingIntervalRef.current) {
+                    clearInterval(recordingIntervalRef.current)
+                    recordingIntervalRef.current = null
                 }
 
                 // Clear recording canvas refs
