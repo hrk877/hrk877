@@ -307,6 +307,7 @@ export default function ParticlesPage() {
     const [eyePosition, setEyePosition] = useState<{ x: number; y: number } | null>(null)
     const [faceBounds, setFaceBounds] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
     const lastGestureRef = useRef<GestureType>('none')
+    const oscillatorRef = useRef<OscillatorNode | null>(null)
 
     const [cameraMode, setCameraMode] = useState<CameraMode>('standard')
     const [isMosaic, setIsMosaic] = useState(true)
@@ -833,405 +834,418 @@ export default function ParticlesPage() {
                         fadeReadPos = (fadeReadPos + pitchRatio) % bufferSize
                         fadeCounter++
 
-                        if (fadeCounter >= fadeLength) {
-                            isFading = false
+
+                        // RING MODULATOR (Sci-fi Robotic Voice)
+                        // Improves intelligibility while masking identity
+
+                        // 1. Create Oscillator (The "Carrier" wave)
+                        // 30Hz - 60Hz gives a "Dalek" or "Cyborg" growl
+                        const oscillator = audioContext.createOscillator()
+                        oscillator.type = 'sine'
+                        oscillator.frequency.value = 50 // Adjust for roughness (30-100Hz)
+
+                        // 2. Create Gain for modulation
+                        // The oscillator will control the gain of the audio, creating distinct tremolo/robotic effect
+                        const ringModGain = audioContext.createGain()
+                        ringModGain.gain.value = 0 // Base gain
+
+                        // 3. Connect Oscillator to Gain.gain
+                        // This performs Amplitude Modulation (AM)
+                        oscillator.connect(ringModGain.gain)
+                        oscillator.start()
+
+                        // 4. Mix with dry signal for clarity? 
+                        // For now, full wet signal for maximum disguise
+
+                        // Signal chain: Source -> HighPass -> MidBoost -> RingMod -> LowPass -> Gain -> Output
+                        source.connect(highPass)
+                        highPass.connect(midBoost)
+                        midBoost.connect(midBoost2)
+                        midBoost2.connect(crackle) // Connect crackle before ringModGain
+                        crackle.connect(ringModGain) // Input audio into the variable gain node
+
+                        // Connect Output
+                        ringModGain.connect(lowPass)
+                        lowPass.connect(outputGain)
+                        outputGain.connect(pitchShift) // Keep this to feed the destination
+
+                        // Update refs
+                        audioStreamRef.current = audioStream
+                        audioContextRef.current = audioContext
+                        // Store oscillator to stop it later
+                        // (We can use a new ref or repurpose shifterRef if typed broadly, but better to add a ref)
+                        // For simplicity in this edit, we'll attach it to the window or just let it be cleaned up by context closure?
+                        // BETTER: Add a ref next time. For now, rely on context.close() to kill it.
+                        // We also need to store the oscillator to stop it later.
+                        // For now, we'll add it to a ref.
+                        oscillatorRef.current = oscillator; // Assuming oscillatorRef is defined elsewhere
+
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume()
                         }
-                    } else {
-                        const p1 = Math.floor(readPos) % bufferSize
-                        const p2 = (p1 + 1) % bufferSize
-                        const frac = readPos - Math.floor(readPos)
-                        sample = buffer[p1] * (1 - frac) + buffer[p2] * frac
-                        readPos = (readPos + pitchRatio) % bufferSize
+
+                        // Use canvas stream from display - store in refs to prevent GC
+                        const canvas = document.createElement('canvas')
+                        const ctx = canvas.getContext('2d')
+                        if (!ctx) return
+
+                        // Store in refs to prevent garbage collection during recording
+                        recordingCanvasRef.current = canvas
+                        recordingCtxRef.current = ctx
+
+                        // Set canvas size to 9:16 aspect ratio for iPhone
+                        const aspectRatio = 9 / 16
+                        canvas.width = window.innerWidth
+                        canvas.height = Math.round(window.innerWidth / aspectRatio)
+
+                        // If height exceeds window height, adjust based on height instead
+                        if (canvas.height > window.innerHeight) {
+                            canvas.height = window.innerHeight
+                            canvas.width = Math.round(window.innerHeight * aspectRatio)
+                        }
+
+                        // Use ref for capturing state to prevent closure issues
+                        isCapturingRef.current = true
+
+                        // Capture frames continuously
+                        const captureFrame = () => {
+                            if (!isCapturingRef.current) return
+
+                            // Use refs to ensure canvas and ctx are still valid
+                            const canvas = recordingCanvasRef.current
+                            const ctx = recordingCtxRef.current
+                            if (!canvas || !ctx) return
+
+                            // Draw the entire page content
+                            ctx.fillStyle = '#000000'
+                            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+                            // Draw video
+                            if (videoRef.current && videoRef.current.readyState >= 2) {
+                                const video = videoRef.current
+                                const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight)
+                                const x = (canvas.width - video.videoWidth * scale) / 2
+                                const y = (canvas.height - video.videoHeight * scale) / 2
+
+                                ctx.save()
+                                if (facingMode === 'user') {
+                                    ctx.translate(canvas.width, 0)
+                                    ctx.scale(-1, 1)
+                                }
+
+                                if (isMosaic && mosaicCanvasRef.current) {
+                                    ctx.drawImage(mosaicCanvasRef.current, x, y, video.videoWidth * scale, video.videoHeight * scale)
+                                } else {
+                                    // Draw video at full opacity for proper colors
+                                    ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale)
+                                }
+                                ctx.restore()
+                            }
+
+                            // Yellow overlay - match display opacity
+                            if (isYellow) {
+                                ctx.fillStyle = 'rgba(250, 204, 0, 0.5)'
+                                ctx.globalCompositeOperation = 'overlay'
+                                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                                ctx.globalCompositeOperation = 'source-over'
+                            }
+
+                            // Date stamp - Custom Font Style
+                            if (dateVisibleRef.current) {
+                                const now = new Date()
+                                // Format: 2026.2.1 (no zero padding)
+                                const dateString = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`
+
+                                // Match Hero title font: Cormorant Garamond
+                                ctx.font = '600 80px "Cormorant Garamond", serif'
+                                ctx.textAlign = 'center'
+                                ctx.textBaseline = 'top'
+
+                                // No shadow requested
+                                ctx.shadowColor = 'transparent'
+                                ctx.shadowBlur = 0
+                                ctx.shadowOffsetX = 0
+                                ctx.shadowOffsetY = 0
+
+                                ctx.fillStyle = '#FAC800' // Yellow to match branding
+                                ctx.fillText(dateString, canvas.width / 2, 150) // Adjusted y to 150 for larger font
+                            }
+
+                            // Draw Three.js particles canvas on top
+                            if (threeCanvasRef.current) {
+                                try {
+                                    ctx.drawImage(threeCanvasRef.current, 0, 0, canvas.width, canvas.height)
+                                } catch (e) {
+                                    // Ignore cross-origin errors if any
+                                }
+                            }
+
+                            recordingAnimationRef.current = requestAnimationFrame(captureFrame)
+                        }
+
+                        // Start capturing frames
+                        captureFrame()
+
+                        // Create stream from canvas
+                        const videoStream = canvas.captureStream(30) // 30 fps
+
+                        // Combine video and audio streams
+                        const combinedStream = new MediaStream([
+                            ...videoStream.getVideoTracks(),
+                            ...pitchShift.stream.getAudioTracks()
+                        ])
+
+                        // Try MP4 first for iPhone compatibility, fallback to WebM
+                        let mimeType = 'video/mp4'
+                        if (!MediaRecorder.isTypeSupported(mimeType)) {
+                            mimeType = 'video/webm;codecs=vp8,opus'
+                        }
+
+                        const mediaRecorder = new MediaRecorder(combinedStream, {
+                            mimeType: mimeType,
+                            videoBitsPerSecond: 2500000,
+                            audioBitsPerSecond: 128000
+                        })
+
+                        recordedChunksRef.current = []
+
+                        mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                recordedChunksRef.current.push(event.data)
+                            }
+                        }
+
+                        mediaRecorder.onstop = async () => {
+                            isCapturingRef.current = false
+                            if (recordingAnimationRef.current) {
+                                cancelAnimationFrame(recordingAnimationRef.current)
+                                recordingAnimationRef.current = null
+                            }
+
+                            // Clear recording canvas refs
+                            recordingCanvasRef.current = null
+                            recordingCtxRef.current = null
+
+                            // Stop audio tracks and close audio context using refs
+                            if (audioStreamRef.current) {
+                                audioStreamRef.current.getTracks().forEach(track => track.stop())
+                                audioStreamRef.current = null
+                            }
+
+                            if (shifterRef.current) {
+                                shifterRef.current.disconnect()
+                                shifterRef.current = null
+                            }
+
+                            if (oscillatorRef.current) {
+                                try {
+                                    oscillatorRef.current.stop()
+                                    oscillatorRef.current.disconnect()
+                                } catch (e) {
+                                    // Ignore if already stopped
+                                }
+                                oscillatorRef.current = null
+                            }
+
+                            if (audioContextRef.current) {
+                                await audioContextRef.current.close()
+                                audioContextRef.current = null
+                            }
+
+                            const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
+                            const blob = new Blob(recordedChunksRef.current, { type: mimeType })
+                            const url = URL.createObjectURL(blob)
+
+                            // For iOS Safari, use a different approach to trigger download
+                            const a = document.createElement('a')
+                            a.style.display = 'none'
+                            a.href = url
+                            a.download = `camera-recording-${Date.now()}.${extension}`
+
+                            // Add to DOM, click, and remove
+                            document.body.appendChild(a)
+
+                            // Use setTimeout to ensure the download starts before cleanup
+                            setTimeout(() => {
+                                a.click()
+
+                                // Clean up after a delay
+                                setTimeout(() => {
+                                    document.body.removeChild(a)
+                                    URL.revokeObjectURL(url)
+                                }, 100)
+                            }, 0)
+                        }
+
+                        mediaRecorderRef.current = mediaRecorder
+                        // Start with timeslice to periodically flush data and prevent buffer issues
+                        // This fixes the issue where recording stops after ~15 seconds
+                        mediaRecorder.start(1000)
+                        setIsRecording(true)
+                        setRecordingTime(0)
+
+                        // Start timer
+                        recordingTimerRef.current = window.setInterval(() => {
+                            setRecordingTime(prev => prev + 1)
+                        }, 1000)
+
+                    } catch (error) {
+                        console.error('Recording failed:', error)
+                        alert('録画の開始に失敗しました')
+                    }
+                }
+
+                const stopRecording = () => {
+                    // Immediately update UI to show "stopped" state
+                    setIsRecording(false)
+
+                    if (recordingTimerRef.current) {
+                        clearInterval(recordingTimerRef.current)
+                        recordingTimerRef.current = null
                     }
 
-                    // Soft compression for consistent, professional volume
-                    const inputLevel = Math.abs(sample)
-                    const attackCoeff = Math.exp(-1 / (sampleRate * attackTime))
-                    const releaseCoeff = Math.exp(-1 / (sampleRate * releaseTime))
-
-                    if (inputLevel > envelope) {
-                        envelope = attackCoeff * envelope + (1 - attackCoeff) * inputLevel
-                    } else {
-                        envelope = releaseCoeff * envelope + (1 - releaseCoeff) * inputLevel
-                    }
-
-                    let gain = 1.0
-                    if (envelope > threshold) {
-                        const overThreshold = envelope - threshold
-                        const compressed = threshold + overThreshold / ratio
-                        gain = compressed / envelope
-                    }
-
-                    output[i] = sample * gain
-                }
-            }
-
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume()
-            }
-
-            // Signal chain: Source -> HighPass -> MidBoost -> MidBoost2 -> Crackle -> Shifter -> LowPass -> Gain -> Output
-            source.connect(highPass)
-            highPass.connect(midBoost)
-            midBoost.connect(midBoost2)
-            midBoost2.connect(crackle)
-            crackle.connect(shifter)
-            shifter.connect(lowPass)
-            lowPass.connect(outputGain)
-            outputGain.connect(pitchShift)
-
-            // Use canvas stream from display - store in refs to prevent GC
-            const canvas = document.createElement('canvas')
-            const ctx = canvas.getContext('2d')
-            if (!ctx) return
-
-            // Store in refs to prevent garbage collection during recording
-            recordingCanvasRef.current = canvas
-            recordingCtxRef.current = ctx
-
-            // Set canvas size to 9:16 aspect ratio for iPhone
-            const aspectRatio = 9 / 16
-            canvas.width = window.innerWidth
-            canvas.height = Math.round(window.innerWidth / aspectRatio)
-
-            // If height exceeds window height, adjust based on height instead
-            if (canvas.height > window.innerHeight) {
-                canvas.height = window.innerHeight
-                canvas.width = Math.round(window.innerHeight * aspectRatio)
-            }
-
-            // Use ref for capturing state to prevent closure issues
-            isCapturingRef.current = true
-
-            // Capture frames continuously
-            const captureFrame = () => {
-                if (!isCapturingRef.current) return
-
-                // Use refs to ensure canvas and ctx are still valid
-                const canvas = recordingCanvasRef.current
-                const ctx = recordingCtxRef.current
-                if (!canvas || !ctx) return
-
-                // Draw the entire page content
-                ctx.fillStyle = '#000000'
-                ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-                // Draw video
-                if (videoRef.current && videoRef.current.readyState >= 2) {
-                    const video = videoRef.current
-                    const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight)
-                    const x = (canvas.width - video.videoWidth * scale) / 2
-                    const y = (canvas.height - video.videoHeight * scale) / 2
-
-                    ctx.save()
-                    if (facingMode === 'user') {
-                        ctx.translate(canvas.width, 0)
-                        ctx.scale(-1, 1)
-                    }
-
-                    if (isMosaic && mosaicCanvasRef.current) {
-                        ctx.drawImage(mosaicCanvasRef.current, x, y, video.videoWidth * scale, video.videoHeight * scale)
-                    } else {
-                        // Draw video at full opacity for proper colors
-                        ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale)
-                    }
-                    ctx.restore()
-                }
-
-                // Yellow overlay - match display opacity
-                if (isYellow) {
-                    ctx.fillStyle = 'rgba(250, 204, 0, 0.5)'
-                    ctx.globalCompositeOperation = 'overlay'
-                    ctx.fillRect(0, 0, canvas.width, canvas.height)
-                    ctx.globalCompositeOperation = 'source-over'
-                }
-
-                // Date stamp - Custom Font Style
-                if (dateVisibleRef.current) {
-                    const now = new Date()
-                    // Format: 2026.2.1 (no zero padding)
-                    const dateString = `${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()}`
-
-                    // Match Hero title font: Cormorant Garamond
-                    ctx.font = '600 80px "Cormorant Garamond", serif'
-                    ctx.textAlign = 'center'
-                    ctx.textBaseline = 'top'
-
-                    // No shadow requested
-                    ctx.shadowColor = 'transparent'
-                    ctx.shadowBlur = 0
-                    ctx.shadowOffsetX = 0
-                    ctx.shadowOffsetY = 0
-
-                    ctx.fillStyle = '#FAC800' // Yellow to match branding
-                    ctx.fillText(dateString, canvas.width / 2, 150) // Adjusted y to 150 for larger font
-                }
-
-                // Draw Three.js particles canvas on top
-                if (threeCanvasRef.current) {
-                    try {
-                        ctx.drawImage(threeCanvasRef.current, 0, 0, canvas.width, canvas.height)
-                    } catch (e) {
-                        // Ignore cross-origin errors if any
-                    }
-                }
-
-                recordingAnimationRef.current = requestAnimationFrame(captureFrame)
-            }
-
-            // Start capturing frames
-            captureFrame()
-
-            // Create stream from canvas
-            const videoStream = canvas.captureStream(30) // 30 fps
-
-            // Combine video and audio streams
-            const combinedStream = new MediaStream([
-                ...videoStream.getVideoTracks(),
-                ...pitchShift.stream.getAudioTracks()
-            ])
-
-            // Try MP4 first for iPhone compatibility, fallback to WebM
-            let mimeType = 'video/mp4'
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm;codecs=vp8,opus'
-            }
-
-            const mediaRecorder = new MediaRecorder(combinedStream, {
-                mimeType: mimeType,
-                videoBitsPerSecond: 2500000,
-                audioBitsPerSecond: 128000
-            })
-
-            recordedChunksRef.current = []
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    recordedChunksRef.current.push(event.data)
-                }
-            }
-
-            mediaRecorder.onstop = async () => {
-                isCapturingRef.current = false
-                if (recordingAnimationRef.current) {
-                    cancelAnimationFrame(recordingAnimationRef.current)
-                    recordingAnimationRef.current = null
-                }
-
-                // Clear recording canvas refs
-                recordingCanvasRef.current = null
-                recordingCtxRef.current = null
-
-                // Stop audio tracks and close audio context using refs
-                if (audioStreamRef.current) {
-                    audioStreamRef.current.getTracks().forEach(track => track.stop())
-                    audioStreamRef.current = null
-                }
-
-                if (shifterRef.current) {
-                    shifterRef.current.disconnect()
-                    shifterRef.current = null
-                }
-
-                if (audioContextRef.current) {
-                    await audioContextRef.current.close()
-                    audioContextRef.current = null
-                }
-
-                const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
-                const blob = new Blob(recordedChunksRef.current, { type: mimeType })
-                const url = URL.createObjectURL(blob)
-
-                // For iOS Safari, use a different approach to trigger download
-                const a = document.createElement('a')
-                a.style.display = 'none'
-                a.href = url
-                a.download = `camera-recording-${Date.now()}.${extension}`
-
-                // Add to DOM, click, and remove
-                document.body.appendChild(a)
-
-                // Use setTimeout to ensure the download starts before cleanup
-                setTimeout(() => {
-                    a.click()
-
-                    // Clean up after a delay
+                    // Add a delay before actually stopping the recorder
+                    // This ensures the buffer is flushed and the last moment is captured
                     setTimeout(() => {
-                        document.body.removeChild(a)
-                        URL.revokeObjectURL(url)
-                    }, 100)
-                }, 0)
-            }
-
-            mediaRecorderRef.current = mediaRecorder
-            // Start with timeslice to periodically flush data and prevent buffer issues
-            // This fixes the issue where recording stops after ~15 seconds
-            mediaRecorder.start(1000)
-            setIsRecording(true)
-            setRecordingTime(0)
-
-            // Start timer
-            recordingTimerRef.current = window.setInterval(() => {
-                setRecordingTime(prev => prev + 1)
-            }, 1000)
-
-        } catch (error) {
-            console.error('Recording failed:', error)
-            alert('録画の開始に失敗しました')
-        }
-    }
-
-    const stopRecording = () => {
-        // Immediately update UI to show "stopped" state
-        setIsRecording(false)
-
-        if (recordingTimerRef.current) {
-            clearInterval(recordingTimerRef.current)
-            recordingTimerRef.current = null
-        }
-
-        // Add a delay before actually stopping the recorder
-        // This ensures the buffer is flushed and the last moment is captured
-        setTimeout(() => {
-            try {
-                if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                    mediaRecorderRef.current.stop()
+                        try {
+                            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                                mediaRecorderRef.current.stop()
+                            }
+                        } catch (e) {
+                            console.error("Stop recording error:", e)
+                        }
+                    }, 1000) // 1 second buffer to catch the end
                 }
-            } catch (e) {
-                console.error("Stop recording error:", e)
+
+                const toggleRecording = () => {
+                    if (isRecording) {
+                        stopRecording()
+                    } else {
+                        startRecording()
+                    }
+                }
+
+                return (
+                    <div className="fixed inset-0 overflow-hidden touch-none bg-black">
+                        <HamburgerMenu color="#FAC800" />
+
+                        {/* Camera controls - top right */}
+                        {isTracking && (
+                            <div className="absolute top-9 right-6 z-50 flex flex-col gap-4">
+                                {/* Camera toggle button */}
+                                <button
+                                    onClick={toggleCamera}
+                                    className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
+                                    aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
+                                >
+                                    <SwitchCamera className="w-8 h-8" strokeWidth={1.5} />
+                                </button>
+
+                                {/* Grid button - mosaic size */}
+                                {/* Grid button - mosaic size */}
+                                <button
+                                    onClick={() => setMosaicLevel(prev => {
+                                        if (prev === 1) return 2
+                                        if (prev === 2) return 0
+                                        return 1
+                                    })}
+                                    className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
+                                >
+                                    <Grid3x3 className="w-8 h-8" strokeWidth={mosaicLevel === 0 ? 1 : mosaicLevel === 1 ? 2 : 3} />
+                                </button>
+
+                                {/* Date toggle button */}
+                                <button
+                                    onClick={() => setIsDateVisible(prev => !prev)}
+                                    className={`transition-opacity ${isDateVisible ? 'text-[#FAC800] opacity-100' : 'text-[#FAC800] opacity-60 hover:opacity-100'}`}
+                                >
+                                    <Calendar className="w-8 h-8" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Yellow Overlay - Always on */}
+                        {isYellow && (
+                            <div className="absolute inset-0 z-10 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
+                        )}
+
+                        {/* Date Preview Overlay */}
+                        {isDateVisible && (
+                            <div className="absolute top-[150px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                                <span className="text-[#FAC800] text-[80px] font-semibold tracking-tight select-none"
+                                    style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                                    {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
+                                </span>
+                            </div>
+                        )}
+
+                        <video
+                            ref={videoRef}
+                            className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
+                                } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''} ${isMosaic ? 'opacity-0' : ''}`}
+                            playsInline
+                            muted
+                        />
+
+                        {/* Mosaic Canvas Overlay */}
+                        <canvas
+                            ref={mosaicCanvasRef}
+                            className={`absolute inset-0 w-full h-full object-cover ${isMosaic && isTracking ? 'opacity-100' : 'opacity-0'
+                                } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                        />
+
+                        {isTracking && (
+                            <Canvas
+                                camera={{ position: [0, 0, 5], fov: 50 }}
+                                className="!absolute inset-0"
+                                gl={{ antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true }}
+                                dpr={1}
+                                onCreated={({ gl }) => {
+                                    threeCanvasRef.current = gl.domElement
+                                }}
+                            >
+                                <ParticleSystem
+                                    gesture={gesture}
+                                    fingerTip={fingerTip}
+                                    isDispersing={isDispersing}
+                                    disperseCenter={disperseCenter}
+                                    eyePosition={eyePosition}
+                                />
+                            </Canvas>
+                        )}
+
+                        {!isTracking && isLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-[#FAC800] font-mono text-sm tracking-widest">LOADING...</span>
+                            </div>
+                        )}
+
+                        {/* Recording Button */}
+                        {isTracking && (
+                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-50">
+                                {/* Timer */}
+                                {isRecording && (
+                                    <div className="flex items-center gap-2.5 bg-black/70 px-5 py-2.5 rounded-full backdrop-blur-md">
+                                        <div className="w-2.5 h-2.5 bg-[#8B0000] rounded-full animate-pulse" />
+                                        <span className="text-white font-mono text-sm">
+                                            {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Simple Record Button */}
+                                <button
+                                    onClick={toggleRecording}
+                                    className="flex items-center justify-center transition-all duration-300"
+                                    aria-label={isRecording ? '録画停止' : '録画開始'}
+                                >
+                                    <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
+                                        ? 'w-7 h-7 rounded-sm'
+                                        : 'w-16 h-16 rounded-full'
+                                        }`} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )
             }
-        }, 1000) // 1 second buffer to catch the end
-    }
-
-    const toggleRecording = () => {
-        if (isRecording) {
-            stopRecording()
-        } else {
-            startRecording()
-        }
-    }
-
-    return (
-        <div className="fixed inset-0 overflow-hidden touch-none bg-black">
-            <HamburgerMenu color="#FAC800" />
-
-            {/* Camera controls - top right */}
-            {isTracking && (
-                <div className="absolute top-9 right-6 z-50 flex flex-col gap-4">
-                    {/* Camera toggle button */}
-                    <button
-                        onClick={toggleCamera}
-                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                        aria-label={facingMode === 'user' ? '外カメラに切り替え' : '内カメラに切り替え'}
-                    >
-                        <SwitchCamera className="w-8 h-8" strokeWidth={1.5} />
-                    </button>
-
-                    {/* Grid button - mosaic size */}
-                    {/* Grid button - mosaic size */}
-                    <button
-                        onClick={() => setMosaicLevel(prev => {
-                            if (prev === 1) return 2
-                            if (prev === 2) return 0
-                            return 1
-                        })}
-                        className="text-[#FAC800] opacity-60 hover:opacity-100 transition-opacity"
-                    >
-                        <Grid3x3 className="w-8 h-8" strokeWidth={mosaicLevel === 0 ? 1 : mosaicLevel === 1 ? 2 : 3} />
-                    </button>
-
-                    {/* Date toggle button */}
-                    <button
-                        onClick={() => setIsDateVisible(prev => !prev)}
-                        className={`transition-opacity ${isDateVisible ? 'text-[#FAC800] opacity-100' : 'text-[#FAC800] opacity-60 hover:opacity-100'}`}
-                    >
-                        <Calendar className="w-8 h-8" strokeWidth={1.5} />
-                    </button>
-                </div>
-            )}
-
-            {/* Yellow Overlay - Always on */}
-            {isYellow && (
-                <div className="absolute inset-0 z-10 bg-yellow-400 mix-blend-overlay pointer-events-none opacity-50" />
-            )}
-
-            {/* Date Preview Overlay */}
-            {isDateVisible && (
-                <div className="absolute top-[150px] left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-                    <span className="text-[#FAC800] text-[80px] font-semibold tracking-tight select-none"
-                        style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                        {`${new Date().getFullYear()}.${new Date().getMonth() + 1}.${new Date().getDate()}`}
-                    </span>
-                </div>
-            )}
-
-            <video
-                ref={videoRef}
-                className={`absolute inset-0 w-full h-full object-cover ${isTracking ? "opacity-50" : "opacity-0"
-                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''} ${isMosaic ? 'opacity-0' : ''}`}
-                playsInline
-                muted
-            />
-
-            {/* Mosaic Canvas Overlay */}
-            <canvas
-                ref={mosaicCanvasRef}
-                className={`absolute inset-0 w-full h-full object-cover ${isMosaic && isTracking ? 'opacity-100' : 'opacity-0'
-                    } transition-opacity ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-            />
-
-            {isTracking && (
-                <Canvas
-                    camera={{ position: [0, 0, 5], fov: 50 }}
-                    className="!absolute inset-0"
-                    gl={{ antialias: false, powerPreference: "high-performance", preserveDrawingBuffer: true }}
-                    dpr={1}
-                    onCreated={({ gl }) => {
-                        threeCanvasRef.current = gl.domElement
-                    }}
-                >
-                    <ParticleSystem
-                        gesture={gesture}
-                        fingerTip={fingerTip}
-                        isDispersing={isDispersing}
-                        disperseCenter={disperseCenter}
-                        eyePosition={eyePosition}
-                    />
-                </Canvas>
-            )}
-
-            {!isTracking && isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[#FAC800] font-mono text-sm tracking-widest">LOADING...</span>
-                </div>
-            )}
-
-            {/* Recording Button */}
-            {isTracking && (
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 z-50">
-                    {/* Timer */}
-                    {isRecording && (
-                        <div className="flex items-center gap-2.5 bg-black/70 px-5 py-2.5 rounded-full backdrop-blur-md">
-                            <div className="w-2.5 h-2.5 bg-[#8B0000] rounded-full animate-pulse" />
-                            <span className="text-white font-mono text-sm">
-                                {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Simple Record Button */}
-                    <button
-                        onClick={toggleRecording}
-                        className="flex items-center justify-center transition-all duration-300"
-                        aria-label={isRecording ? '録画停止' : '録画開始'}
-                    >
-                        <div className={`bg-[#8B0000] transition-all duration-300 ${isRecording
-                            ? 'w-7 h-7 rounded-sm'
-                            : 'w-16 h-16 rounded-full'
-                            }`} />
-                    </button>
-                </div>
-            )}
-        </div>
-    )
-}
