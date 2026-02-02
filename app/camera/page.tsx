@@ -726,94 +726,81 @@ export default function ParticlesPage() {
             const source = audioContext.createMediaStreamSource(audioStream)
             const destination = audioContext.createMediaStreamDestination()
 
-            // --- LOW VOICE CHAIN (Robot Growl) ---
-            // 1. High-Pass & Low-Pass for bandwidth limiting
-            const lowHP = audioContext.createBiquadFilter()
-            lowHP.type = 'highpass'
-            lowHP.frequency.value = 200
+            // --- STYLISH MUSEUM VOICE ---
+            // Concept: Spacious, Ethereal, High-Fidelity. 
+            // Like speaking in a modern concrete art gallery.
 
-            const lowLP = audioContext.createBiquadFilter()
-            lowLP.type = 'lowpass'
-            lowLP.frequency.value = 2000
+            // 1. Dynamics Compressor (Polished Broadcast Sound)
+            const compressor = audioContext.createDynamicsCompressor()
+            compressor.threshold.value = -24
+            compressor.knee.value = 30
+            compressor.ratio.value = 12
+            compressor.attack.value = 0.003
+            compressor.release.value = 0.25
 
-            // 2. Ring Mod (50Hz Sine)
-            const oscLow = audioContext.createOscillator()
-            oscLow.type = 'sine'
-            oscLow.frequency.value = 50
+            // 2. Reverb (Convolver) - "The Gallery Space"
+            const convolver = audioContext.createConvolver()
 
-            const ringModLow = audioContext.createGain()
-            ringModLow.gain.value = 0 // Modulated by oscillator
+            // Generate Impulse Response for a large, slightly bright room
+            const rate = audioContext.sampleRate
+            const length = rate * 3.0 // 3 seconds decay
+            const decay = 2.0
+            const impulse = audioContext.createBuffer(2, length, rate)
+            const left = impulse.getChannelData(0)
+            const right = impulse.getChannelData(1)
 
-            oscLow.connect(ringModLow.gain)
-            oscLow.start()
+            for (let i = 0; i < length; i++) {
+                const n = length - i
+                // Simple exponential decay noise
+                left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay)
+                right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay)
+            }
+            convolver.buffer = impulse
 
-            // 3. Chain Connection
-            // Input -> HP -> LP -> RingMod -> LowChainGain
-            const lowChainGain = audioContext.createGain()
-            lowChainGain.gain.value = 1.0 // Adjust blend level
+            const reverbGain = audioContext.createGain()
+            reverbGain.gain.value = 0.4 // Moderate reverb mix
 
-            source.connect(lowHP)
-            lowHP.connect(lowLP)
-            lowLP.connect(ringModLow)
-            ringModLow.connect(lowChainGain)
-            lowChainGain.connect(destination)
+            // 3. Delay (Echo) - "Artistic Reflection"
+            const delay = audioContext.createDelay()
+            delay.delayTime.value = 0.4 // 400ms delay
 
-            // --- HIGH VOICE CHAIN (Robotic Chirp) ---
-            // 1. High-Pass to remove mud
-            const highHP = audioContext.createBiquadFilter()
-            highHP.type = 'highpass'
-            highHP.frequency.value = 800
+            const feedback = audioContext.createGain()
+            feedback.gain.value = 0.3 // 30% feedback
 
-            // 2. Ring Mod (800Hz Sine)
-            const oscHigh = audioContext.createOscillator()
-            oscHigh.type = 'sine'
-            oscHigh.frequency.value = 800
+            const delayFilter = audioContext.createBiquadFilter()
+            delayFilter.type = 'lowpass'
+            delayFilter.frequency.value = 2000 // Dampen echoes to keep them subtle
 
-            const ringModHigh = audioContext.createGain()
-            ringModHigh.gain.value = 0
+            const delayGain = audioContext.createGain()
+            delayGain.gain.value = 0.2 // Subtle echo
 
-            oscHigh.connect(ringModHigh.gain)
-            oscHigh.start()
+            // 4. Dry Signal Gain
+            const dryGain = audioContext.createGain()
+            dryGain.gain.value = 0.8
 
-            // 3. Chain Connection
-            // Input -> HP -> RingMod -> HighChainGain
-            const highChainGain = audioContext.createGain()
-            highChainGain.gain.value = 0.6 // Slightly lower to not overpower
+            // --- Routing ---
 
-            source.connect(highHP)
-            highHP.connect(ringModHigh)
-            ringModHigh.connect(highChainGain)
-            highChainGain.connect(destination)
+            // Input -> Compressor -> All Chains
+            source.connect(compressor)
 
+            // Chain A: Dry
+            compressor.connect(dryGain)
+            dryGain.connect(destination)
 
-            // Store for cleanup
-            oscillatorRef.current = oscLow
-            // checking if we need a ref for the high oscillator
-            // Since we can't easily add a new Ref hook without re-rendering the whole component and losing state,
-            // we'll attach the high oscillator to the low oscillator instance as a custom property or just store it in a way
-            // that doesn't require a new hook.
-            // Actually, let's just use the existing refs. We can reuse 'shifterRef' (which was ScriptProcessor) 
-            // to store the second oscillator temporarily if we cast it, OR just add a property to the ref object if TS allows,
-            // OR best practice: Add a designated ref. I will add oscillatorHighRef at the top level in a separate edit 
-            // but for now I will store it in the same ref by casting or just using a closure if I was careful (but I need it in onstop).
+            // Chain B: Reverb
+            compressor.connect(convolver)
+            convolver.connect(reverbGain)
+            reverbGain.connect(destination)
 
-            // Hack for now: attaching to the same ref container is messy.
-            // I will use `shifterRef` (which is typed as ScriptProcessorNode | null) to store the second oscillator
-            // by casting, since we aren't using ScriptProcessor anymore. 
-            // Ideally I should add `oscillatorHighRef` properly.
-            // Let's rely on the fact that I will add `oscillatorHighRef` in the next tool call properly.
-            // For this block to work, I'll assume I have `oscillatorHighRef`.
-            // Wait, I can't use a variable I haven't defined.
-            // I will temporarily cast it to `any` on `oscillatorRef` or similar.
-            // Actually, I'll just put `oscillatorHighRef.current = oscHigh` here and assume I'll add the definition 
-            // to the component in the previous step... except I didn't.
-            // OK, I'll do a multi-replace to add the Ref definition AND this code.
+            // Chain C: Delay Loop
+            compressor.connect(delay)
+            delay.connect(feedback)
+            feedback.connect(delayFilter)
+            delayFilter.connect(delay) // Close loop
 
-            // Cleanest approach: Add the Ref in the same file update if possible? 
-            // No, replace_file_content is single block.
-            // I will use the `shifterRef` as `unknown as OscillatorNode` since I'm removing the shifter logic.
-            // @ts-ignore
-            shifterRef.current = oscHigh
+            // Delay Output
+            delay.connect(delayGain)
+            delayGain.connect(destination)
 
 
             // Update refs
@@ -973,26 +960,21 @@ export default function ParticlesPage() {
                     audioStreamRef.current = null
                 }
 
-                // Clean up Low Oscillator
+                // Clean up oscillators if they exist (though we removed them in this version)
                 if (oscillatorRef.current) {
                     try {
                         oscillatorRef.current.stop()
                         oscillatorRef.current.disconnect()
-                    } catch (e) {
-                        // Ignore if already stopped
-                    }
+                    } catch (e) { }
                     oscillatorRef.current = null
                 }
 
-                // Clean up High Oscillator (stored in shifterRef)
                 if (shifterRef.current) {
                     try {
                         // @ts-ignore
-                        shifterRef.current.stop()
+                        if (shifterRef.current.stop) shifterRef.current.stop()
                         shifterRef.current.disconnect()
-                    } catch (e) {
-                        // Ignore
-                    }
+                    } catch (e) { }
                     shifterRef.current = null
                 }
 
