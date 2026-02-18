@@ -313,8 +313,8 @@ export default function ParticlesPage() {
     const [isMosaic, setIsMosaic] = useState(true)
     const [isYellow, setIsYellow] = useState(true)
     const [mosaicLevel, setMosaicLevel] = useState<1 | 2 | 0>(1) // 1=small, 2=medium, 0=high clarity
-    const [isDateVisible, setIsDateVisible] = useState(false)
-    const dateVisibleRef = useRef(false)
+    const [isDateVisible, setIsDateVisible] = useState(true)
+    const dateVisibleRef = useRef(true)
 
     useEffect(() => {
         dateVisibleRef.current = isDateVisible
@@ -338,8 +338,8 @@ export default function ParticlesPage() {
     const mosaicCanvasRef = useRef<HTMLCanvasElement>(null)
 
     // Camera facing mode
-    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
-    const facingModeRef = useRef<'user' | 'environment'>('user')
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
+    const facingModeRef = useRef<'user' | 'environment'>('environment')
 
     // Recording state
     const [isRecording, setIsRecording] = useState(false)
