@@ -481,12 +481,10 @@ export default function ParticlesPage() {
 
     const startTracking = async (mode?: 'user' | 'environment') => {
         const targetMode = mode ?? facingMode
-        if (isLoading) return
         if (!navigator.mediaDevices?.getUserMedia) {
             alert("カメラAPIが利用できません")
             return
         }
-        if (!handLandmarkerRef.current && !(await initializeLandmarkers())) return
 
         // Stop existing stream if any
         if (videoRef.current?.srcObject) {
@@ -512,11 +510,21 @@ export default function ParticlesPage() {
                 videoRef.current.srcObject = stream
                 await videoRef.current.play()
                 setIsTracking(true)
-                detectAll()
+
+                // Initialize landmarkers in background if not ready
+                if (!handLandmarkerRef.current) {
+                    if (!isLoading) {
+                        initializeLandmarkers().then(success => {
+                            if (success) detectAll()
+                        })
+                    }
+                } else {
+                    detectAll()
+                }
             }
         } catch (e) {
             console.error("Camera transition error:", e)
-            alert("カメラの切り替えに失敗しました。ブラウザの設定でカメラ許可を確認してください。")
+            alert("カメラの起動に失敗しました。ブラウザの設定でカメラ許可を確認してください。")
         }
     }
 
