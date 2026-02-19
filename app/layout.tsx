@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   verification: {
     google: "X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE",
   },
-  // ★★★ 本番環境のURLをここに設定してください（例: https://hrk877.vercel.app）
-  metadataBase: new URL("https://hrk877.vercel.app"),
+  // ★★★ 本番環境のURLをここに設定してください（例: https://877hand.vercel.app）
+  metadataBase: new URL("https://877hand.vercel.app"),
 
   // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {

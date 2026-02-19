@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://hrk877.vercel.app'
+    const baseUrl = 'https://877hand.vercel.app'
 
     // 主な固定ページ
     const routes = [

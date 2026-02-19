@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: '/admin/',
         },
-        sitemap: 'https://hrk877.vercel.app/sitemap.xml',
+        sitemap: 'https://877hand.vercel.app/sitemap.xml',
     }
 }
