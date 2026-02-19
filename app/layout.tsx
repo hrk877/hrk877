@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "877hand",
   description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter.",
+  verification: {
+    google: "X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE",
+  },
   // ★★★ 本番環境のURLをここに設定してください（例: https://hrk877.vercel.app）
   metadataBase: new URL("https://hrk877.vercel.app"),
 
