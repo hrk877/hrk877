@@ -17,7 +17,8 @@ const geistMono = Geist_Mono({
 // メタデータをここに集約します
 export const metadata: Metadata = {
   title: "877hand",
-  description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter.",
+  description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter. 877hand.",
+  keywords: ["877hand", "banana", "creative space", "AI", "museum", "877"],
   verification: {
     google: "X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE",
   },
