@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 
 // メタデータをここに集約します
 export const metadata: Metadata = {
-  title: "877hand",
-  description: "A creative space bending the world with the power of bananas. Explore the museum, chat with Banana AI, and send a letter. 877hand.",
-  keywords: ["877hand", "banana", "creative space", "AI", "museum", "877"],
+  title: "877hand | バナナハンド",
+  description: "バナナの力で世界を曲げるクリエイティブスペース『877hand（バナナハンド）』。ミュージアム、AI対話、手紙など、バナナの新たな可能性を体験してください。",
+  keywords: ["877hand", "バナナハンド", "banana hand", "バナナ", "banana", "creative space", "AI", "museum", "877"],
   verification: {
     google: "X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE",
   },
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
 
   // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {
-    title: "877hand",
-    description: "A creative space bending the world with the power of bananas.",
+    title: "877hand | バナナハンド",
+    description: "バナナの力で世界を曲げるクリエイティブスペース『877hand（バナナハンド）』。",
     url: "/",
     siteName: "877hand",
     images: [
@@ -44,8 +44,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "877hand",
-    description: "A creative space bending the world with the power of bananas.",
+    title: "877hand | バナナハンド",
+    description: "バナナの力で世界を曲げるクリエイティブスペース『877hand（バナナハンド）』。",
     images: ["/ogp-image.png"], // public/ogp-image.png
   },
 

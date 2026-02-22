@@ -44,6 +44,7 @@ const Hero = () => {
             <BananaScene />
             {/* pointer-events-none to allow clicking through to 3D scene, but enable for children text */}
             <div className="flex flex-col items-center relative z-50 w-full pointer-events-none">
+                <h1 className="sr-only">877hand | バナナハンド</h1>
                 <div className="flex justify-center w-full">
                     <div className="flex items-baseline relative whitespace-nowrap">
                         {title.split("").map((char, index) => (
