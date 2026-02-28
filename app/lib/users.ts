@@ -2,6 +2,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export async function getAllUserEmails(): Promise<string[]> {
+    if (!db) return []
     try {
         const usersRef = collection(db, "users");
         // Query users where email is not null

@@ -93,7 +93,7 @@ export default function RunningPage() {
 
     // Fetch all records
     useEffect(() => {
-        if (authLoading || !user || user.isAnonymous) {
+        if (!db || authLoading || !user || user.isAnonymous) {
             setLoading(false)
             return
         }
@@ -112,7 +112,7 @@ export default function RunningPage() {
     }, [user, authLoading])
 
     const saveRecord = useCallback(async () => {
-        if (!user || user.isAnonymous) return
+        if (!db || !user || user.isAnonymous) return
         const recordsRef = collection(db, "users", user.uid, "training_records")
         await addDoc(recordsRef, {
             distance,
@@ -200,7 +200,7 @@ export default function RunningPage() {
 
     const performAutoSave = useCallback(async () => {
         if (autoSaveRef.current) return // Prevent double save
-        if (!user || user.isAnonymous) return
+        if (!db || !user || user.isAnonymous) return
         if (distanceRef.current <= 0 || elapsedTimeRef.current <= 0) return
         if (!isRunning && !isPaused) return // Not in an active session
 

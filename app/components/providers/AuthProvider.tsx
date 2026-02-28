@@ -32,6 +32,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        if (!auth) {
+            setLoading(false)
+            return
+        }
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             // If no user is logged in, try to restore or sign in anonymously
             if (!currentUser) {
@@ -64,6 +68,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             if (currentUser && !currentUser.isAnonymous) {
                 // Save/Update User in Firestore (Only for signed-in users)
+                if (!db) return
+
                 try {
                     const userRef = doc(db, "users", currentUser.uid)
                     const userSnap = await getDoc(userRef)

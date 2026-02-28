@@ -192,7 +192,7 @@ export default function HabitPage() {
 
     // 1. Fetch Data
     useEffect(() => {
-        if (authLoading) return
+        if (!db || authLoading) return
 
         if (!user || user.isAnonymous) {
             setLoading(false)
@@ -251,6 +251,7 @@ export default function HabitPage() {
             return
         }
         if (hasPressedToday) return
+        if (!db) return
 
         setIsEntryModalOpen(false)
         setJustPressed(true)
@@ -302,7 +303,7 @@ export default function HabitPage() {
     const MAX_COUNT = TOTAL_DOTS * 2
 
     const handlePixelClick = (i: number, type: PixelType) => {
-        if (type !== 'body' || !isLoggedIn) return
+        if (type !== 'body' || !isLoggedIn || !db) return
 
         if (!isAdmin && !isWhitelisted) {
             setIsAccessDeniedOpen(true)
