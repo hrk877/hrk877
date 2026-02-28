@@ -252,6 +252,20 @@ export default function HamburgerMenu({ color }: HamburgerMenuProps) {
                                                             <Settings size={20} />
                                                         </button>
                                                     )}
+
+                                                    {/* Admin Gear Icon for RUNNING */}
+                                                    {item.label === "RUNNING" && isAdmin && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault()
+                                                                e.stopPropagation()
+                                                                setIsAllowlistOpen(true)
+                                                            }}
+                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
+                                                        >
+                                                            <Settings size={20} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
