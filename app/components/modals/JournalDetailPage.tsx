@@ -106,7 +106,7 @@ const JournalDetailPage = ({
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="prose prose-xl md:prose-2xl max-w-none font-['Cormorant_Garamond',_serif] text-black/90 leading-relaxed selection:bg-black selection:text-[#FAC800]"
+                        className="prose prose-base md:prose-lg max-w-none font-['Cormorant_Garamond',_serif] text-black/90 leading-relaxed selection:bg-black selection:text-[#FAC800]"
                     >
                         <div
                             dangerouslySetInnerHTML={{ __html: post.content }}

@@ -232,7 +232,7 @@ const TipTapEditor = ({ content, onChange }: { content: string; onChange: (html:
         },
         editorProps: {
             attributes: {
-                class: "prose prose-xl md:prose-2xl max-w-none focus:outline-none min-h-[70vh] font-['Cormorant_Garamond',_serif] leading-relaxed px-4 md:px-0 selection:bg-black selection:text-[#FAC800] break-words whitespace-pre-wrap",
+                class: "prose prose-base md:prose-lg max-w-none focus:outline-none min-h-[70vh] font-['Cormorant_Garamond',_serif] leading-relaxed px-4 md:px-0 selection:bg-black selection:text-[#FAC800] break-words whitespace-pre-wrap",
             },
             handleDrop: (view, event, slice, moved) => {
                 if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
