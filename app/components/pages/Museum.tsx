@@ -13,10 +13,12 @@ import MuseumEditorModal, { type Artwork } from "../modals/MuseumEditorModal"
 import { useAuth } from "../providers/AuthProvider"
 import Link from "next/link"
 import HamburgerMenu from "../navigation/HamburgerMenu"
+import AdminPlusButton from "../navigation/AdminPlusButton"
 import AdminLoginModal from "../modals/AdminLoginModal"
 
 const Museum = () => {
     const { isAdmin, user } = useAuth()
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [artworks, setArtworks] = useState<Artwork[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -106,8 +108,19 @@ const Museum = () => {
     const prevPageMuseum = () => setCurrentPageMuseum(Math.max(currentPageMuseum - 1, 1))
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
-            <HamburgerMenu />
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 relative">
+            <HamburgerMenu onToggle={setIsMenuOpen} />
+
+            {isAdmin && (
+                <AdminPlusButton
+                    onClick={() => {
+                        setEditingArtwork(null)
+                        setIsEditorOpen(true)
+                    }}
+                    isVisible={!isMenuOpen}
+                />
+            )}
+
             <MuseumEditorModal
                 isOpen={isEditorOpen}
                 onClose={() => {
@@ -124,10 +137,7 @@ const Museum = () => {
 
             <div className="max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
-
-
                     <div>
-                        {/* ARCHIVE COLLECTION removed */}
                         <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">MUSEUM</h1>
                     </div>
                     <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
@@ -136,17 +146,6 @@ const Museum = () => {
                             <br />
                             Tokyo, Japan
                         </p>
-                        {isAdmin && (
-                            <button
-                                onClick={() => {
-                                    setEditingArtwork(null)
-                                    setIsEditorOpen(true)
-                                }}
-                                className="inline-flex items-center gap-2 bg-black text-[#FAC800] px-4 py-3 font-mono text-base md:text-xs tracking-widest hover:scale-105 transition-transform active:scale-95 touch-manipulation"
-                            >
-                                <Plus size={14} /> ADD ARTWORK
-                            </button>
-                        )}
                     </div>
                 </header>
 

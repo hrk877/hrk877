@@ -40,9 +40,10 @@ const MENU_ITEMS = [
 
 interface HamburgerMenuProps {
     color?: string
+    onToggle?: (isOpen: boolean) => void
 }
 
-export default function HamburgerMenu({ color }: HamburgerMenuProps) {
+export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
     const { user, isAdmin, isWhitelisted } = useAuth()
@@ -64,13 +65,15 @@ export default function HamburgerMenu({ color }: HamburgerMenuProps) {
     }, [isOpen])
 
     const toggleMenu = () => {
+        const nextState = !isOpen
         if (isOpen) {
             // Reset view when closing
             setTimeout(() => setCurrentView("MAIN"), 200)
         } else {
             setCurrentView("MAIN")
         }
-        setIsOpen(!isOpen)
+        setIsOpen(nextState)
+        onToggle?.(nextState)
     }
 
     // Handle LINE Button Click

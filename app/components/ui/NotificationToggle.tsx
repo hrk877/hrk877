@@ -11,18 +11,15 @@ interface NotificationToggleProps {
 
 export const NotificationToggle = ({ enabled, onChange, label = "NOTIFY COMMUNITY" }: NotificationToggleProps) => {
     return (
-        <div className="flex items-center gap-3 md:gap-4 group cursor-pointer touch-manipulation" onClick={() => onChange(!enabled)}>
-            <div className="hidden md:flex flex-col items-end">
-                <span className="font-mono text-[10px] tracking-[0.2em] text-black/40 group-hover:text-black/60 transition-colors">
-                    {label}
+        <div className="flex items-center gap-2 md:gap-4 group cursor-pointer touch-manipulation" onClick={() => onChange(!enabled)}>
+            <div className="flex flex-col items-end">
+                <span className="font-mono text-[8px] md:text-[10px] tracking-[0.15em] md:tracking-[0.2em] text-black/40 group-hover:text-black/60 transition-colors">
+                    {label.replace(" COMMUNITY", "")}
+                    <span className="hidden md:inline"> COMMUNITY</span>
                 </span>
-                <span className="font-mono text-[8px] tracking-widest opacity-20 uppercase">
+                <span className="font-mono text-[7px] md:text-[8px] tracking-widest opacity-20 uppercase">
                     {enabled ? "ON" : "OFF"}
                 </span>
-            </div>
-
-            <div className="md:hidden flex flex-col items-end">
-                <span className="font-mono text-[8px] tracking-[0.1em] text-black/40">NOTIFY</span>
             </div>
 
             <div className={`relative w-12 h-6 rounded-full transition-colors duration-500 flex items-center px-1 ${enabled ? 'bg-black' : 'bg-black/10'}`}>

@@ -9,6 +9,7 @@ import { Plus, ChevronRight } from "lucide-react"
 
 // Components
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
+import AdminPlusButton from "../components/navigation/AdminPlusButton"
 
 // Modals
 import BlogEditor, { type BlogPost } from "../components/modals/BlogEditor"
@@ -17,6 +18,7 @@ import AdminLoginModal from "../components/modals/AdminLoginModal"
 
 export default function JournalPage() {
     const { user, isAdmin } = useAuth()
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     // Blog State
     const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
@@ -81,8 +83,18 @@ export default function JournalPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20">
-            <HamburgerMenu />
+        <div className="min-h-screen bg-[#FAC800] text-black p-4 md:p-6 pt-24 md:pt-32 pb-20 relative">
+            <HamburgerMenu onToggle={setIsMenuOpen} />
+
+            {isAdmin && (
+                <AdminPlusButton
+                    onClick={() => {
+                        setEditingPost(null)
+                        setIsBlogEditorOpen(true)
+                    }}
+                    isVisible={!isMenuOpen}
+                />
+            )}
 
             <BlogEditor
                 isOpen={isBlogEditorOpen}
@@ -124,17 +136,6 @@ export default function JournalPage() {
                             <br />
                             Tokyo, Japan
                         </p>
-                        {isAdmin && (
-                            <button
-                                onClick={() => {
-                                    setEditingPost(null)
-                                    setIsBlogEditorOpen(true)
-                                }}
-                                className="inline-flex items-center gap-2 bg-black text-[#FAC800] px-4 py-3 font-mono text-base md:text-xs tracking-widest hover:scale-105 transition-transform active:scale-95 touch-manipulation"
-                            >
-                                <Plus size={14} /> NEW POST
-                            </button>
-                        )}
                     </div>
                 </header>
 
