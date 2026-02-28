@@ -17,12 +17,31 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
-const auth = getAuth(app)
-const db = getFirestore(app)
-const storage = getStorage(app)
+let app: any;
+let auth: any;
+let db: any;
+let storage: any;
 
-// Firestoreのパスに使用するApp ID
-const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ""
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
 
-export { app, auth, db, storage, appId }
+if (isConfigValid) {
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
+        auth = getAuth(app)
+        db = getFirestore(app)
+        storage = getStorage(app)
+    } catch (error) {
+        console.error("Firebase initialization failed:", error)
+    }
+} else {
+    // Only warn in development or if not in build process to reduce clutter
+    if (process.env.NODE_ENV !== 'production') {
+        console.warn("Firebase configuration is incomplete. Some features may not work.")
+    }
+}
+
+// Firestoreのパスに使用するApp ID (プロジェクト内の共通識別子として使用)
+// .env.localに設定されているか確認
+const appIdValue = process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "hrk877-default"
+
+export { app, auth, db, storage, appIdValue as appId }
