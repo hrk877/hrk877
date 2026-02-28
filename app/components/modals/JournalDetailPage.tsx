@@ -1,8 +1,9 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ChevronLeft, Edit, Trash2, ChevronRight } from "lucide-react"
+import { ChevronLeft, Edit, Trash2, ChevronRight, X } from "lucide-react"
 import type { BlogPost } from "./BlogEditor"
+import { useRouter } from "next/navigation"
 
 const JournalDetailPage = ({
     post,
@@ -21,9 +22,18 @@ const JournalDetailPage = ({
     onDelete: (id: string) => void
     onEdit: (post: BlogPost) => void
 }) => {
+    const router = useRouter()
     const currentIndex = posts.findIndex((p) => p.id === post.id)
     const prevPost = currentIndex > 0 ? posts[currentIndex - 1] : null
     const nextPost = currentIndex < posts.length - 1 ? posts[currentIndex + 1] : null
+
+    const handleBack = () => {
+        onClose()
+    }
+
+    const handleNavigate = (targetPost: BlogPost) => {
+        onNavigate(targetPost)
+    }
 
     return (
         <motion.div
@@ -31,13 +41,13 @@ const JournalDetailPage = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-[9999] bg-[#FAC800] overflow-y-auto"
+            className="fixed inset-0 z-[9999] bg-[#FAC800] overflow-y-auto selection:bg-black selection:text-[#FAC800]"
         >
             <div className="noise-overlay" />
             <header className="fixed top-0 left-0 right-0 z-50 bg-[#FAC800]/90 backdrop-blur-md border-b border-black/10">
                 <div className="max-w-6xl mx-auto px-6 md:px-10 py-4 flex items-center justify-between">
                     <button
-                        onClick={onClose}
+                        onClick={handleBack}
                         className="flex items-center gap-2 font-mono text-xs tracking-widest hover:opacity-60 transition-opacity"
                     >
                         <ChevronLeft size={20} strokeWidth={1.5} />
@@ -58,7 +68,6 @@ const JournalDetailPage = ({
                                     onClick={() => {
                                         if (confirm("Delete this post?")) {
                                             onDelete(post.id)
-                                            onClose()
                                         }
                                     }}
                                     className="hover:text-red-500 transition-colors"
@@ -69,7 +78,7 @@ const JournalDetailPage = ({
                             </div>
                         )}
                         <span className="font-mono text-xs opacity-50">
-                            {currentIndex + 1} / {posts.length}
+                            {currentIndex !== -1 ? `${currentIndex + 1} / ${posts.length}` : "- / -"}
                         </span>
                     </div>
                 </div>
@@ -106,7 +115,7 @@ const JournalDetailPage = ({
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="prose prose-base md:prose-lg max-w-none font-['Cormorant_Garamond',_serif] text-black/90 leading-relaxed selection:bg-black selection:text-[#FAC800]"
+                        className="prose prose-base md:prose-lg max-w-none font-['Cormorant_Garamond',_serif] text-black/90 leading-relaxed"
                     >
                         <div
                             dangerouslySetInnerHTML={{ __html: post.content }}
@@ -119,7 +128,7 @@ const JournalDetailPage = ({
             <footer className="fixed bottom-0 left-0 right-0 bg-black text-[#FAC800] border-t border-[#FAC800]/20 z-40">
                 <div className="max-w-6xl mx-auto grid grid-cols-2 divide-x divide-[#FAC800]/20">
                     <button
-                        onClick={() => prevPost && onNavigate(prevPost)}
+                        onClick={() => prevPost && handleNavigate(prevPost)}
                         disabled={!prevPost}
                         className={`group p-6 md:p-8 text-left transition-all duration-300 ${prevPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
                             }`}
@@ -133,7 +142,7 @@ const JournalDetailPage = ({
                     </button>
 
                     <button
-                        onClick={() => nextPost && onNavigate(nextPost)}
+                        onClick={() => nextPost && handleNavigate(nextPost)}
                         disabled={!nextPost}
                         className={`group p-6 md:p-8 text-right transition-all duration-300 ${nextPost ? "hover:bg-[#FAC800]/10" : "opacity-30 cursor-not-allowed"
                             }`}

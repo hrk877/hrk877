@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../components/providers/AuthProvider"
 import { Plus, ChevronRight } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 // Components
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
@@ -17,11 +18,20 @@ import JournalDetailPage from "../components/modals/JournalDetailPage"
 import AdminLoginModal from "../components/modals/AdminLoginModal"
 
 export default function JournalPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#FAC800]" />}>
+            <JournalPageContent />
+        </Suspense>
+    )
+}
+
+function JournalPageContent() {
     const { user, isAdmin } = useAuth()
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     // Blog State
-    const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
     const [allPosts, setAllPosts] = useState<BlogPost[]>([])
     const [editingPost, setEditingPost] = useState<BlogPost | null>(null)
     const [isBlogEditorOpen, setIsBlogEditorOpen] = useState(false)
@@ -40,6 +50,21 @@ export default function JournalPage() {
             return newCount
         })
     }
+
+    // Handle 'edit' query param for deep-link editing
+    useEffect(() => {
+        const editId = searchParams.get('edit')
+        if (editId && allPosts.length > 0) {
+            const postToEdit = allPosts.find(p => p.id === editId)
+            if (postToEdit && isAdmin) {
+                setEditingPost(postToEdit)
+                setIsBlogEditorOpen(true)
+                // Clear the param without refreshing
+                const newUrl = window.location.pathname
+                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl)
+            }
+        }
+    }, [searchParams, allPosts, isAdmin])
 
     useEffect(() => {
         if (!db) return
@@ -63,7 +88,7 @@ export default function JournalPage() {
     }, [])
 
     const handleOpenPost = (post: BlogPost) => {
-        setSelectedPost(post)
+        router.push(`/journal/${post.id}`)
     }
 
     const handleDeletePost = async (id: string) => {
@@ -79,7 +104,6 @@ export default function JournalPage() {
     const handleEditPost = (post: BlogPost) => {
         setEditingPost(post)
         setIsBlogEditorOpen(true)
-        setSelectedPost(null)
     }
 
     return (
@@ -110,20 +134,6 @@ export default function JournalPage() {
                 isOpen={isAdminLoginOpen}
                 onClose={() => setIsAdminLoginOpen(false)}
             />
-
-            <AnimatePresence>
-                {selectedPost && allPosts.length > 0 && (
-                    <JournalDetailPage
-                        post={selectedPost}
-                        posts={allPosts}
-                        onClose={() => setSelectedPost(null)}
-                        onNavigate={(post) => setSelectedPost(post)}
-                        isAdmin={isAdmin}
-                        onDelete={handleDeletePost}
-                        onEdit={handleEditPost}
-                    />
-                )}
-            </AnimatePresence>
 
             <div className="max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
