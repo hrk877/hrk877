@@ -19,7 +19,7 @@ import {
     Undo,
     Redo,
 } from "lucide-react"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 
 const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -277,6 +277,13 @@ const TipTapEditor = ({ content, onChange }: { content: string; onChange: (html:
             }
         },
     })
+
+    // Content synchronization when parent state changes (e.g., selecting a post to edit)
+    useEffect(() => {
+        if (editor && content !== editor.getHTML()) {
+            editor.commands.setContent(content)
+        }
+    }, [content, editor])
 
     return (
         <div className="min-h-full">
