@@ -35,13 +35,34 @@ const JournalDetailPage = ({
         onNavigate(targetPost)
     }
 
-    const handleShare = () => {
+    const handleShare = async () => {
         const url = `${window.location.origin}/journal/${post.id}`
-        navigator.clipboard.writeText(url).then(() => {
-            alert("URL copied to clipboard!")
-        }).catch(err => {
-            console.error("Failed to copy:", err)
-        })
+        const shareData = {
+            title: post.title,
+            text: `HRK.877 JOURNAL: ${post.title}`,
+            url: url
+        }
+
+        try {
+            if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                await navigator.share(shareData)
+            } else {
+                await navigator.clipboard.writeText(url)
+                alert("URL copied to clipboard!")
+            }
+        } catch (err) {
+            // Check if it's AbortError (user cancelled share)
+            if ((err as Error).name !== 'AbortError') {
+                console.error("Error sharing:", err)
+                // Fallback to copy if share fails
+                try {
+                    await navigator.clipboard.writeText(url)
+                    alert("URL copied to clipboard!")
+                } catch (copyErr) {
+                    console.error("Clipboard fallback failed:", copyErr)
+                }
+            }
+        }
     }
 
     return (
