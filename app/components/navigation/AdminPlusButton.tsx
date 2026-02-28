@@ -12,7 +12,7 @@ interface AdminPlusButtonProps {
 export default function AdminPlusButton({
     onClick,
     isVisible = true,
-    className = "top-9 right-6"
+    className = "top-9.5 right-6"
 }: AdminPlusButtonProps) {
     if (!isVisible) return null
 
