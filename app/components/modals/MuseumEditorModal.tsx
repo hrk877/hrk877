@@ -9,6 +9,8 @@ import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
 import { notifyCommunity } from "@/app/lib/notification"
 
+import { NotificationToggle } from "../ui/NotificationToggle"
+
 export interface Artwork {
     id: string
     title: string
@@ -37,6 +39,7 @@ const MuseumEditorModal = ({
     const [type, setType] = useState("")
     const [desc, setDesc] = useState("")
     const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [sendNotification, setSendNotification] = useState(true)
     const [loading, setLoading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -135,8 +138,10 @@ const MuseumEditorModal = ({
                 // Create new
                 await addDoc(museumRef, dataToSave)
 
-                // Notify community
-                notifyCommunity('museum', title)
+                // Notify community if enabled
+                if (sendNotification) {
+                    notifyCommunity('museum', title)
+                }
             }
 
             onClose()
@@ -224,6 +229,14 @@ const MuseumEditorModal = ({
                                     onChange={(e) => setDesc(e.target.value)}
                                     required
                                 />
+                                {!editingArtwork && (
+                                    <div className="flex justify-end mt-2">
+                                        <NotificationToggle
+                                            enabled={sendNotification}
+                                            onChange={setSendNotification}
+                                        />
+                                    </div>
+                                )}
                                 <button
                                     type="submit"
                                     disabled={loading}

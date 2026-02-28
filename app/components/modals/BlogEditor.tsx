@@ -7,6 +7,7 @@ import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
 import { notifyCommunity } from "@/app/lib/notification"
 import TipTapEditor from "../editor/TipTapEditor"
+import { NotificationToggle } from "../ui/NotificationToggle"
 
 export interface BlogPost {
     id: string
@@ -30,6 +31,7 @@ const BlogEditor = ({
 }) => {
     const [title, setTitle] = useState("")
     const [content, setContent] = useState("")
+    const [sendNotification, setSendNotification] = useState(true)
     const [loading, setLoading] = useState(false)
 
     // Proper scroll locking mechanism that preserves position
@@ -94,8 +96,10 @@ const BlogEditor = ({
                     authorEmail: user.email || null,
                 })
 
-                // Notify community
-                notifyCommunity('journal', title)
+                // Notify community only for new posts if enabled
+                if (sendNotification) {
+                    notifyCommunity('journal', title)
+                }
             }
 
             onClose()
@@ -132,7 +136,13 @@ const BlogEditor = ({
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-6">
+                                {!editingPost && (
+                                    <NotificationToggle
+                                        enabled={sendNotification}
+                                        onChange={setSendNotification}
+                                    />
+                                )}
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading || !title || !content}
