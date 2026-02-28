@@ -151,7 +151,7 @@ export default function JournalPage() {
                             <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-12 relative z-10 p-2">
                                 <span className="font-mono text-xs md:text-xs opacity-40 w-24 shrink-0">{post.date}</span>
                                 <div className="flex-1">
-                                    <h3 className="text-2xl md:text-3xl font-serif font-light leading-snug group-hover:translate-x-2 transition-transform duration-300">
+                                    <h3 className="text-2xl md:text-3xl font-serif font-light leading-snug group-hover:translate-x-2 transition-transform duration-300 break-words">
                                         {post.title}
                                     </h3>
                                 </div>

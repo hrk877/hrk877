@@ -116,7 +116,83 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Premium Journal Styling */
+/* Premium Journal Styling - Base Configuration */
+.rich-text-content blockquote,
+.ProseMirror blockquote {
+  @apply border-l-4 border-black/10 pl-8 italic text-black/60 my-10;
+}
+
+.rich-text-content,
+.ProseMirror {
+  font-family: 'Cormorant Garamond', serif !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word;
+}
+
+.rich-text-content ul,
+.ProseMirror ul {
+  list-style-type: disc !important;
+  @apply my-8 pl-12 space-y-4;
+}
+
+.rich-text-content ol,
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  @apply my-8 pl-12 space-y-4;
+}
+
+.rich-text-content li,
+.ProseMirror li {
+  @apply text-xl md:text-2xl leading-relaxed text-black/90;
+}
+
+.ProseMirror h1,
+.rich-text-content h1 {
+  @apply text-5xl md:text-7xl font-serif font-light mb-12 mt-20 leading-tight;
+}
+
+.ProseMirror h2,
+.rich-text-content h2 {
+  @apply text-4xl md:text-5xl font-serif font-light mb-10 mt-16 leading-tight;
+}
+
+.ProseMirror h3,
+.rich-text-content h3 {
+  @apply text-2xl md:text-3xl font-serif font-medium mb-8 mt-12 leading-snug;
+}
+
+.rich-text-content p,
+.ProseMirror p {
+  @apply text-xl md:text-2xl leading-relaxed mb-8;
+}
+
+/* TipTap Focus Styling */
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  height: 0;
+}
+
+.draggable-img {
+  @apply cursor-move transition-all active:scale-[0.98] outline outline-0 outline-black/20 outline-offset-[12px] hover:outline-2 rounded-[40px];
+}
+
+/* Ensure editor text selection is visible on yellow */
+.ProseMirror ::selection {
+  background: black;
+  color: #FAC800;
 }

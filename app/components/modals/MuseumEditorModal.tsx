@@ -19,6 +19,8 @@ export interface Artwork {
     createdAt?: { seconds: number }
 }
 
+import { compressImage } from "@/app/lib/image"
+
 const MuseumEditorModal = ({
     isOpen,
     onClose,
@@ -78,14 +80,24 @@ const MuseumEditorModal = ({
         }
     }, [editingArtwork, isOpen])
 
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string)
+            setLoading(true)
+            try {
+                const compressedBase64 = await compressImage(file)
+                setImagePreview(compressedBase64)
+            } catch (error) {
+                console.error("Compression failed", error)
+                // Fallback
+                const reader = new FileReader()
+                reader.onloadend = () => {
+                    setImagePreview(reader.result as string)
+                }
+                reader.readAsDataURL(file)
+            } finally {
+                setLoading(false)
             }
-            reader.readAsDataURL(file)
         }
     }
 

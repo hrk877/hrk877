@@ -90,7 +90,7 @@ const JournalDetailPage = ({
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-4xl md:text-6xl lg:text-7xl font-serif font-light leading-tight mb-12"
+                        className="text-4xl md:text-6xl lg:text-7xl font-['Cormorant_Garamond',_serif] font-light leading-tight mb-12 break-words"
                     >
                         {post.title}
                     </motion.h1>
@@ -106,13 +106,12 @@ const JournalDetailPage = ({
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="prose prose-lg max-w-none"
+                        className="prose prose-xl md:prose-2xl max-w-none font-['Cormorant_Garamond',_serif] text-black/90 leading-relaxed selection:bg-black selection:text-[#FAC800]"
                     >
-                        {post.content.split("\n").map((paragraph, idx) => (
-                            <p key={idx} className="text-lg md:text-xl leading-relaxed mb-6 font-serif opacity-80">
-                                {paragraph}
-                            </p>
-                        ))}
+                        <div
+                            dangerouslySetInnerHTML={{ __html: post.content }}
+                            className="rich-text-content break-words whitespace-pre-wrap"
+                        />
                     </motion.article>
                 </div>
             </main>

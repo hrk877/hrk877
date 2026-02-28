@@ -1,7 +1,3 @@
-// Imports need to be handled carefully. I will merge imports in the next step or do it here if possible. 
-// I'll assume I can just replace the whole file content area or use careful replacement.
-// Let's replace the imports and the component body.
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -10,6 +6,7 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
 import { notifyCommunity } from "@/app/lib/notification"
+import TipTapEditor from "../editor/TipTapEditor"
 
 export interface BlogPost {
     id: string
@@ -116,51 +113,65 @@ const BlogEditor = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
-                    onClick={onClose}
+                    className="fixed inset-0 z-[9999] bg-[#FAC800] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <motion.div
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="bg-[#FAFAFA] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-6 md:p-12">
-                            <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-gray-100 transition-colors z-10">
-                                <X size={24} />
-                            </button>
-                            <h2 className="text-3xl font-serif mb-8">{editingPost ? "Edit Article" : "New Article"}</h2>
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-                                <div>
-                                    <label className="block text-xs font-mono opacity-40 mb-2 tracking-widest">TITLE</label>
-                                    <input
-                                        placeholder="Enter title..."
-                                        className="admin-input text-2xl font-serif"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-mono opacity-40 mb-2 tracking-widest">CONTENT</label>
-                                    <textarea
-                                        placeholder="Write your thoughts..."
-                                        className="admin-textarea"
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        required
-                                    />
-                                </div>
+                    <div className="min-h-screen flex flex-col">
+                        <div className="noise-overlay pointer-events-none" />
+                        {/* Editor Header */}
+                        <header className="sticky top-0 z-50 bg-[#FAC800]/90 backdrop-blur-md border-b border-black/10 px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
                                 <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="bg-black text-[#FAC800] py-4 px-6 mt-4 hover:bg-[#333] transition-colors font-mono text-base md:text-sm tracking-widest disabled:opacity-50 active:scale-95 touch-manipulation"
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-black/5 rounded-full transition-colors text-black/40 hover:text-black"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <span className="font-mono text-[10px] tracking-widest opacity-30 px-3 border-l border-black/10">
+                                    {editingPost ? "EDITING ARCHIVE" : "NEW DRAFT"}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={loading || !title || !content}
+                                    className="bg-black text-[#FAC800] py-2 px-8 hover:bg-[#333] transition-all font-mono text-xs tracking-widest disabled:opacity-20 active:scale-95 rounded-full shadow-md"
                                 >
                                     {loading ? "SAVING..." : editingPost ? "UPDATE" : "PUBLISH"}
                                 </button>
+                            </div>
+                        </header>
+
+                        <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-12 md:py-24 relative z-10">
+                            <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-12">
+                                <div className="space-y-4">
+                                    <textarea
+                                        placeholder="Title for your journal..."
+                                        className="w-full text-5xl md:text-8xl font-['Cormorant_Garamond',_serif] font-light bg-transparent border-none focus:ring-0 resize-none placeholder:opacity-5 leading-tight break-words"
+                                        rows={1}
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLTextAreaElement
+                                            target.style.height = 'auto'
+                                            target.style.height = target.scrollHeight + 'px'
+                                        }}
+                                        required
+                                    />
+                                    <div className="flex items-center gap-3 font-mono text-[10px] opacity-20 tracking-wider">
+                                        <span>BY {user?.displayName || "HRK.877"}</span>
+                                        <span>•</span>
+                                        <span>{new Date().toLocaleDateString('ja-JP').replace(/\//g, '.')}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4">
+                                    <TipTapEditor content={content} onChange={setContent} />
+                                </div>
                             </form>
-                        </div>
-                    </motion.div>
+                        </main>
+                    </div>
                 </motion.div>
             )}
         </AnimatePresence>
