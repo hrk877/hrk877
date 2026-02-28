@@ -131,12 +131,12 @@ const BlogEditor = ({
                                 >
                                     <X size={20} />
                                 </button>
-                                <span className="font-mono text-[10px] tracking-widest opacity-30 px-3 border-l border-black/10">
+                                <span className="hidden md:inline font-mono text-[10px] tracking-widest opacity-30 px-3 border-l border-black/10">
                                     {editingPost ? "EDITING ARCHIVE" : "NEW DRAFT"}
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 md:gap-6">
                                 {!editingPost && (
                                     <NotificationToggle
                                         enabled={sendNotification}
@@ -146,7 +146,7 @@ const BlogEditor = ({
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading || !title || !content}
-                                    className="bg-black text-[#FAC800] py-2 px-8 hover:bg-[#333] transition-all font-mono text-xs tracking-widest disabled:opacity-20 active:scale-95 rounded-full shadow-md"
+                                    className="bg-black text-[#FAC800] py-2 px-4 md:px-8 hover:bg-[#333] transition-all font-mono text-xs tracking-widest disabled:opacity-20 active:scale-95 rounded-full shadow-md whitespace-nowrap"
                                 >
                                     {loading ? "SAVING..." : editingPost ? "UPDATE" : "PUBLISH"}
                                 </button>

@@ -208,6 +208,14 @@ const MuseumEditorModal = ({
                                     onChange={(e) => setTitle(e.target.value)}
                                     required
                                 />
+                                {!editingArtwork && (
+                                    <div className="flex justify-end -mt-2">
+                                        <NotificationToggle
+                                            enabled={sendNotification}
+                                            onChange={setSendNotification}
+                                        />
+                                    </div>
+                                )}
                                 <input
                                     placeholder="Year / Date"
                                     className="admin-input font-mono text-base md:text-sm"
@@ -229,14 +237,6 @@ const MuseumEditorModal = ({
                                     onChange={(e) => setDesc(e.target.value)}
                                     required
                                 />
-                                {!editingArtwork && (
-                                    <div className="flex justify-end mt-2">
-                                        <NotificationToggle
-                                            enabled={sendNotification}
-                                            onChange={setSendNotification}
-                                        />
-                                    </div>
-                                )}
                                 <button
                                     type="submit"
                                     disabled={loading}
