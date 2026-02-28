@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ChevronLeft, Edit, Trash2, ChevronRight, X } from "lucide-react"
+import { ChevronLeft, Edit, Trash2, ChevronRight, X, Share2 } from "lucide-react"
 import type { BlogPost } from "./BlogEditor"
 import { useRouter } from "next/navigation"
 
@@ -35,6 +35,15 @@ const JournalDetailPage = ({
         onNavigate(targetPost)
     }
 
+    const handleShare = () => {
+        const url = `${window.location.origin}/journal/${post.id}`
+        navigator.clipboard.writeText(url).then(() => {
+            alert("URL copied to clipboard!")
+        }).catch(err => {
+            console.error("Failed to copy:", err)
+        })
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -55,28 +64,37 @@ const JournalDetailPage = ({
                     </button>
 
                     <div className="flex items-center gap-4">
-                        {isAdmin && (
-                            <div className="flex items-center gap-3 border-r border-black/10 pr-4 mr-4">
-                                <button
-                                    onClick={() => onEdit(post)}
-                                    className="hover:opacity-50 transition-opacity"
-                                    title="Edit Post"
-                                >
-                                    <Edit size={18} />
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (confirm("Delete this post?")) {
-                                            onDelete(post.id)
-                                        }
-                                    }}
-                                    className="hover:text-red-500 transition-colors"
-                                    title="Delete Post"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        )}
+                        <div className={`flex items-center gap-3 ${isAdmin ? 'border-r border-black/10 pr-4 mr-4' : ''}`}>
+                            <button
+                                onClick={handleShare}
+                                className="hover:opacity-50 transition-opacity"
+                                title="Share Post"
+                            >
+                                <Share2 size={18} />
+                            </button>
+                            {isAdmin && (
+                                <>
+                                    <button
+                                        onClick={() => onEdit(post)}
+                                        className="hover:opacity-50 transition-opacity"
+                                        title="Edit Post"
+                                    >
+                                        <Edit size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm("Delete this post?")) {
+                                                onDelete(post.id)
+                                            }
+                                        }}
+                                        className="hover:text-red-500 transition-colors"
+                                        title="Delete Post"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                         <span className="font-mono text-xs opacity-50">
                             {currentIndex !== -1 ? `${currentIndex + 1} / ${posts.length}` : "- / -"}
                         </span>
