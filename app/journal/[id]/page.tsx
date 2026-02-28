@@ -92,7 +92,6 @@ export default function JournalPostPage({ params }: { params: Promise<{ id: stri
                 post={currentPost}
                 posts={allPosts}
                 onClose={() => router.push("/journal")}
-                onNavigate={(post) => router.push(`/journal/${post.id}`)}
                 isAdmin={isAdmin}
                 onDelete={handleDeletePost}
                 onEdit={(post) => {
