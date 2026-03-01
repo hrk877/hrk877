@@ -1,6 +1,10 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+const EXCLUDED_EMAILS = [
+    "miso.blye17@gmail.com"
+];
+
 export async function getAllUserEmails(): Promise<string[]> {
     if (!db) return []
     try {
@@ -10,10 +14,11 @@ export async function getAllUserEmails(): Promise<string[]> {
         const querySnapshot = await getDocs(q);
 
         const emails: string[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            // Ensure they have an email AND are not anonymous (though the query checks for non-null email, isAnonymous check is safer for logic)
-            if (data.email && !data.isAnonymous) {
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            // Ensure they have an email AND are not anonymous
+            // AND the email is not in the excluded list
+            if (data.email && !data.isAnonymous && !EXCLUDED_EMAILS.includes(data.email)) {
                 emails.push(data.email);
             }
         });
