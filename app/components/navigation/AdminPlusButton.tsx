@@ -1,8 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Plus } from "lucide-react"
-
 interface AdminPlusButtonProps {
     onClick: () => void
     isVisible?: boolean
@@ -22,7 +19,12 @@ export default function AdminPlusButton({
             className={`absolute z-[101] p-4 -mr-4 -mt-4 focus:outline-none mix-blend-difference text-[#FAC800] ${className}`}
             aria-label="Admin Action"
         >
-            <Plus size={32} strokeWidth={1} />
+            <div className="relative w-8 h-8 flex items-center justify-center">
+                {/* Horizontal line */}
+                <div className="absolute w-full h-[1px] bg-current" />
+                {/* Vertical line */}
+                <div className="absolute h-full w-[1px] bg-current" />
+            </div>
         </button>
     )
 }
