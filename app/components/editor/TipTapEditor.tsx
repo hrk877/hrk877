@@ -87,7 +87,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-1 p-2 border border-black/10 bg-white/40 backdrop-blur-md sticky top-24 md:top-28 z-40 w-fit mx-auto rounded-full mb-8 px-4 py-2 shadow-sm">
+        <div className="flex flex-wrap items-center justify-center gap-1 p-2 border border-black/10 bg-white/60 backdrop-blur-md fixed top-16 md:top-24 left-1/2 -translate-x-1/2 z-50 w-[95%] md:w-fit mx-auto rounded-full px-4 py-2 shadow-sm">
             <button
                 type="button"
                 onClick={() => editor.chain().focus().toggleBold().run()}
