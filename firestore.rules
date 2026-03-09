@@ -34,6 +34,10 @@ service cloud.firestore {
       match /training_records/{recordId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /journal_drafts/{draftId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // Counters collection (Critical for finger_id)
@@ -67,14 +71,6 @@ service cloud.firestore {
       match /posts/{postId} {
         allow read: if true;
         allow write: if isAdmin();
-      }
-    }
-
-    // Private User Data within App (Drafts, etc.)
-    match /artifacts/{appId}/private/data/users/{userId} {
-      allow read, write: if isOwner(userId);
-      match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId);
       }
     }
   }

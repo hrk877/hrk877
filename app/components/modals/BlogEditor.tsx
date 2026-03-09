@@ -77,7 +77,7 @@ const BlogEditor = ({
     const checkForDraft = async () => {
         if (!user || editingPost) return
         try {
-            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            const draftRef = doc(db, "users", user.uid, "journal_drafts", "current_draft")
             const draftSnap = await getDoc(draftRef)
             if (draftSnap.exists()) {
                 setDraftData(draftSnap.data() as { title: string, content: string })
@@ -92,7 +92,7 @@ const BlogEditor = ({
         if (!user || !title || !content) return
         setLoading(true)
         try {
-            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            const draftRef = doc(db, "users", user.uid, "journal_drafts", "current_draft")
             await setDoc(draftRef, {
                 title,
                 content,
@@ -102,7 +102,7 @@ const BlogEditor = ({
             onClose()
         } catch (error) {
             console.error("Error saving draft:", error)
-            alert("Draft save failed.")
+            alert(`Draft save failed: ${(error as any).message || "Unknown error"}`)
         }
         setLoading(false)
     }
@@ -110,7 +110,7 @@ const BlogEditor = ({
     const deleteDraft = async () => {
         if (!user) return
         try {
-            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            const draftRef = doc(db, "users", user.uid, "journal_drafts", "current_draft")
             await deleteDoc(draftRef)
         } catch (error) {
             console.error("Error deleting draft:", error)
