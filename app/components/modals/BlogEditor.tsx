@@ -2,7 +2,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X } from "lucide-react"
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
+import { collection, addDoc, updateDoc, doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
 import { notifyCommunity } from "@/app/lib/notification"
@@ -33,6 +33,11 @@ const BlogEditor = ({
     const [content, setContent] = useState("")
     const [sendNotification, setSendNotification] = useState(true)
     const [loading, setLoading] = useState(false)
+    const [showDraftPrompt, setShowDraftPrompt] = useState(false)
+    const [showSavePrompt, setShowSavePrompt] = useState(false)
+    const [draftData, setDraftData] = useState<{ title: string, content: string } | null>(null)
+
+    const isDirty = (title !== "" || content !== "") && !editingPost
 
     // Proper scroll locking mechanism that preserves position
     useEffect(() => {
@@ -62,11 +67,63 @@ const BlogEditor = ({
             setTitle(editingPost.title)
             setContent(editingPost.content)
         } else if (isOpen) {
-            // Clear form for new entry
+            // Clear form for new entry, but check for drafts
             setTitle("")
             setContent("")
+            checkForDraft()
         }
     }, [editingPost, isOpen])
+
+    const checkForDraft = async () => {
+        if (!user || editingPost) return
+        try {
+            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            const draftSnap = await getDoc(draftRef)
+            if (draftSnap.exists()) {
+                setDraftData(draftSnap.data() as { title: string, content: string })
+                setShowDraftPrompt(true)
+            }
+        } catch (error) {
+            console.error("Error checking draft:", error)
+        }
+    }
+
+    const saveDraft = async () => {
+        if (!user || !title || !content) return
+        setLoading(true)
+        try {
+            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            await setDoc(draftRef, {
+                title,
+                content,
+                updatedAt: serverTimestamp()
+            })
+            setShowSavePrompt(false)
+            onClose()
+        } catch (error) {
+            console.error("Error saving draft:", error)
+            alert("Draft save failed.")
+        }
+        setLoading(false)
+    }
+
+    const deleteDraft = async () => {
+        if (!user) return
+        try {
+            const draftRef = doc(db, "artifacts", appId, "private", "data", "users", user.uid, "journal_drafts", "current_draft")
+            await deleteDoc(draftRef)
+        } catch (error) {
+            console.error("Error deleting draft:", error)
+        }
+    }
+
+    const handleClose = () => {
+        if (isDirty) {
+            setShowSavePrompt(true)
+        } else {
+            onClose()
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -100,6 +157,8 @@ const BlogEditor = ({
                 if (sendNotification) {
                     notifyCommunity('journal', title)
                 }
+                // Clear draft if it exists
+                await deleteDraft()
             }
 
             onClose()
@@ -126,7 +185,7 @@ const BlogEditor = ({
                         <header className="sticky top-0 z-50 bg-[#FAC800]/90 backdrop-blur-md border-b border-black/10 px-6 py-4 flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <button
-                                    onClick={onClose}
+                                    onClick={handleClose}
                                     className="p-2 hover:bg-black/5 rounded-full transition-colors text-black/40 hover:text-black"
                                 >
                                     <X size={20} />
@@ -181,6 +240,84 @@ const BlogEditor = ({
                                 </div>
                             </form>
                         </main>
+
+                        {/* Custom UI for Draft Confirmation */}
+                        <AnimatePresence>
+                            {showDraftPrompt && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 20 }}
+                                    className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[10000] bg-black text-[#FAC800] px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 w-[90%] max-w-md border border-[#FAC800]/20 backdrop-blur-xl"
+                                >
+                                    <p className="font-serif text-xl md:text-2xl text-center">Unfinished work found. Resume?</p>
+                                    <div className="flex gap-4 w-full">
+                                        <button
+                                            onClick={() => {
+                                                if (draftData) {
+                                                    setTitle(draftData.title)
+                                                    setContent(draftData.content)
+                                                }
+                                                setShowDraftPrompt(false)
+                                            }}
+                                            className="flex-1 bg-[#FAC800] text-black py-3 rounded-full font-mono text-xs tracking-widest hover:bg-white transition-colors"
+                                        >
+                                            RESUME
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                deleteDraft()
+                                                setShowDraftPrompt(false)
+                                            }}
+                                            className="flex-1 border border-[#FAC800] text-[#FAC800] py-3 rounded-full font-mono text-xs tracking-widest hover:bg-white/10 transition-colors"
+                                        >
+                                            DISCARD
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {showSavePrompt && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="bg-[#FAC800] text-black p-10 md:p-16 rounded-[40px] shadow-2xl max-w-lg w-full flex flex-col items-center gap-8 relative overflow-hidden"
+                                    >
+                                        <div className="noise-overlay pointer-events-none opacity-20" />
+                                        <h3 className="text-4xl md:text-5xl font-serif text-center leading-tight">Save your progress as a draft?</h3>
+                                        <p className="font-mono text-[10px] tracking-widest opacity-40 text-center">YOU CAN CONTINUE FROM ANY DEVICE</p>
+
+                                        <div className="flex flex-col gap-3 w-full mt-4">
+                                            <button
+                                                onClick={saveDraft}
+                                                disabled={loading}
+                                                className="w-full bg-black text-[#FAC800] py-4 rounded-full font-mono text-xs tracking-widest hover:bg-[#333] transition-colors disabled:opacity-20 shadow-lg"
+                                            >
+                                                {loading ? "SAVING..." : "SAVE DRAFT"}
+                                            </button>
+                                            <button
+                                                onClick={onClose}
+                                                className="w-full border border-black/10 py-4 rounded-full font-mono text-xs tracking-widest hover:bg-black/5 transition-colors"
+                                            >
+                                                DISCARD CHANGES
+                                            </button>
+                                            <button
+                                                onClick={() => setShowSavePrompt(false)}
+                                                className="w-full py-4 font-mono text-xs tracking-widest opacity-30 hover:opacity-100 transition-opacity"
+                                            >
+                                                CANCEL
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </motion.div>
             )}
