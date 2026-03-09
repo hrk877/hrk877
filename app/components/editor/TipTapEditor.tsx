@@ -2,7 +2,6 @@
 
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import Underline from "@tiptap/extension-underline"
 import Image from "@tiptap/extension-image"
 import Dropcursor from "@tiptap/extension-dropcursor"
 import { TextStyle } from "@tiptap/extension-text-style"
@@ -217,7 +216,6 @@ const TipTapEditor = ({ content, onChange }: { content: string; onChange: (html:
                 },
             }),
             TextStyle,
-            Underline,
             Image.configure({
                 HTMLAttributes: {
                     class: "draggable-img max-w-full h-auto rounded-3xl shadow-2xl my-16 mx-auto block cursor-move",

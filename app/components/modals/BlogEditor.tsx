@@ -77,11 +77,15 @@ const BlogEditor = ({
     const checkForDraft = async () => {
         if (!user || editingPost) return
         try {
+            console.log("Checking draft at path:", `users/${user.uid}/journal_drafts/current_draft`)
             const draftRef = doc(db, "users", user.uid, "journal_drafts", "current_draft")
             const draftSnap = await getDoc(draftRef)
             if (draftSnap.exists()) {
+                console.log("Draft found:", draftSnap.data())
                 setDraftData(draftSnap.data() as { title: string, content: string })
                 setShowDraftPrompt(true)
+            } else {
+                console.log("No draft found.")
             }
         } catch (error) {
             console.error("Error checking draft:", error)
@@ -91,6 +95,7 @@ const BlogEditor = ({
     const saveDraft = async () => {
         if (!user || !title || !content) return
         setLoading(true)
+        console.log("Attempting to save draft. User UID:", user.uid)
         try {
             const draftRef = doc(db, "users", user.uid, "journal_drafts", "current_draft")
             await setDoc(draftRef, {
@@ -98,10 +103,11 @@ const BlogEditor = ({
                 content,
                 updatedAt: serverTimestamp()
             })
+            console.log("Draft saved successfully.")
             setShowSavePrompt(false)
             onClose()
         } catch (error) {
-            console.error("Error saving draft:", error)
+            console.error("Error saving draft (caught):", error)
             alert(`Draft save failed: ${(error as any).message || "Unknown error"}`)
         }
         setLoading(false)
