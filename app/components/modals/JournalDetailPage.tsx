@@ -31,7 +31,7 @@ const JournalDetailPage = ({
         const url = `${window.location.origin}/journal/${post.id}`
         const shareData = {
             title: post.title,
-            text: `HRK.877 JOURNAL: ${post.title}`,
+            text: post.title,
             url: url
         }
 
@@ -39,17 +39,16 @@ const JournalDetailPage = ({
             if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
                 await navigator.share(shareData)
             } else {
-                await navigator.clipboard.writeText(url)
-                alert("URL copied to clipboard!")
+                await navigator.clipboard.writeText(`${post.title}\n${url}`)
+                alert("Copied to clipboard!")
             }
         } catch (err) {
             // Check if it's AbortError (user cancelled share)
             if ((err as Error).name !== 'AbortError') {
                 console.error("Error sharing:", err)
-                // Fallback to copy if share fails
                 try {
-                    await navigator.clipboard.writeText(url)
-                    alert("URL copied to clipboard!")
+                    await navigator.clipboard.writeText(`${post.title}\n${url}`)
+                    alert("Copied to clipboard!")
                 } catch (copyErr) {
                     console.error("Clipboard fallback failed:", copyErr)
                 }
