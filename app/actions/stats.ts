@@ -71,7 +71,8 @@ export async function getDevelopmentStats() {
                     };
                 }
             });
-            // If git log was empty (e.g. Vercel shallow clone), use JSON hourly stats
+            // ONLY use JSON hourly activity if we have NO git logs (e.g., shallow clone)
+            // to avoid double-counting historical commits already in the log.
             if (gitProcessedDates.size === 0 && Array.isArray(history.hourlyActivity)) {
                 history.hourlyActivity.forEach((count: number, hour: number) => {
                     hourlyActivity[hour] += count;
@@ -122,7 +123,8 @@ export async function getDevelopmentStats() {
             postSnap.forEach((docSnap) => {
                 const data = docSnap.data();
                 if (data.createdAt) {
-                    const date = data.createdAt.toDate().toISOString().substring(0, 10);
+                    const jsDate = data.createdAt.toDate();
+                    const date = jsDate.toISOString().substring(0, 10);
                     if (!dailyStats[date]) {
                         dailyStats[date] = { commits: 0, posts: 0, additions: 0, deletions: 0 };
                     }
@@ -180,8 +182,9 @@ export async function getDevelopmentStats() {
     let cumulativeLoc = 0;
     const growthData = sortedDaily.map(d => {
         cumulativeCommits += d.commits;
+        // cumulativeLoc is additions - deletions, representing current state
         cumulativeLoc += (d.additions - d.deletions);
-        return { date: d.date, commits: cumulativeCommits, loc: cumulativeLoc };
+        return { date: d.date, commits: cumulativeCommits, loc: Math.max(0, cumulativeLoc) };
     });
 
     const langChartData = Object.entries(languages)
