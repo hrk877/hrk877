@@ -127,12 +127,11 @@ export async function getDevelopmentStats() {
             const museumSnap = await getDocs(query(museumRef, limit(200)));
             museumCount = museumSnap.size;
 
-            const emails = await getAllUserEmails();
-
             const userCountSnap = await getDoc(doc(db, "counters", "user_count"));
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
             } else {
+                const emails = await getAllUserEmails();
                 userCount = emails.length;
                 const demographicsMap: Record<string, number> = {};
                 emails.forEach(email => {

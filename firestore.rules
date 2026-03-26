@@ -48,6 +48,7 @@ service cloud.firestore {
     match /counters/user_count {
       // ユーザー数カウンタのみ、公開読み取りを許可
       allow read: if true;
+      allow update: if isAuthenticated();
       allow write: if isAdmin();
     }
 
@@ -94,11 +95,6 @@ service cloud.firestore {
         allow read, write: if true;
       }
       
-      // Journal Views - 誰でも作成可能、読み取りは管理者のみ
-      match /journal_views/{viewId} {
-        allow create: if true;
-        allow read: if isAdmin();
-      }
     }
   }
 }
