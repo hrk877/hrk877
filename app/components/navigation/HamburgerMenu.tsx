@@ -31,8 +31,8 @@ const MENU_ITEMS = [
             { label: "CAMERA", href: "/camera" },
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
-            { label: "HABIT", href: "/habit", restricted: true },
-            { label: "RUNNING", href: "/training", restricted: true },
+            { label: "HABIT", href: "/habit", isPrivate: true },
+            { label: "RUNNING", href: "/training", isPrivate: true },
         ]
     },
     { label: "LETTER", href: "/letter" },
@@ -104,14 +104,14 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                     { label: "CAMERA", href: "/camera" },
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
-                    { label: "HABIT", href: "/habit", restricted: true },
-                    { label: "RUNNING", href: "/training", restricted: true },
-                    { label: "STATS", href: "/stats", restricted: true },
+                    { label: "HABIT", href: "/habit", isPrivate: true },
+                    { label: "RUNNING", href: "/training", isPrivate: true },
+                    { label: "STATS", href: "/stats", isPrivate: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
-                // Only show restricted items if logged in
+                // Only show private items if logged in
                 if (!user || user.isAnonymous) {
-                    return items.filter((item: any) => !item.restricted && !item.adminOnly)
+                    return items.filter((item: any) => !item.isPrivate && !item.adminOnly)
                 }
                 return items
             case "SNS":
@@ -219,7 +219,7 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                         </a>
                                                     )}
                                                 </div>
-                                            ) : (item.restricted && (!isAdmin && !isWhitelisted)) || (item.adminOnly && !isAdmin) ? (
+                                            ) : (item.adminOnly && !isAdmin) ? (
                                                 <button
                                                     onClick={() => setIsAccessDeniedOpen(true)}
                                                     className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
