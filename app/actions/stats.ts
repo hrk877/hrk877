@@ -15,7 +15,6 @@ export async function getDevelopmentStats() {
     let hourlyActivity = new Array(24).fill(0);
 
     // 1. Get Recent Git Metrics from live log (Source of Truth for what's in repo)
-    let gitProcessedDates = new Set<string>();
     try {
         const gitLog = execSync('git log --numstat --format="%ad %H" --date=iso', { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
         const lines = gitLog.split('\n');
@@ -32,7 +31,6 @@ export async function getDevelopmentStats() {
                 if (!dailyStats[currentDate]) {
                     dailyStats[currentDate] = { commits: 0, posts: 0, additions: 0, deletions: 0 };
                 }
-                gitProcessedDates.add(currentDate);
                 dailyStats[currentDate].commits += 1;
 
                 if (time) {
@@ -53,35 +51,6 @@ export async function getDevelopmentStats() {
         });
     } catch (error) {
         console.error("Failed to fetch recent git log:", error);
-    }
-
-    // 2. Get Historical Git Metrics from JSON (Fallback for what's not in current log)
-    try {
-        const statsPath = path.join(process.cwd(), 'app/data/git-stats.json');
-        if (fs.existsSync(statsPath)) {
-            const history = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
-            // Only add stats for dates that ARE NOT in gitProcessedDates
-            Object.entries(history.dailyStats).forEach(([date, values]: [string, any]) => {
-                if (!gitProcessedDates.has(date)) {
-                    dailyStats[date] = { 
-                        commits: values.commits || 0, 
-                        posts: 0, 
-                        additions: values.additions || 0, 
-                        deletions: values.deletions || 0 
-                    };
-                }
-            });
-            // ONLY use JSON hourly activity if we have NO git logs (e.g., shallow clone)
-            // to avoid double-counting historical commits already in the log.
-            if (gitProcessedDates.size === 0 && Array.isArray(history.hourlyActivity)) {
-                history.hourlyActivity.forEach((count: number, hour: number) => {
-                    hourlyActivity[hour] += count;
-                });
-            }
-            console.log("Loaded historical git stats from JSON");
-        }
-    } catch (error) {
-        console.error("Failed to load historical git stats:", error);
     }
 
     const languages: Record<string, number> = {};
