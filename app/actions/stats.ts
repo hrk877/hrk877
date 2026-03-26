@@ -168,7 +168,23 @@ export async function getDevelopmentStats() {
             
             let cumulativeUsers = 0;
             const sortedMonthKeys = Object.keys(growthMap).sort();
-            userGrowth = sortedMonthKeys.map((monthKey) => {
+            
+            // 欠落している月を補完するロジックを復活
+            if (sortedMonthKeys.length > 0) {
+                const minMonth = sortedMonthKeys[0];
+                const maxMonth = new Date().toISOString().substring(0, 7); // 今月まで
+                
+                let current = new Date(minMonth + "-01");
+                const last = new Date(maxMonth + "-01");
+                
+                while (current <= last) {
+                    const key = current.toISOString().substring(0, 7);
+                    if (!growthMap[key]) growthMap[key] = 0;
+                    current.setMonth(current.getMonth() + 1);
+                }
+            }
+
+            userGrowth = Object.keys(growthMap).sort().map((monthKey) => {
                 const newUsers = growthMap[monthKey];
                 cumulativeUsers += newUsers;
                 return { 
