@@ -28,10 +28,10 @@ const MENU_ITEMS = [
         label: "LAB",
         children: [
             { label: "AI", href: "/ai" },
-            { label: "HABIT", href: "/habit", restricted: true },
+            { label: "CAMERA", href: "/camera" },
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
-            { label: "CAMERA", href: "/camera" },
+            { label: "HABIT", href: "/habit", restricted: true },
             { label: "RUNNING", href: "/training", restricted: true },
         ]
     },
@@ -99,16 +99,21 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
     const getVisibleItems = () => {
         switch (currentView) {
             case "LAB":
-                return [
+                const items = [
                     { label: "AI", href: "/ai" },
-                    { label: "HABIT", href: "/habit", restricted: true },
+                    { label: "CAMERA", href: "/camera" },
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
-                    { label: "CAMERA", href: "/camera" },
+                    { label: "HABIT", href: "/habit", restricted: true },
                     { label: "RUNNING", href: "/training", restricted: true },
-                    { label: "STATS", href: "/stats", adminOnly: true },
+                    { label: "STATS", href: "/stats", restricted: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
+                // Only show restricted items if logged in
+                if (!user || user.isAnonymous) {
+                    return items.filter((item: any) => !item.restricted && !item.adminOnly)
+                }
+                return items
             case "SNS":
                 return [
                     { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
@@ -213,18 +218,6 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                             {item.label}
                                                         </a>
                                                     )}
-                                                    {/* Admin Gear Icon for LINE */}
-                                                    {item.label === "LINE" && isAdmin && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setIsAllowlistOpen(true)
-                                                            }}
-                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
-                                                        >
-                                                            <Settings size={20} />
-                                                        </button>
-                                                    )}
                                                 </div>
                                             ) : (item.restricted && (!isAdmin && !isWhitelisted)) || (item.adminOnly && !isAdmin) ? (
                                                 <button
@@ -243,34 +236,6 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                     >
                                                         {item.label}
                                                     </Link>
-
-                                                    {/* Admin Gear Icon for HABIT */}
-                                                    {item.label === "HABIT" && isAdmin && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault()
-                                                                e.stopPropagation()
-                                                                setIsAllowlistOpen(true)
-                                                            }}
-                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
-                                                        >
-                                                            <Settings size={20} />
-                                                        </button>
-                                                    )}
-
-                                                    {/* Admin Gear Icon for RUNNING */}
-                                                    {item.label === "RUNNING" && isAdmin && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault()
-                                                                e.stopPropagation()
-                                                                setIsAllowlistOpen(true)
-                                                            }}
-                                                            className="absolute -right-10 top-1/2 -translate-y-1/2 text-[#FAC800] hover:text-white transition-colors"
-                                                        >
-                                                            <Settings size={20} />
-                                                        </button>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -278,23 +243,23 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                 </motion.div>
                             </AnimatePresence>
 
-                            {/* Logout Button (Replaces Collection Text) */}
-                            {user && !user.isAnonymous && (
-                                <motion.button
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ delay: 0.2, duration: 0.5 }}
-                                    onClick={() => signOut(auth)}
-                                    className="absolute bottom-12 text-xs font-mono tracking-[0.3em] text-white hover:opacity-50 transition-opacity"
-                                >
-                                    LOGOUT
-                                </motion.button>
-                            )}
-                        </nav>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        {/* Logout Button (Replaces Collection Text) */}
+                        {user && !user.isAnonymous && (
+                            <motion.button
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ delay: 0.2, duration: 0.5 }}
+                                onClick={() => signOut(auth)}
+                                className="absolute bottom-12 text-xs font-mono tracking-[0.3em] text-white hover:opacity-50 transition-opacity"
+                            >
+                                LOGOUT
+                            </motion.button>
+                        )}
+                    </nav>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
             {/* Modals */}
             <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
