@@ -77,9 +77,10 @@ export default function RootLayout({
 }>) {
   return (
     // <head>タグはNext.jsが自動生成するため削除します
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <GlobalStyles />

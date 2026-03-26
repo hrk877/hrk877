@@ -9,12 +9,12 @@ import { getAnalytics, isSupported } from "firebase/analytics"
 // ============================================
 
 const firebaseConfig = {
-    apiKey: "AIzaSyB-VjhkzjmebiWphe2PK9WuskqL2fLrLPg",
-    authDomain: "hrk877-801a8.firebaseapp.com",
-    projectId: "hrk877-801a8",
-    storageBucket: "hrk877-801a8.firebasestorage.app",
-    messagingSenderId: "977524735776",
-    appId: "1:977524735776:web:d76bfaaa526cc96b366145",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     measurementId: "G-0MVZWEGNWC"
 };
 
@@ -42,6 +42,6 @@ try {
 }
 
 // Firestoreのパスに使用するApp ID
-const appId = "1:977524735776:web:d76bfaaa526cc96b366145"
+const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:977524735776:web:d76bfaaa526cc96b366145"
 
 export { app, auth, db, storage, analytics, appId }

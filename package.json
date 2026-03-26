@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@google-analytics/data": "^5.2.1",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
@@ -62,6 +63,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "firebase": "12.6.0",
+    "firebase-admin": "^13.7.0",
     "framer-motion": "12.23.25",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",

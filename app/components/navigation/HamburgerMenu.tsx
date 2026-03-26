@@ -106,6 +106,7 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                     { label: "MOON", href: "/moon" },
                     { label: "CAMERA", href: "/camera" },
                     { label: "RUNNING", href: "/training", restricted: true },
+                    { label: "STATS", href: "/stats", adminOnly: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
             case "SNS":
@@ -224,7 +225,7 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                         </button>
                                                     )}
                                                 </div>
-                                            ) : item.restricted && (!isAdmin && !isWhitelisted) ? (
+                                            ) : (item.restricted && (!isAdmin && !isWhitelisted)) || (item.adminOnly && !isAdmin) ? (
                                                 <button
                                                     onClick={() => setIsAccessDeniedOpen(true)}
                                                     className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"

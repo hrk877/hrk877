@@ -95,6 +95,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     }
                     setFingerId(currentFingerId)
 
+                    // 1. Determine geographic location if missing
+                    let country = userSnap.data()?.country
+                    if (!country) {
+                        try {
+                            const res = await fetch("https://ipapi.co/json/")
+                            if (res.ok) {
+                                const data = await res.json()
+                                country = data.country_name || data.country
+                            }
+                        } catch (e) {
+                            console.warn("Could not fetch geographic data", e)
+                        }
+                    }
+
+                    // 2. Determine exact creation time
+                    let createdAt = userSnap.data()?.createdAt
+                    if (!createdAt) {
+                        createdAt = currentUser.metadata.creationTime 
+                            ? new Date(currentUser.metadata.creationTime) 
+                            : serverTimestamp()
+                    }
+
                     await setDoc(userRef, {
                         uid: currentUser.uid,
                         email: currentUser.email || null,
@@ -102,6 +124,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         photoURL: currentUser.photoURL || null,
                         lastLoginAt: serverTimestamp(),
                         isAnonymous: currentUser.isAnonymous,
+                        ...(country ? { country } : {}),
+                        ...(createdAt ? { createdAt } : {}),
+                    }, { merge: true })
+
+                    // Safely write public metrics to an open collection
+                    const publicUserRef = doc(db, "public_users", currentUser.uid)
+                    await setDoc(publicUserRef, {
+                        uid: currentUser.uid,
+                        lastLoginAt: serverTimestamp(),
+                        isAnonymous: currentUser.isAnonymous,
+                        ...(country ? { country } : {}),
+                        ...(createdAt ? { createdAt } : {}),
                     }, { merge: true })
                 } catch (error) {
                     console.error("Error updating user record:", error)
