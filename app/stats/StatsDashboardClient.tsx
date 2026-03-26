@@ -96,20 +96,20 @@ export default function StatsDashboardClient({ data }: { data: any }) {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 pt-16 mt-16 border-t border-black/10">
-                            <div className="space-y-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-16 border-t border-black/10 pt-16">
+                            <div className="bg-black/5 p-8 border border-black/10 flex flex-col items-center justify-center space-y-4">
                                 <div className="text-4xl md:text-5xl font-thin font-mono">{data.community.bananas}</div>
                                 <div className="text-[10px] font-mono tracking-[0.4em] opacity-40 uppercase">BANANA DROPS</div>
                             </div>
-                            <div className="space-y-4">
+                            <div className="bg-black/5 p-8 border border-black/10 flex flex-col items-center justify-center space-y-4">
                                 <div className="text-4xl md:text-5xl font-thin font-mono">{data.community.aiLogs}</div>
                                 <div className="text-[10px] font-mono tracking-[0.4em] opacity-40 uppercase">AI DIALOGUES</div>
                             </div>
-                            <div className="space-y-4">
+                            <div className="bg-black/5 p-8 border border-black/10 flex flex-col items-center justify-center space-y-4">
                                 <div className="text-4xl md:text-5xl font-thin font-mono">{data.community.museum}</div>
                                 <div className="text-[10px] font-mono tracking-[0.4em] opacity-40 uppercase">MUSEUM PIECES</div>
                             </div>
-                            <div className="space-y-4">
+                            <div className="bg-black/5 p-8 border border-black/10 flex flex-col items-center justify-center space-y-4">
                                 <div className="text-4xl md:text-5xl font-thin font-mono">{data.community.journal}</div>
                                 <div className="text-[10px] font-mono tracking-[0.4em] opacity-40 uppercase">JOURNAL POSTS</div>
                             </div>
@@ -127,34 +127,17 @@ export default function StatsDashboardClient({ data }: { data: any }) {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 text-center border-b border-black/10 pb-16">
-                            <div className="space-y-2">
-                                <div className="text-3xl md:text-6xl font-extralight font-mono leading-none tracking-tighter">
-                                    {totalCommits}
-                                </div>
-                                <div className="text-[10px] tracking-[0.4em] opacity-40">COMMITS</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                            <div className="bg-black/5 p-8 md:p-12 border border-black/10 flex flex-col justify-between aspect-square">
+                                <div className="text-[10px] font-mono tracking-[0.4em] opacity-40 uppercase">LINES OF CODE</div>
+                                <div className="text-5xl md:text-7xl font-thin font-mono leading-none">{currentLoc.toLocaleString()}</div>
+                                <div className="text-[10px] font-mono opacity-40 leading-relaxed max-w-[200px]">Total project size in lines across all tracked files.</div>
                             </div>
-                            <div className="space-y-2">
-                                <div className="text-3xl md:text-6xl font-extralight font-mono leading-none tracking-tighter">
-                                    {currentLoc.toLocaleString()}
-                                </div>
-                                <div className="text-[10px] tracking-[0.4em] opacity-40">LINES OF CODE</div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-3xl md:text-6xl font-extralight font-mono leading-none tracking-tighter">
-                                    {totalPosts}
-                                </div>
-                                <div className="text-[10px] tracking-[0.4em] opacity-40">JOURNAL</div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-3xl md:text-6xl font-extralight font-mono leading-none tracking-tighter">
-                                    {data.daily.length}
-                                </div>
-                                <div className="text-[10px] tracking-[0.4em] opacity-40">DAYS ACTIVE</div>
+                            
+                            <div className="bg-black/5 p-8 md:p-12 border border-black/10 flex flex-col aspect-square overflow-hidden relative">
+                                <DevCharts data={data} />
                             </div>
                         </div>
-
-                        <DevCharts data={data} />
                     </section>
                 </div>
             </div>

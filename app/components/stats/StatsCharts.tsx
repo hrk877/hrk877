@@ -227,211 +227,53 @@ export function DevCharts({ data }: { data: StatsData }) {
     const mounted = useMounted();
 
     return (
-        <div className="w-full space-y-16 md:space-y-24 pt-16">
-            {/* 1. Code Growth */}
-            <div className="space-y-8 flex flex-col items-center">
-                <h3 className="font-mono text-xs md:text-[10px] tracking-[0.4em] opacity-40 uppercase text-center">
-                    CUMULATIVE CODE GROWTH (LOC)
-                </h3>
-                <div className="h-[300px] md:h-[450px] w-full max-w-[calc(100vw-4rem)] md:max-w-none">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={data.growth} margin={{ top: 20, right: isMobile ? 10 : 20, left: isMobile ? 10 : 0, bottom: 30 }}>
-                            <defs>
-                                <linearGradient id="colorLoc" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#000000" stopOpacity={0.2} />
-                                    <stop offset="95%" stopColor="#000000" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <XAxis
-                                dataKey="date"
-                                stroke="#000000"
-                                fontSize={12}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(str) => str.substring(5)}
-                                padding={{ left: 10, right: 10 }}
-                                tickMargin={18}
-                            />
-                             <YAxis
-                                hide={mounted && isMobile}
-                                mirror={true}
-                                stroke="#000000"
-                                fontSize={12}
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={10}
-                            />
-                            <Tooltip
-                                cursor={{ strokeOpacity: 0.1 }}
-                                contentStyle={{
-                                    backgroundColor: "#FAC800",
-                                    border: "1px solid #000000",
-                                    borderRadius: "0px",
-                                    fontFamily: "monospace",
-                                    fontSize: "14px",
-                                }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="loc"
-                                name="LINES OF CODE"
-                                stroke="#000000"
-                                fillOpacity={1}
-                                fill="url(#colorLoc)"
-                                strokeWidth={2.5}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                {/* 2. Language Distribution */}
-                <div className="space-y-6 flex flex-col items-center">
-                    <h3 className="font-mono text-xs md:text-[10px] tracking-[0.4em] opacity-40 uppercase text-center">
-                        TECH STACK DISTRIBUTION
-                    </h3>
-                    <div className="h-[300px] w-full max-w-[calc(100vw-4rem)]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                                <Pie
-                                    data={data.languages}
-                                    cx="50%"
-                                    cy={isMobile ? "40%" : "50%"}
-                                    innerRadius={isMobile ? 60 : 70}
-                                    outerRadius={isMobile ? 80 : 90}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {data.languages.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: "#FAC800",
-                                        border: "1px solid #000000",
-                                        borderRadius: "0px",
-                                        fontFamily: "monospace",
-                                        fontSize: "14px",
-                                    }}
-                                />
-                                <Legend 
-                                    layout={isMobile ? "horizontal" : "vertical"} 
-                                    verticalAlign={isMobile ? "bottom" : "middle"} 
-                                    align={isMobile ? "center" : "right"}
-                                    wrapperStyle={{
-                                        fontFamily: "monospace",
-                                        fontSize: "10px",
-                                        paddingLeft: isMobile ? "0" : "10px",
-                                        paddingTop: isMobile ? "20px" : "0"
-                                    }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* 3. Hourly Productivity */}
-                <div className="space-y-6 flex flex-col items-center">
-                    <h3 className="font-mono text-xs md:text-[10px] tracking-[0.4em] opacity-40 uppercase text-center">
-                        PEAK PRODUCTIVITY HOURS
-                    </h3>
-                    <div className="h-[300px] w-full max-w-[calc(100vw-4rem)]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.hourly} margin={{ top: 20, right: 10, left: 10, bottom: 25 }}>
-                                <XAxis
-                                    dataKey="hour"
-                                    stroke="#000000"
-                                    fontSize={11}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    padding={{ left: 5, right: 5 }}
-                                    tickMargin={12}
-                                    interval={mounted && isMobile ? 4 : 2}
-                                />
-                                <YAxis hide width={0} />
-                                <Tooltip
-                                    cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                                    contentStyle={{
-                                        backgroundColor: "#FAC800",
-                                        border: "1px solid #000000",
-                                        borderRadius: "0px",
-                                        fontFamily: "monospace",
-                                        fontSize: "14px",
-                                    }}
-                                />
-                                <Bar
-                                    dataKey="count"
-                                    name="COMMITS"
-                                    fill="#000000"
-                                    radius={[2, 2, 0, 0]}
-                                    maxBarSize={40}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* 4. Daily Velocity */}
-            <div className="space-y-8 flex flex-col items-center">
-                <h3 className="font-mono text-xs md:text-[10px] tracking-[0.4em] opacity-40 uppercase text-center">
-                   DAILY VELOCITY (COMMITS vs JOURNAL)
-                </h3>
-                <div className="h-[300px] md:h-[450px] w-full max-w-[calc(100vw-4rem)] md:max-w-none">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data.daily} margin={{ top: 20, right: 20, left: 20, bottom: 30 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                            <XAxis
-                                dataKey="date"
-                                stroke="#000000"
-                                fontSize={12}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(str) => str.substring(5)}
-                                padding={{ left: 10, right: 10 }}
-                                tickMargin={18}
-                                interval={mounted && isMobile ? 4 : 2}
-                            />
-                            <YAxis hide width={0} />
-                            <Tooltip
-                                cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                                contentStyle={{
-                                    backgroundColor: "#FAC800",
-                                    border: "1px solid #000000",
-                                    borderRadius: "0px",
-                                    fontFamily: "monospace",
-                                    fontSize: "14px",
-                                }}
-                            />
-                            <Legend
-                                verticalAlign="top"
-                                align="center"
-                                wrapperStyle={{
-                                    paddingBottom: "25px",
-                                    fontFamily: "monospace",
-                                    fontSize: "12px",
-                                }}
-                            />
-                            <Bar
-                                dataKey="commits"
-                                name="COMMITS"
-                                fill="#000000"
-                                radius={[2, 2, 0, 0]}
-                                maxBarSize={30}
-                            />
-                            <Bar
-                                dataKey="posts"
-                                name="JOURNAL"
-                                fill="rgba(0,0,0,0.2)"
-                                radius={[2, 2, 0, 0]}
-                                maxBarSize={30}
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+        <div className="w-full h-full flex flex-col items-center py-4">
+            <h3 className="font-mono text-[10px] tracking-[0.4em] opacity-40 uppercase text-center w-full mb-4">
+                TECH STACK DISTRIBUTION
+            </h3>
+            
+            <div className="flex-grow w-full relative min-h-0 mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ bottom: 20 }}>
+                        <Pie
+                            data={data.languages}
+                            cx="50%"
+                            cy="45%"
+                            innerRadius={isMobile ? 55 : 65}
+                            outerRadius={isMobile ? 80 : 105}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                        >
+                            {data.languages.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: "#FAC800",
+                                border: "1px solid #000000",
+                                borderRadius: "0px",
+                                fontFamily: "monospace",
+                                fontSize: "12px",
+                                textTransform: "uppercase"
+                            }}
+                        />
+                        <Legend 
+                            verticalAlign="bottom" 
+                            align="center"
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{
+                                paddingTop: "10px",
+                                fontFamily: "monospace",
+                                fontSize: "11px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.1em",
+                            }}
+                        />
+                    </PieChart>
+                </ResponsiveContainer>
             </div>
         </div>
     )
