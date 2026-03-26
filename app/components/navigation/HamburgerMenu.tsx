@@ -125,9 +125,10 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
             {/* Toggle Button */}
             <button
                 onClick={toggleMenu}
-                style={{ color: color }}
-                className={`absolute top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none group ${color ? '' : 'mix-blend-difference text-[#FAC800]'
-                    }`}
+                style={{ color: isOpen ? "#FAC800" : color }}
+                className={`absolute top-12 left-6 z-[101] p-4 -ml-4 -mt-4 focus:outline-none group ${
+                    isOpen ? "" : (color ? "" : "mix-blend-difference text-[#FAC800]")
+                }`}
                 aria-label="Toggle Menu"
             >
                 <div className="flex flex-col gap-[6px] w-8 items-center justify-center">

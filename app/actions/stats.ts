@@ -55,18 +55,31 @@ export async function getDevelopmentStats() {
 
     const languages: Record<string, number> = {};
 
-    // 2. Language Distribution
+    // 2. Language Distribution (Source Code only)
     try {
+        const mapping: Record<string, string> = {
+            '.ts': 'TypeScript',
+            '.tsx': 'TypeScript',
+            '.js': 'JavaScript',
+            '.jsx': 'JavaScript',
+            '.css': 'CSS',
+            '.scss': 'CSS',
+            '.html': 'HTML'
+        };
+
         const scanDir = (dir: string) => {
             const files = fs.readdirSync(dir);
             files.forEach(file => {
                 const fullPath = path.join(dir, file);
                 const stats = fs.statSync(fullPath);
                 if (stats.isDirectory()) {
-                    if (file !== 'node_modules' && file !== '.next' && file !== '.git') scanDir(fullPath);
+                    if (file !== 'node_modules' && file !== '.next' && file !== '.git' && file !== 'public') scanDir(fullPath);
                 } else {
                     const ext = path.extname(file).toLowerCase();
-                    if (ext) languages[ext] = (languages[ext] || 0) + stats.size;
+                    if (mapping[ext]) {
+                        const lang = mapping[ext];
+                        languages[lang] = (languages[lang] || 0) + stats.size;
+                    }
                 }
             });
         };
@@ -157,7 +170,7 @@ export async function getDevelopmentStats() {
     });
 
     const langChartData = Object.entries(languages)
-        .map(([ext, size]) => ({ name: ext.replace('.', '').toUpperCase(), value: size }))
+        .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
 
     const engagementRatio = userCount > 0 ? ((bananaCount + aiLogCount + journalCount) / userCount).toFixed(1) : "0.0";
