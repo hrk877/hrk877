@@ -3,7 +3,7 @@
 import { execSync } from 'child_process';
 import { collection, query, orderBy, getDocs, limit, doc, getDoc, where, Timestamp } from "firebase/firestore";
 import { db, appId } from "@/lib/firebase";
-import { getAllUserEmails } from "@/app/lib/users";
+import { getAllUserEmails, EXCLUDED_EMAILS } from "@/app/lib/users";
 import { getGA4Stats } from "@/app/lib/analytics";
 import fs from 'fs';
 import path from 'path';
@@ -11,38 +11,13 @@ import path from 'path';
 export async function getDevelopmentStats() {
     console.log("Starting getDevelopmentStats with appId:", appId);
     
-    // 1. Get Historical Git Metrics from JSON
     let dailyStats: Record<string, { commits: number; posts: number; additions: number; deletions: number }> = {};
     let hourlyActivity = new Array(24).fill(0);
 
+    // 1. Get Recent Git Metrics from live log (Source of Truth for what's in repo)
+    let gitProcessedDates = new Set<string>();
     try {
-        const statsPath = path.join(process.cwd(), 'app/data/git-stats.json');
-        if (fs.existsSync(statsPath)) {
-            const history = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
-            // Initialize dailyStats with historical data
-            Object.entries(history.dailyStats).forEach(([date, values]: [string, any]) => {
-                dailyStats[date] = { 
-                    commits: values.commits || 0, 
-                    posts: 0, 
-                    additions: values.additions || 0, 
-                    deletions: values.deletions || 0 
-                };
-            });
-            // Initialize hourlyActivity with historical data
-            if (Array.isArray(history.hourlyActivity)) {
-                history.hourlyActivity.forEach((count: number, hour: number) => {
-                    hourlyActivity[hour] += count;
-                });
-            }
-            console.log("Loaded historical git stats from JSON");
-        }
-    } catch (error) {
-        console.error("Failed to load historical git stats:", error);
-    }
-
-    // 2. Append/Refresh recent Git Metrics from live log
-    try {
-        const gitLog = execSync('git log --numstat --format="%ad %H" --date=iso', { encoding: 'utf8' });
+        const gitLog = execSync('git log --numstat --format="%ad %H" --date=iso', { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
         const lines = gitLog.split('\n');
         
         let currentDate = "";
@@ -56,11 +31,13 @@ export async function getDevelopmentStats() {
                 
                 if (!dailyStats[currentDate]) {
                     dailyStats[currentDate] = { commits: 0, posts: 0, additions: 0, deletions: 0 };
-                    if (time) {
-                        const hour = parseInt(time.split(':')[0]);
-                        hourlyActivity[hour] += 1;
-                    }
-                    dailyStats[currentDate].commits += 1;
+                }
+                gitProcessedDates.add(currentDate);
+                dailyStats[currentDate].commits += 1;
+
+                if (time) {
+                    const hour = parseInt(time.split(':')[0]);
+                    hourlyActivity[hour] += 1;
                 }
             } else {
                 const parts = line.split(/\s+/);
@@ -76,6 +53,34 @@ export async function getDevelopmentStats() {
         });
     } catch (error) {
         console.error("Failed to fetch recent git log:", error);
+    }
+
+    // 2. Get Historical Git Metrics from JSON (Fallback for what's not in current log)
+    try {
+        const statsPath = path.join(process.cwd(), 'app/data/git-stats.json');
+        if (fs.existsSync(statsPath)) {
+            const history = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
+            // Only add stats for dates that ARE NOT in gitProcessedDates
+            Object.entries(history.dailyStats).forEach(([date, values]: [string, any]) => {
+                if (!gitProcessedDates.has(date)) {
+                    dailyStats[date] = { 
+                        commits: values.commits || 0, 
+                        posts: 0, 
+                        additions: values.additions || 0, 
+                        deletions: values.deletions || 0 
+                    };
+                }
+            });
+            // If git log was empty (e.g. Vercel shallow clone), use JSON hourly stats
+            if (gitProcessedDates.size === 0 && Array.isArray(history.hourlyActivity)) {
+                history.hourlyActivity.forEach((count: number, hour: number) => {
+                    hourlyActivity[hour] += count;
+                });
+            }
+            console.log("Loaded historical git stats from JSON");
+        }
+    } catch (error) {
+        console.error("Failed to load historical git stats:", error);
     }
 
     const languages: Record<string, number> = {};
@@ -107,8 +112,6 @@ export async function getDevelopmentStats() {
     let journalCount = 0;
     let museumCount = 0;
     let demographics: { name: string, value: number }[] = [];
-    let userGrowth: { date: string, newUsers: number, total: number }[] = [];
-    let recentViews: any[] = [];
 
     try {
         if (db) {
@@ -140,74 +143,22 @@ export async function getDevelopmentStats() {
             const museumSnap = await getDocs(query(museumRef, limit(200)));
             museumCount = museumSnap.size;
 
+            const emails = await getAllUserEmails();
+
             const userCountSnap = await getDoc(doc(db, "counters", "user_count"));
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
             } else {
-                const emails = await getAllUserEmails();
                 userCount = emails.length;
-            }
-
-            const usersSnap = await getDocs(collection(db, "public_users"));
-            const demographicsMap: Record<string, number> = {};
-            const growthMap: Record<string, number> = {};
-
-            usersSnap.forEach((docSnap) => {
-                const data = docSnap.data();
-                if (data.country) demographicsMap[data.country] = (demographicsMap[data.country] || 0) + 1;
-                if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-                    const jstDate = new Date(data.createdAt.toDate().getTime() + 9 * 60 * 60 * 1000);
-                    const monthKey = jstDate.toISOString().substring(0, 7);
-                    growthMap[monthKey] = (growthMap[monthKey] || 0) + 1;
-                }
-            });
-
-            demographics = Object.entries(demographicsMap)
+                const demographicsMap: Record<string, number> = {};
+                emails.forEach(email => {
+                    const domain = email.split('@')[1];
+                    demographicsMap[domain] = (demographicsMap[domain] || 0) + 1;
+                });
+                demographics = Object.entries(demographicsMap)
                 .map(([name, value]) => ({ name, value }))
                 .sort((a, b) => b.value - a.value).slice(0, 5);
-            
-            let cumulativeUsers = 0;
-            const sortedMonthKeys = Object.keys(growthMap).sort();
-            
-            // 欠落している月を補完するロジックを復活
-            if (sortedMonthKeys.length > 0) {
-                const minMonth = sortedMonthKeys[0];
-                const maxMonth = new Date().toISOString().substring(0, 7); // 今月まで
-                
-                let current = new Date(minMonth + "-01");
-                const last = new Date(maxMonth + "-01");
-                
-                while (current <= last) {
-                    const key = current.toISOString().substring(0, 7);
-                    if (!growthMap[key]) growthMap[key] = 0;
-                    current.setMonth(current.getMonth() + 1);
-                }
             }
-
-            userGrowth = Object.keys(growthMap).sort().map((monthKey) => {
-                const newUsers = growthMap[monthKey];
-                cumulativeUsers += newUsers;
-                return { 
-                    date: monthKey.substring(2).replace('-', '/'), 
-                    newUsers, 
-                    total: cumulativeUsers 
-                };
-            });
-
-            // 6. Recent Journal Views
-            const viewsRef = collection(db, "artifacts", appId, "public", "data", "journal_views");
-            const viewsSnap = await getDocs(query(viewsRef, orderBy("viewedAt", "desc"), limit(50)));
-            recentViews = viewsSnap.docs.map(docSnap => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    postId: data.postId,
-                    postTitle: data.postTitle,
-                    viewedAt: data.viewedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-                    userId: data.userId,
-                    userAgent: data.userAgent
-                };
-            });
         }
     } catch (error) {
         console.error("Firebase fetch error:", error);
@@ -252,9 +203,7 @@ export async function getDevelopmentStats() {
             museum: museumCount,
             engagement: engagementRatio,
             totalArtifacts: bananaCount + aiLogCount + journalCount + museumCount,
-            demographics,
-            userGrowth,
-            recentViews
+            demographics
         },
         traffic
     };

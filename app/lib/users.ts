@@ -1,7 +1,7 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-const EXCLUDED_EMAILS = [
+export const EXCLUDED_EMAILS = [
     "miso.blye17@gmail.com"
 ];
 

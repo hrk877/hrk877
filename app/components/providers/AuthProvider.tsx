@@ -128,15 +128,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         ...(createdAt ? { createdAt } : {}),
                     }, { merge: true })
 
-                    // Safely write public metrics to an open collection
-                    const publicUserRef = doc(db, "public_users", currentUser.uid)
-                    await setDoc(publicUserRef, {
-                        uid: currentUser.uid,
-                        lastLoginAt: serverTimestamp(),
-                        isAnonymous: currentUser.isAnonymous,
-                        ...(country ? { country } : {}),
-                        ...(createdAt ? { createdAt } : {}),
-                    }, { merge: true })
                 } catch (error) {
                     console.error("Error updating user record:", error)
                 }
