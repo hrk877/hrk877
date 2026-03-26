@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, use, Suspense } from "react"
-import { collection, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from "firebase/firestore"
+import { collection, query, orderBy, onSnapshot, doc, getDoc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../../components/providers/AuthProvider"
 import { useRouter } from "next/navigation"
@@ -16,6 +16,30 @@ export default function JournalPostPage({ params }: { params: Promise<{ id: stri
     const [currentPost, setCurrentPost] = useState<BlogPost | null>(null)
     const [allPosts, setAllPosts] = useState<BlogPost[]>([])
     const [loading, setLoading] = useState(true)
+    const [viewRecorded, setViewRecorded] = useState(false)
+
+    // Record View Log
+    useEffect(() => {
+        if (!db || !id || !currentPost || viewRecorded) return
+
+        const recordView = async () => {
+            try {
+                const viewsRef = collection(db, "artifacts", appId, "public", "data", "journal_views")
+                await addDoc(viewsRef, {
+                    postId: id,
+                    postTitle: currentPost.title,
+                    viewedAt: serverTimestamp(),
+                    userId: user?.uid || "anonymous",
+                    userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'server'
+                })
+                setViewRecorded(true)
+            } catch (err) {
+                console.error("Error recording view:", err)
+            }
+        }
+        
+        recordView()
+    }, [id, currentPost, user, viewRecorded])
 
     // Fetch all posts for navigation
     useEffect(() => {

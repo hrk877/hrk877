@@ -118,6 +118,63 @@ export default function StatsDashboardClient({ data }: { data: any }) {
                         <CommunityGrowthChart data={data} />
                     </section>
 
+                    {/* 2.5 RECENT JOURNAL ACTIVITY - Admin Only Detail */}
+                    <section className="border-t border-black pt-16 space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-baseline">
+                            <h2 className="text-4xl md:text-6xl font-thin tracking-tight uppercase">
+                                RECENT <br className="hidden md:block" />ACTIVITY
+                            </h2>
+                            <p className="font-mono text-[10px] tracking-[0.3em] opacity-40 mt-4 md:mt-0">
+                                DETAILED VIEW LOGS
+                            </p>
+                        </div>
+
+                        <div className="bg-black/5 border border-black/10 overflow-x-auto">
+                            <table className="w-full text-left font-mono text-[10px] md:text-xs">
+                                <thead>
+                                    <tr className="border-b border-black/10">
+                                        <th className="p-4 opacity-40 uppercase tracking-widest">Time</th>
+                                        <th className="p-4 opacity-40 uppercase tracking-widest">Journal Title</th>
+                                        <th className="p-4 opacity-40 uppercase tracking-widest">User</th>
+                                        <th className="p-4 opacity-40 uppercase tracking-widest hidden md:table-cell">Device</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.community.recentViews?.map((view: any) => (
+                                        <tr key={view.id} className="border-b border-black/5 hover:bg-black/5 transition-colors">
+                                            <td className="p-4 tabular-nums">
+                                                {new Date(view.viewedAt).toLocaleString('ja-JP', { 
+                                                    month: '2-digit', 
+                                                    day: '2-digit', 
+                                                    hour: '2-digit', 
+                                                    minute: '2-digit' 
+                                                })}
+                                            </td>
+                                            <td className="p-4 font-serif text-sm md:text-base">
+                                                {view.postTitle || "Untitled Entry"}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col">
+                                                    <span className={view.userId === 'anonymous' ? 'opacity-30' : 'text-blue-600 font-mono text-[10px]'}>
+                                                        {view.userId}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 hidden md:table-cell opacity-40 truncate max-w-[150px]" title={view.userAgent}>
+                                                {view.userAgent?.split(' ')[0] || 'Unknown'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!data.community.recentViews || data.community.recentViews.length === 0) && (
+                                        <tr>
+                                            <td colSpan={4} className="p-12 text-center opacity-30 italic">No view logs recorded yet.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
                     {/* 3. CORE DEVELOPMENT METRICS - Priority #3 */}
                     <section className="border-t border-black pt-16 space-y-16">
                         <div className="flex flex-col md:flex-row justify-between items-baseline mb-12">

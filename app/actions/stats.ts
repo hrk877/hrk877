@@ -45,8 +45,6 @@ export async function getDevelopmentStats() {
         const gitLog = execSync('git log --numstat --format="%ad %H" --date=iso', { encoding: 'utf8' });
         const lines = gitLog.split('\n');
         
-        // Use a temporary map to calculate recent stats to avoid double-counting 
-        // if they are already in the JSON (we'll overwrite the JSON entries with fresh log values)
         let currentDate = "";
         lines.forEach(line => {
             if (!line.trim()) return;
@@ -56,26 +54,13 @@ export async function getDevelopmentStats() {
                 currentDate = parts[0];
                 const time = parts[1];
                 
-                // For hourly activity, if we are recalculating from log, 
-                // we should be careful not to double count if the log entries were already in history.
-                // However, since we're using live log as the "source of truth" for overlaps, 
-                // a simple strategy is to just process everything and if it's already in dailyStats, it gets overwritten.
-                // For simplified 'live' updates, we'll just ignore and trust the JSON for most things 
-                // UNLESS the JSON is missing or we want latest.
-                
-                // Let's only update dailyStats to ensure latest additions/deletions/commits are correct.
                 if (!dailyStats[currentDate]) {
                     dailyStats[currentDate] = { commits: 0, posts: 0, additions: 0, deletions: 0 };
-                    // If it's a NEW date (not in JSON), increment hourly too
                     if (time) {
                         const hour = parseInt(time.split(':')[0]);
                         hourlyActivity[hour] += 1;
                     }
                     dailyStats[currentDate].commits += 1;
-                } else {
-                    // If it exists in JSON, we trust the JSON for the count for now, 
-                    // or we could recalculate if we want to be very precise.
-                    // For now, let's just use the JSON as a static base and only append new days.
                 }
             } else {
                 const parts = line.split(/\s+/);
@@ -83,11 +68,8 @@ export async function getDevelopmentStats() {
                     const adds = parseInt(parts[0]) || 0;
                     const dels = parseInt(parts[1]) || 0;
                     if (currentDate && dailyStats[currentDate]) {
-                        // Only add if it's not already accounted for? 
-                        // Actually, if we overwrite the dailyStats entries for those dates 
-                        // detected in the log, it's safer.
-                        // But let's keep it simple: the JSON has all 277 commits. 
-                        // Local dev log also has 277. Vercel log has 10.
+                        dailyStats[currentDate].additions += adds;
+                        dailyStats[currentDate].deletions += dels;
                     }
                 }
             }
@@ -126,6 +108,7 @@ export async function getDevelopmentStats() {
     let museumCount = 0;
     let demographics: { name: string, value: number }[] = [];
     let userGrowth: { date: string, newUsers: number, total: number }[] = [];
+    let recentViews: any[] = [];
 
     try {
         if (db) {
@@ -145,22 +128,18 @@ export async function getDevelopmentStats() {
             });
 
             // Community & Interactions
-            // 1. Bananas
             const bananasRef = collection(db, "artifacts", appId, "public", "data", "banana_hand_posts");
             const bananaSnap = await getDocs(query(bananasRef, limit(200)));
             bananaCount = bananaSnap.size;
 
-            // 2. AI Logs
             const aiLogsRef = collection(db, "artifacts", appId, "public", "data", "ai_logs");
             const aiLogSnap = await getDocs(query(aiLogsRef, limit(200)));
             aiLogCount = aiLogSnap.size;
 
-            // 3. Museum
             const museumRef = collection(db, "artifacts", appId, "public", "data", "museum_artworks");
             const museumSnap = await getDocs(query(museumRef, limit(200)));
             museumCount = museumSnap.size;
 
-            // 4. Users (Counter)
             const userCountSnap = await getDoc(doc(db, "counters", "user_count"));
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
@@ -169,20 +148,14 @@ export async function getDevelopmentStats() {
                 userCount = emails.length;
             }
 
-            // 5. Users Demographics and Growth
             const usersSnap = await getDocs(collection(db, "public_users"));
             const demographicsMap: Record<string, number> = {};
             const growthMap: Record<string, number> = {};
 
-
-
             usersSnap.forEach((docSnap) => {
                 const data = docSnap.data();
-                if (data.country) {
-                    demographicsMap[data.country] = (demographicsMap[data.country] || 0) + 1;
-                }
+                if (data.country) demographicsMap[data.country] = (demographicsMap[data.country] || 0) + 1;
                 if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-                    // Convert to JST (UTC+9) and group by month (YYYY-MM)
                     const jstDate = new Date(data.createdAt.toDate().getTime() + 9 * 60 * 60 * 1000);
                     const monthKey = jstDate.toISOString().substring(0, 7);
                     growthMap[monthKey] = (growthMap[monthKey] || 0) + 1;
@@ -191,38 +164,34 @@ export async function getDevelopmentStats() {
 
             demographics = Object.entries(demographicsMap)
                 .map(([name, value]) => ({ name, value }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 5);
+                .sort((a, b) => b.value - a.value).slice(0, 5);
             
-            // Fill in missing months between min and max
-            const sortedMonthKeys = Object.keys(growthMap).sort();
-            if (sortedMonthKeys.length > 0) {
-                const minMonth = sortedMonthKeys[0];
-                const maxMonth = sortedMonthKeys[sortedMonthKeys.length - 1];
-                
-                let current = new Date(minMonth + "-01");
-                const last = new Date(maxMonth + "-01");
-                
-                while (current <= last) {
-                    const key = current.toISOString().substring(0, 7);
-                    if (!growthMap[key]) growthMap[key] = 0;
-                    // Move to next month
-                    current.setMonth(current.getMonth() + 1);
-                }
-            }
-
             let cumulativeUsers = 0;
-            userGrowth = Object.keys(growthMap)
-                .sort()
-                .map((monthKey) => {
-                    const newUsers = growthMap[monthKey];
-                    cumulativeUsers += newUsers;
-                    return { 
-                        date: monthKey.substring(2).replace('-', '/'), // YY/MM format
-                        newUsers, 
-                        total: cumulativeUsers 
-                    };
-                });
+            const sortedMonthKeys = Object.keys(growthMap).sort();
+            userGrowth = sortedMonthKeys.map((monthKey) => {
+                const newUsers = growthMap[monthKey];
+                cumulativeUsers += newUsers;
+                return { 
+                    date: monthKey.substring(2).replace('-', '/'), 
+                    newUsers, 
+                    total: cumulativeUsers 
+                };
+            });
+
+            // 6. Recent Journal Views
+            const viewsRef = collection(db, "artifacts", appId, "public", "data", "journal_views");
+            const viewsSnap = await getDocs(query(viewsRef, orderBy("viewedAt", "desc"), limit(50)));
+            recentViews = viewsSnap.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    postId: data.postId,
+                    postTitle: data.postTitle,
+                    viewedAt: data.viewedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                    userId: data.userId,
+                    userAgent: data.userAgent
+                };
+            });
         }
     } catch (error) {
         console.error("Firebase fetch error:", error);
@@ -252,7 +221,6 @@ export async function getDevelopmentStats() {
         .map(([ext, size]) => ({ name: ext.replace('.', '').toUpperCase(), value: size }))
         .sort((a, b) => b.value - a.value);
 
-    // Engagement = (Bananas + AI Logs + Journal) / Users (if available)
     const engagementRatio = userCount > 0 ? ((bananaCount + aiLogCount + journalCount) / userCount).toFixed(1) : "0.0";
 
     return {
@@ -269,7 +237,8 @@ export async function getDevelopmentStats() {
             engagement: engagementRatio,
             totalArtifacts: bananaCount + aiLogCount + journalCount + museumCount,
             demographics,
-            userGrowth
+            userGrowth,
+            recentViews
         },
         traffic
     };

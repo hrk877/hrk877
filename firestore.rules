@@ -93,6 +93,12 @@ service cloud.firestore {
       match /ai_logs/{logId} {
         allow read, write: if true;
       }
+      
+      // Journal Views - 誰でも作成可能、読み取りは管理者のみ
+      match /journal_views/{viewId} {
+        allow create: if true;
+        allow read: if isAdmin();
+      }
     }
   }
 }
