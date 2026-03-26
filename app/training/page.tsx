@@ -8,7 +8,6 @@ import { collection, addDoc, Timestamp, onSnapshot, query, orderBy } from "fireb
 import { db } from "@/lib/firebase"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 import LoginModal from "../components/modals/LoginModal"
-import AccessDeniedModal from "../components/modals/AccessDeniedModal"
 import { X, History } from "lucide-react"
 
 interface Position {
@@ -54,11 +53,10 @@ function formatDate(timestamp: Timestamp): string {
 }
 
 export default function RunningPage() {
-    const { user, loading: authLoading, isAdmin, isWhitelisted } = useAuth()
+    const { user, loading: authLoading } = useAuth()
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-    const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false)
     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
     const [isRunning, setIsRunning] = useState(false)
@@ -124,7 +122,6 @@ export default function RunningPage() {
 
     const startTracking = useCallback(() => {
         if (!isLoggedIn) { setIsLoginModalOpen(true); return }
-        if (!isAdmin && !isWhitelisted) { setIsAccessDeniedOpen(true); return }
         if (!navigator.geolocation) { setError("GPS not supported"); return }
 
         setError(null)
@@ -160,7 +157,7 @@ export default function RunningPage() {
             (err) => setError(`GPS: ${err.message}`),
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         )
-    }, [isLoggedIn, isAdmin, isWhitelisted, requestWakeLock])
+    }, [isLoggedIn, requestWakeLock])
 
     const stopTracking = useCallback(() => {
         if (watchIdRef.current !== null) {
@@ -260,6 +257,12 @@ export default function RunningPage() {
         }
     }, [releaseWakeLock])
 
+    useEffect(() => {
+        if (!authLoading && (!user || user.isAnonymous)) {
+            router.replace("/")
+        }
+    }, [user, authLoading, router])
+
     if (authLoading || (loading && isLoggedIn)) {
         return (
             <main className="min-h-screen bg-[#FAC800] flex items-center justify-center">
@@ -268,13 +271,7 @@ export default function RunningPage() {
         )
     }
 
-    if (!isAdmin && !isWhitelisted) {
-        return (
-            <main className="h-dvh bg-[#FAC800] flex items-center justify-center">
-                <AccessDeniedModal isOpen={true} onClose={() => router.push('/')} />
-            </main>
-        )
-    }
+    if (!user || user.isAnonymous) return null
 
     // Calculate totals
     const totalDistance = allRecords.reduce((sum, r) => sum + r.distance, 0)
@@ -463,7 +460,6 @@ export default function RunningPage() {
             </AnimatePresence>
 
             <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
-            <AccessDeniedModal isOpen={isAccessDeniedOpen} onClose={() => setIsAccessDeniedOpen(false)} />
         </div>
     )
 }

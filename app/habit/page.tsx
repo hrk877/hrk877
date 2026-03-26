@@ -8,7 +8,6 @@ import { doc, getDoc, setDoc, updateDoc, Timestamp, onSnapshot, collection } fro
 import { db } from "@/lib/firebase"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
 import LoginModal from "../components/modals/LoginModal"
-import AccessDeniedModal from "../components/modals/AccessDeniedModal"
 import { Plus, X } from "lucide-react"
 
 // ==========================================
@@ -35,8 +34,8 @@ const BANANA_PIXELS: PixelData[] = [
     { x: 6, y: 1, type: 'border' },
     { x: 7, y: 1, type: 'border' },
 
-    { x: 4, y: 2, type: 'stem' },
-    { x: 5, y: 2, type: 'stem' },
+    { x: 4, y: 2, type: 'border' },
+    { x: 5, y: 2, type: 'border' },
     { x: 6, y: 2, type: 'border' },
 
     // Upper Body
@@ -170,11 +169,10 @@ interface HabitLog {
 }
 
 export default function HabitPage() {
-    const { user, loading: authLoading, isAdmin, isWhitelisted } = useAuth()
+    const { user, loading: authLoading } = useAuth()
     const router = useRouter()
     const [loading, setLoading] = useState(true)
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-    const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false)
     const [habitState, setHabitState] = useState({
         count: 0,
         cycle: 0,
@@ -246,10 +244,6 @@ export default function HabitPage() {
             return
         }
 
-        if (!isAdmin && !isWhitelisted) {
-            setIsAccessDeniedOpen(true)
-            return
-        }
         if (hasPressedToday) return
         if (!db) return
 
@@ -304,11 +298,6 @@ export default function HabitPage() {
 
     const handlePixelClick = (i: number, type: PixelType) => {
         if (type !== 'body' || !isLoggedIn || !db) return
-
-        if (!isAdmin && !isWhitelisted) {
-            setIsAccessDeniedOpen(true)
-            return
-        }
 
         const { count, cycle } = habitState
         const isPhaseTwo = count > TOTAL_DOTS
@@ -399,6 +388,12 @@ export default function HabitPage() {
         }
     }
 
+    useEffect(() => {
+        if (!authLoading && (!user || user.isAnonymous)) {
+            router.replace("/")
+        }
+    }, [user, authLoading, router])
+
     if (authLoading || (loading && isLoggedIn)) {
         return (
             <main className="min-h-screen bg-[#FAC800] flex items-center justify-center">
@@ -407,14 +402,7 @@ export default function HabitPage() {
         )
     }
 
-    // PAGE GUARD: ACCESS DENIED IF NOT ADMIN/WHITELISTED
-    if (!isAdmin && !isWhitelisted) {
-        return (
-            <main className="h-dvh bg-[#FAC800] flex items-center justify-center">
-                <AccessDeniedModal isOpen={true} onClose={() => router.push('/')} />
-            </main>
-        )
-    }
+    if (!user || user.isAnonymous) return null
 
     // Scale multiplier for pixels
     const PIXEL_SIZE = 26
@@ -435,10 +423,6 @@ export default function HabitPage() {
                     onClick={() => {
                         if (!isLoggedIn) {
                             setIsLoginModalOpen(true)
-                            return
-                        }
-                        if (!isAdmin && !isWhitelisted) {
-                            setIsAccessDeniedOpen(true)
                             return
                         }
                         setIsEntryModalOpen(true)
@@ -600,7 +584,6 @@ export default function HabitPage() {
             </AnimatePresence>
 
             <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
-            <AccessDeniedModal isOpen={isAccessDeniedOpen} onClose={() => setIsAccessDeniedOpen(false)} />
         </main>
     )
 }

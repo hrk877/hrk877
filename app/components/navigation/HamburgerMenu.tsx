@@ -6,11 +6,7 @@ import Link from "next/link"
 import { useAuth } from "../providers/AuthProvider"
 import { signOut } from "firebase/auth"
 import { auth } from "@/lib/firebase"
-import { Settings } from "lucide-react"
-
 import LoginModal from "../modals/LoginModal"
-import AllowlistModal from "../modals/AllowlistModal"
-import AccessDeniedModal from "../modals/AccessDeniedModal"
 
 const MENU_ITEMS = [
     { label: "HOME", href: "/" },
@@ -46,10 +42,8 @@ interface HamburgerMenuProps {
 export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
-    const { user, isAdmin, isWhitelisted } = useAuth()
+    const { user } = useAuth()
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-    const [isAllowlistOpen, setIsAllowlistOpen] = useState(false)
-    const [isAccessDeniedOpen, setIsAccessDeniedOpen] = useState(false)
 
     // Dynamic Theme Color for Mobile Status Bar
     useEffect(() => {
@@ -76,30 +70,11 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
         onToggle?.(nextState)
     }
 
-    // Handle LINE Button Click
-    const handleLineClick = (e: React.MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-
-        // 1. Not Logged In OR Anonymous -> Open Access Denied Modal
-        if (!user || user.isAnonymous) {
-            setIsAccessDeniedOpen(true)
-            return
-        }
-
-        // 2. Admin or Whitelisted -> Allowed
-        if (isAdmin || isWhitelisted) {
-            window.open("https://lin.ee/CYLzSSE", "_blank")
-        } else {
-            setIsAccessDeniedOpen(true)
-        }
-    }
-
     // Helper to get items for current view
     const getVisibleItems = () => {
         switch (currentView) {
             case "LAB":
-                const items = [
+                const labItems = [
                     { label: "AI", href: "/ai" },
                     { label: "CAMERA", href: "/camera" },
                     { label: "SPIN", href: "/spin" },
@@ -109,11 +84,11 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                     { label: "STATS", href: "/stats", isPrivate: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
-                // Only show private items if logged in
+                // Hide private items if not logged in
                 if (!user || user.isAnonymous) {
-                    return items.filter((item: any) => !item.isPrivate && !item.adminOnly)
+                    return labItems.filter((item) => !item.isPrivate)
                 }
-                return items
+                return labItems
             case "SNS":
                 return [
                     { label: "INSTAGRAM", href: "https://www.instagram.com/877hand/", external: true },
@@ -121,6 +96,10 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]
             default:
+                // Filter top level items (though only LAB children are currently marked isPrivate)
+                if (!user || user.isAnonymous) {
+                    return MENU_ITEMS.filter((item: any) => !item.isPrivate)
+                }
                 return MENU_ITEMS
         }
     }
@@ -176,7 +155,6 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                     {getVisibleItems().map((item: any) => (
                                         <div key={item.label}>
                                             {item.children ? (
-                                                // Trigger for Submenu (Drill down)
                                                 <button
                                                     onClick={() => setCurrentView(item.label as any)}
                                                     className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
@@ -184,7 +162,6 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                     {item.label}
                                                 </button>
                                             ) : item.action ? (
-                                                // Back Button
                                                 <button
                                                     onClick={item.action}
                                                     className="text-sm md:text-base font-serif font-light tracking-[0.2em] text-[#FAC800]/50 hover:text-[#FAC800] hover:tracking-[0.3em] transition-all duration-500 mt-4"
@@ -193,41 +170,17 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                                 </button>
                                             ) : item.external ? (
                                                 <div className="relative flex items-center justify-center">
-                                                    {item.label === "LINE" && (!isAdmin && !isWhitelisted) ? (
-                                                        // RESTRICTED LINE BUTTON (No HREF to prevent preview)
-                                                        <button
-                                                            onClick={handleLineClick}
-                                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
-                                                        >
-                                                            {item.label}
-                                                        </button>
-                                                    ) : (
-                                                        // NORMAL LINK (Authorized LINE or Other External)
-                                                        <a
-                                                            href={item.href}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => {
-                                                                if (item.label !== "LINE") {
-                                                                    toggleMenu()
-                                                                }
-                                                                // Authorized LINE uses native href behavior
-                                                            }}
-                                                            className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
-                                                        >
-                                                            {item.label}
-                                                        </a>
-                                                    )}
+                                                    <a
+                                                        href={item.href}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={() => toggleMenu()}
+                                                        className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
+                                                    >
+                                                        {item.label}
+                                                    </a>
                                                 </div>
-                                            ) : (item.adminOnly && !isAdmin) ? (
-                                                <button
-                                                    onClick={() => setIsAccessDeniedOpen(true)}
-                                                    className="text-2xl md:text-3xl font-serif font-light tracking-[0.2em] text-[#FAC800] hover:tracking-[0.3em] hover:text-white transition-all duration-500"
-                                                >
-                                                    {item.label}
-                                                </button>
                                             ) : (
-                                                // Internal Link
                                                 <div className="relative flex items-center justify-center">
                                                     <Link
                                                         href={item.href!}
@@ -243,7 +196,7 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                                 </motion.div>
                             </AnimatePresence>
 
-                        {/* Logout Button (Replaces Collection Text) */}
+                        {/* Logout Button */}
                         {user && !user.isAnonymous && (
                             <motion.button
                                 initial={{ opacity: 0 }}
@@ -259,12 +212,10 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
                     </nav>
                 </motion.div>
             )}
-        </AnimatePresence>
+            </AnimatePresence>
 
             {/* Modals */}
             <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
-            <AllowlistModal isOpen={isAllowlistOpen} onClose={() => setIsAllowlistOpen(false)} />
-            <AccessDeniedModal isOpen={isAccessDeniedOpen} onClose={() => setIsAccessDeniedOpen(false)} />
         </>
     )
 }

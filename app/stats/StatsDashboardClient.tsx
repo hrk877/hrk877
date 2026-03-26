@@ -7,14 +7,14 @@ import HamburgerMenu from "../components/navigation/HamburgerMenu"
 import { TrafficDashboard, CommunityGrowthChart, DevCharts } from "../components/stats/StatsCharts"
 
 export default function StatsDashboardClient({ data }: { data: any }) {
-    const { isAdmin, loading } = useAuth()
+    const { user, loading } = useAuth()
     const router = useRouter()
 
     useEffect(() => {
-        if (!loading && !isAdmin) {
+        if (!loading && (!user || user.isAnonymous)) {
             router.replace("/")
         }
-    }, [isAdmin, loading, router])
+    }, [user, loading, router])
 
     if (loading) {
         return (
@@ -24,7 +24,7 @@ export default function StatsDashboardClient({ data }: { data: any }) {
         )
     }
 
-    if (!isAdmin) return null
+    if (!user || user.isAnonymous) return null
 
     const totalCommits = data.growth[data.growth.length - 1]?.commits || 0;
     const currentLoc = data.growth[data.growth.length - 1]?.loc || 0;
