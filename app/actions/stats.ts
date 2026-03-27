@@ -12,6 +12,22 @@ export async function getDevelopmentStats() {
     
     let dailyStats: Record<string, { commits: number; posts: number; additions: number; deletions: number }> = {};
     let hourlyActivity = new Array(24).fill(0);
+    let languages: Record<string, number> = {};
+
+    // Load static cache fallback if available
+    let cache: any = null;
+    try {
+        const cachePath = path.join(process.cwd(), 'app/data/stats-cache.json');
+        if (fs.existsSync(cachePath)) {
+            cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+            dailyStats = { ...cache.dailyStats };
+            hourlyActivity = [...cache.hourlyActivity];
+            languages = { ...cache.languages };
+            console.log("Stats: Loaded static cache from app/data/stats-cache.json");
+        }
+    } catch (e) {
+        console.warn("Stats: Failed to load static cache:", e);
+    }
 
 
     // 1. Get Recent Git Metrics from live log (Source of Truth for what's in repo)
@@ -50,10 +66,8 @@ export async function getDevelopmentStats() {
             }
         });
     } catch (error) {
-        console.error("Failed to fetch recent git log:", error);
+        console.error("Failed to fetch recent git log (using cache if available):", error);
     }
-
-    const languages: Record<string, number> = {};
 
     // 2. Language Distribution (Source Code only)
     try {
@@ -85,7 +99,7 @@ export async function getDevelopmentStats() {
         };
         scanDir(process.cwd());
     } catch (error) {
-        console.error("Failed to scan languages:", error);
+        console.error("Failed to scan languages (using cache if available):", error);
     }
 
     // 3. Firebase & Community Stats

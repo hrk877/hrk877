@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "update-stats": "node scripts/generate-stats.js"
   },
   "dependencies": {
     "@google-analytics/data": "^5.2.1",
