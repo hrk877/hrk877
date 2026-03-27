@@ -102,19 +102,41 @@ export async function getDevelopmentStats() {
         console.error("Failed to scan languages (using cache if available):", error);
     }
 
-    // 3. Firebase & Community Stats
+    // 3. Parallel Data Fetching (Firebase & GA4)
     let userCount = 0;
     let bananaCount = 0;
     let aiLogCount = 0;
     let journalCount = 0;
     let museumCount = 0;
     let demographics: { name: string, value: number }[] = [];
+    let traffic: any = null;
+    let postDocs: any[] = [];
 
     try {
         if (db) {
-            // Journal Posts
             const postsRef = collection(db, "artifacts", appId, "public", "data", "posts");
-            const postSnap = await getDocs(query(postsRef, orderBy("createdAt", "asc")));
+            const bananasRef = collection(db, "artifacts", appId, "public", "data", "banana_hand_posts");
+            const aiLogsRef = collection(db, "artifacts", appId, "public", "data", "ai_logs");
+            const museumRef = collection(db, "artifacts", appId, "public", "data", "museum_artworks");
+            const userCountRef = doc(db, "counters", "user_count");
+
+            const [
+                postSnap,
+                bananaSnap,
+                aiLogSnap,
+                museumSnap,
+                userCountSnap,
+                ga4Stats
+            ] = await Promise.all([
+                getDocs(query(postsRef, orderBy("createdAt", "asc"))),
+                getDocs(query(bananasRef, limit(200))),
+                getDocs(query(aiLogsRef, limit(200))),
+                getDocs(query(museumRef, limit(200))),
+                getDoc(userCountRef),
+                getGA4Stats()
+            ]);
+
+            // Process Post Data
             journalCount = postSnap.size;
             postSnap.forEach((docSnap) => {
                 const data = docSnap.data();
@@ -128,20 +150,11 @@ export async function getDevelopmentStats() {
                 }
             });
 
-            // Community & Interactions
-            const bananasRef = collection(db, "artifacts", appId, "public", "data", "banana_hand_posts");
-            const bananaSnap = await getDocs(query(bananasRef, limit(200)));
             bananaCount = bananaSnap.size;
-
-            const aiLogsRef = collection(db, "artifacts", appId, "public", "data", "ai_logs");
-            const aiLogSnap = await getDocs(query(aiLogsRef, limit(200)));
             aiLogCount = aiLogSnap.size;
-
-            const museumRef = collection(db, "artifacts", appId, "public", "data", "museum_artworks");
-            const museumSnap = await getDocs(query(museumRef, limit(200)));
             museumCount = museumSnap.size;
+            traffic = ga4Stats;
 
-            const userCountSnap = await getDoc(doc(db, "counters", "user_count"));
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
             } else {
@@ -153,16 +166,13 @@ export async function getDevelopmentStats() {
                     demographicsMap[domain] = (demographicsMap[domain] || 0) + 1;
                 });
                 demographics = Object.entries(demographicsMap)
-                .map(([name, value]) => ({ name, value }))
-                .sort((a, b) => b.value - a.value).slice(0, 5);
+                    .map(([name, value]) => ({ name, value }))
+                    .sort((a, b) => b.value - a.value).slice(0, 5);
             }
         }
     } catch (error) {
-        console.error("Firebase fetch error:", error);
+        console.error("Data fetch error in parallel:", error);
     }
-
-    // 6. Google Analytics Data
-    const traffic = await getGA4Stats();
 
     // 4. Processing
     const sortedDaily = Object.entries(dailyStats)
