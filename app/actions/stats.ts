@@ -1,4 +1,4 @@
-'use server';
+// Removed 'use server' since this is only called on the server.
 
 import { execSync } from 'child_process';
 import { collection, query, orderBy, getDocs, limit, doc, getDoc, where, Timestamp } from "firebase/firestore";
@@ -9,10 +9,10 @@ import fs from 'fs';
 import path from 'path';
 
 export async function getDevelopmentStats() {
-    console.log("Starting getDevelopmentStats with appId:", appId);
     
     let dailyStats: Record<string, { commits: number; posts: number; additions: number; deletions: number }> = {};
     let hourlyActivity = new Array(24).fill(0);
+
 
     // 1. Get Recent Git Metrics from live log (Source of Truth for what's in repo)
     try {
@@ -174,6 +174,13 @@ export async function getDevelopmentStats() {
 
     const engagementRatio = userCount > 0 ? ((bananaCount + aiLogCount + journalCount) / userCount).toFixed(1) : "0.0";
 
+    // User growth proxy (using journal posts for now as we don't have user creation dates in sortedDaily)
+    let cumulativeUsers = 0;
+    const userGrowthData = sortedDaily.map(d => {
+        cumulativeUsers += d.posts; // Not accurate for "users", but good for activity growth
+        return { date: d.date, total: cumulativeUsers, newUsers: d.posts };
+    });
+
     return {
         daily: sortedDaily,
         growth: growthData,
@@ -187,7 +194,8 @@ export async function getDevelopmentStats() {
             museum: museumCount,
             engagement: engagementRatio,
             totalArtifacts: bananaCount + aiLogCount + journalCount + museumCount,
-            demographics
+            demographics,
+            userGrowth: userGrowthData
         },
         traffic
     };
