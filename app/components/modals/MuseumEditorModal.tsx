@@ -140,7 +140,7 @@ const MuseumEditorModal = ({
 
                 // Notify community if enabled
                 if (sendNotification) {
-                    notifyCommunity('museum', title)
+                    await notifyCommunity('museum', title)
                 }
             }
 

@@ -86,7 +86,7 @@ const HandPostEditor = ({
                 })
 
                 // Notify community
-                notifyCommunity('banana', content)
+                await notifyCommunity('banana', content)
             }
             setContent("")
             onClose()

@@ -101,7 +101,7 @@ const BlogEditor = ({
 
             // Notify community if enabled (works for both new posts and edits)
             if (sendNotification) {
-                notifyCommunity('journal', title)
+                await notifyCommunity('journal', title)
             }
 
             onClose()
