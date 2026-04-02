@@ -3,6 +3,7 @@
 import { execSync } from 'child_process';
 import { collection, query, orderBy, getDocs, limit, doc, getDoc, where, Timestamp } from "firebase/firestore";
 import { db, appId } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 import { getAllUserEmails, EXCLUDED_EMAILS } from "@/app/lib/users";
 import { getGA4Stats } from "@/app/lib/analytics";
 import fs from 'fs';
@@ -158,7 +159,18 @@ export async function getDevelopmentStats() {
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
             } else {
-                const emails = await getAllUserEmails();
+                // Fetch all users with emails using Admin SDK to bypass Firestore rules
+                const usersSnapshot = await adminDb.collection("users").get();
+                const emails: string[] = [];
+                const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"];
+
+                usersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.email && !data.isAnonymous && !EXCLUDED_EMAILS.includes(data.email)) {
+                        emails.push(data.email);
+                    }
+                });
+
                 userCount = emails.length;
                 const demographicsMap: Record<string, number> = {};
                 emails.forEach(email => {

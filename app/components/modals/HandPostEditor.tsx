@@ -17,7 +17,7 @@ export interface HandPost {
 }
 
 import { useAuth } from "../providers/AuthProvider"
-import { notifyCommunity } from "@/app/lib/notification"
+import { notifyCommunityServer } from "@/app/actions/notifications"
 
 const HandPostEditor = ({
     isOpen,
@@ -85,8 +85,8 @@ const HandPostEditor = ({
                     authorFingerId: fingerId || null,
                 })
 
-                // Notify community
-                await notifyCommunity('banana', content)
+                // Notify community (using Server Action to bypass client-side Firestore restrictions)
+                await notifyCommunityServer('banana', content)
             }
             setContent("")
             onClose()

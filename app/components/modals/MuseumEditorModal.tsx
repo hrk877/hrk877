@@ -7,7 +7,7 @@ import { X, ImageIcon } from "lucide-react"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
-import { notifyCommunity } from "@/app/lib/notification"
+import { notifyCommunityServer } from "@/app/actions/notifications"
 
 import { NotificationToggle } from "../ui/NotificationToggle"
 
@@ -138,9 +138,9 @@ const MuseumEditorModal = ({
                 // Create new
                 await addDoc(museumRef, dataToSave)
 
-                // Notify community if enabled
+                // Notify community if enabled (using Server Action to bypass client-side Firestore restrictions)
                 if (sendNotification) {
-                    await notifyCommunity('museum', title)
+                    await notifyCommunityServer('museum', title)
                 }
             }
 

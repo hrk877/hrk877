@@ -57,11 +57,24 @@ export async function sendBroadcastEmail(bcc: string[], subject: string, message
 }
 
 import { getAllUserEmails } from "@/app/lib/users"
+import { adminDb } from "@/lib/firebase-admin"
 
 export async function sendCustomBroadcast(subject: string, message: string) {
     try {
-        const recipients = await getAllUserEmails()
+        // Fetch all users with emails using Admin SDK to bypass Firestore rules
+        const usersSnapshot = await adminDb.collection("users").get();
+        const recipients: string[] = [];
+        const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"];
+
+        usersSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.email && !data.isAnonymous && !EXCLUDED_EMAILS.includes(data.email)) {
+                recipients.push(data.email);
+            }
+        });
+
         if (recipients.length === 0) {
+            console.log("No recipients found for custom broadcast")
             return { success: false, error: "No recipients found" }
         }
 

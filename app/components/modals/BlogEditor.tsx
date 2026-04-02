@@ -5,7 +5,7 @@ import { X } from "lucide-react"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import type { User as FirebaseUser } from "firebase/auth"
-import { notifyCommunity } from "@/app/lib/notification"
+import { notifyCommunityServer } from "@/app/actions/notifications"
 import TipTapEditor from "../editor/TipTapEditor"
 import { NotificationToggle } from "../ui/NotificationToggle"
 
@@ -99,9 +99,9 @@ const BlogEditor = ({
                 })
             }
 
-            // Notify community if enabled (works for both new posts and edits)
+            // Notify community if enabled (using Server Action to bypass client-side Firestore restrictions)
             if (sendNotification) {
-                await notifyCommunity('journal', title)
+                await notifyCommunityServer('journal', title)
             }
 
             onClose()
