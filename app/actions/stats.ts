@@ -158,7 +158,7 @@ export async function getDevelopmentStats() {
 
             if (userCountSnap.exists()) {
                 userCount = userCountSnap.data().count || 0;
-            } else {
+            } else if (adminDb) {
                 // Fetch all users with emails using Admin SDK to bypass Firestore rules
                 const usersSnapshot = await adminDb.collection("users").get();
                 const emails: string[] = [];

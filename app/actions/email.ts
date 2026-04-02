@@ -62,6 +62,10 @@ import { adminDb } from "@/lib/firebase-admin"
 export async function sendCustomBroadcast(subject: string, message: string) {
     try {
         // Fetch all users with emails using Admin SDK to bypass Firestore rules
+        if (!adminDb) {
+            console.warn("adminDb not initialized, falling back to empty recipients");
+            return { success: false, error: "Database not initialized" };
+        }
         const usersSnapshot = await adminDb.collection("users").get();
         const recipients: string[] = [];
         const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"];

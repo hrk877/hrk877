@@ -11,6 +11,10 @@ export async function notifyCommunityServer(type: 'banana' | 'museum' | 'journal
         console.log(`[Notification] Starting server-side notification for type: ${type}`);
         
         // 1. Fetch all users from Firestore (Admin privilege)
+        if (!adminDb) {
+            console.error("[Notification] adminDb not initialized. Check environment variables.");
+            return { success: false, error: "Database not initialized" };
+        }
         const usersSnapshot = await adminDb.collection("users").get();
         const recipients: string[] = [];
         
