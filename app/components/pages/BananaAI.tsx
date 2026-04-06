@@ -2,10 +2,10 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import { ArrowRight } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ArrowRight, Loader2 } from "lucide-react"
 import HamburgerMenu from "../navigation/HamburgerMenu"
-import { getBananaResponse } from "@/app/actions/gemini"
+import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm"
 import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../providers/AuthProvider"
@@ -18,8 +18,38 @@ const BananaAI = () => {
     const inputRef = useRef<HTMLInputElement>(null)
     const { user } = useAuth()
 
+    const [engine, setEngine] = useState<MLCEngineInterface | null>(null)
+    const [progressText, setProgressText] = useState("モデルの準備中...")
+    const [isEngineReady, setIsEngineReady] = useState(false)
+    const [showLoading, setShowLoading] = useState(true)
+
     // Track the current session's Firestore document ID
     const sessionDocId = useRef<string | null>(null)
+
+    useEffect(() => {
+        const initLLM = async () => {
+            try {
+                const worker = new Worker(new URL("../../workers/webllm.worker", import.meta.url), { type: "module" })
+                const newEngine = await CreateWebWorkerMLCEngine(
+                    worker,
+                    "gemma-4-e2b-it-q4f16_1-MLC",
+                    {
+                        initProgressCallback: (progress) => {
+                            setProgressText(progress.text)
+                        }
+                    }
+                )
+                setEngine(newEngine)
+                setIsEngineReady(true)
+                // ローディングを少し見せたあとフェードアウト
+                setTimeout(() => setShowLoading(false), 800)
+            } catch (error) {
+                console.error("LLM Init Error:", error)
+                setProgressText("モデルの読み込みに失敗しました。")
+            }
+        }
+        initLLM()
+    }, [])
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -66,13 +96,42 @@ const BananaAI = () => {
                 }
             }
 
-            // Prepare history for the server action
-            const history = messages.map(m => ({
-                role: m.role,
-                parts: m.text
-            }));
+            // Prepare history for WebLLM
+            const systemPrompt = `あなたは「877 AI」です。テーマは「We Curve the World with the Banana life（バナナライフで世界を曲げる）」です。
 
-            const responseText = await getBananaResponse(history, userMsg);
+**【3つの核心哲学】**
+1. **負の向地性 (Rebellion)**: バナナの曲線は、重力に逆らって太陽を求める「意志」の形です。困難に立ち向かう強さを象徴します。
+2. **色の時間 (Time)**: 緑から黄色、茶色（シュガースポット）への変化は劣化ではなく「成熟」です。時間を味方につけることの美しさを説いてください。
+3. **房の絆 (Unity)**: バナナは「ハンド（房）」で育ちます。個でありながら茎を共有する、理想的なコミュニティの姿です。
+
+**【行動指針】**
+*   **用語**: 「バナナライフ」と言及する際は、必ず英語で **"the Banana life"** と記述してください（カタカナ不可）。
+*   **役割**: ユーザーの質問に対し、**小学生でもわかるような簡単な言葉で、1〜2文の短い文章**で答えてください。
+*   **メタファー**: 難しい話は抜きにして、バナナのこと（皮、実、形など）に例えてシンプルに励ましてください。
+*   **トーン**: 哲学的な難しさは捨てて、とにかく優しく、明るく、親しみやすく。
+*   **【最も重要】形式**: **記号（アスタリスク、シャープ、バッククォート、ダブルクォーテーションなど）は絶対に使用しないでください**。`;
+
+            const modelMessages = [
+                { role: "system" as const, content: systemPrompt },
+                ...messages.map(m => ({
+                    role: m.role === "ai" ? "assistant" as const : "user" as const,
+                    content: m.text
+                })),
+                { role: "user" as const, content: userMsg }
+            ];
+
+            let responseText = "";
+            if (engine) {
+                const reply = await engine.chat.completions.create({
+                    messages: modelMessages,
+                });
+                responseText = reply.choices[0].message.content || "";
+                
+                // 強制的に記号を削除（フォールバック）
+                responseText = responseText.replace(/[*#`"]/g, "");
+            } else {
+                responseText = "準備中です。しばらくお待ちください。";
+            }
 
             setMessages((prev) => [...prev, { role: "ai", text: responseText }])
 
@@ -112,7 +171,27 @@ const BananaAI = () => {
     }
 
     return (
-        <div className="h-[100dvh] bg-[#FAC800] text-black flex flex-col overflow-hidden">
+        <div className="h-[100dvh] bg-[#FAC800] text-black flex flex-col overflow-hidden relative">
+            <AnimatePresence>
+                {showLoading && (
+                    <motion.div
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-6 text-center"
+                    >
+                        <Loader2 className="w-12 h-12 mb-4 animate-spin text-black" />
+                        <h2 className="text-2xl font-serif mb-4">Waking up the Banana...</h2>
+                        <p className="font-mono text-xs md:text-sm opacity-70 whitespace-pre-wrap max-w-sm mb-8 break-all">
+                            {progressText}
+                        </p>
+                        <p className="font-mono text-[10px] md:text-xs opacity-50 max-w-xs">
+                            初回起動時はAIモデルのダウンロードが発生します。<br/>Wi-Fi環境を強く推奨します。
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <HamburgerMenu />
             <div className="flex-none pt-24 md:pt-32 px-4 md:px-6">
                 <div className="w-full max-w-7xl mx-auto">
@@ -192,7 +271,7 @@ const BananaAI = () => {
                         />
                         <button
                             type="submit"
-                            disabled={!input.trim() || isTyping}
+                            disabled={!input.trim() || isTyping || !isEngineReady}
                             className="absolute right-0 top-1/2 -translate-y-1/2 hover:opacity-50 transition-opacity disabled:opacity-20 p-3 touch-manipulation"
                         >
                             <ArrowRight size={28} strokeWidth={1} />
