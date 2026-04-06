@@ -28,24 +28,44 @@ const BananaAI = () => {
 
     useEffect(() => {
         const initLLM = async () => {
-            try {
+            // WebGPU非対応チェック
+            if (!navigator.gpu) {
+                setProgressText("このブラウザはWebGPUに対応していません。Chrome / Safari (iOS 17以降) をお使いください。")
+                return
+            }
+
+            const tryLoad = async (modelId: string) => {
                 const worker = new Worker(new URL("../../workers/webllm.worker", import.meta.url), { type: "module" })
-                const newEngine = await CreateWebWorkerMLCEngine(
+                return await CreateWebWorkerMLCEngine(
                     worker,
-                    "gemma-2-2b-jpn-it-q4f16_1-MLC",
+                    modelId,
                     {
                         initProgressCallback: (progress) => {
                             setProgressText(progress.text)
                         }
                     }
                 )
+            }
+
+            try {
+                // まずf16（軽量）を試みる
+                const newEngine = await tryLoad("gemma-2-2b-jpn-it-q4f16_1-MLC")
                 setEngine(newEngine)
                 setIsEngineReady(true)
-                // ローディングを少し見せたあとフェードアウト
                 setTimeout(() => setShowLoading(false), 800)
-            } catch (error: any) {
-                console.error("LLM Init Error:", error)
-                setProgressText("エラー: " + (error?.message || String(error)))
+            } catch (err1: any) {
+                console.warn("f16 failed, trying f32 fallback:", err1)
+                setProgressText("モバイル向けモードに切り替えています...")
+                try {
+                    // f16が失敗したらf32（モバイル互換）にフォールバック
+                    const newEngine = await tryLoad("gemma-2-2b-jpn-it-q4f32_1-MLC")
+                    setEngine(newEngine)
+                    setIsEngineReady(true)
+                    setTimeout(() => setShowLoading(false), 800)
+                } catch (err2: any) {
+                    console.error("LLM Init Error:", err2)
+                    setProgressText("エラー: " + (err2?.message || String(err2)))
+                }
             }
         }
         initLLM()
