@@ -38,7 +38,7 @@ const BananaAI = () => {
                             model_list: [
                                 {
                                     model_id: "gemma-4-E2B-it-q4f16_1-MLC",
-                                    model: "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC/resolve/main",
+                                    model: "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC/resolve/main/",
                                     model_lib: "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC/resolve/main/libs/gemma-4-E2B-it-q4f16_1-MLC-webgpu.wasm"
                                 }
                             ]
