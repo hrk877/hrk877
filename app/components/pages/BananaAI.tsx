@@ -32,7 +32,7 @@ const BananaAI = () => {
                 const worker = new Worker(new URL("../../workers/webllm.worker", import.meta.url), { type: "module" })
                 const newEngine = await CreateWebWorkerMLCEngine(
                     worker,
-                    "gemma-4-e2b-it-q4f16_1-MLC",
+                    "gemma-2-2b-it-q4f16_1-MLC",
                     {
                         initProgressCallback: (progress) => {
                             setProgressText(progress.text)
