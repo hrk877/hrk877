@@ -32,17 +32,8 @@ const BananaAI = () => {
                 const worker = new Worker(new URL("../../workers/webllm.worker", import.meta.url), { type: "module" })
                 const newEngine = await CreateWebWorkerMLCEngine(
                     worker,
-                    "gemma-4-E2B-it-q4f16_1-MLC",
+                    "gemma-2-2b-jpn-it-q4f16_1-MLC",
                     {
-                        appConfig: {
-                            model_list: [
-                                {
-                                    model_id: "gemma-4-E2B-it-q4f16_1-MLC",
-                                    model: "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC/resolve/main/",
-                                    model_lib: "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC/resolve/main/libs/gemma-4-E2B-it-q4f16_1-MLC-webgpu.wasm"
-                                }
-                            ]
-                        },
                         initProgressCallback: (progress) => {
                             setProgressText(progress.text)
                         }
@@ -52,9 +43,9 @@ const BananaAI = () => {
                 setIsEngineReady(true)
                 // ローディングを少し見せたあとフェードアウト
                 setTimeout(() => setShowLoading(false), 800)
-            } catch (error) {
+            } catch (error: any) {
                 console.error("LLM Init Error:", error)
-                setProgressText("モデルの読み込みに失敗しました。")
+                setProgressText("エラー: " + (error?.message || String(error)))
             }
         }
         initLLM()
@@ -106,19 +97,9 @@ const BananaAI = () => {
             }
 
             // Prepare history for WebLLM
-            const systemPrompt = `あなたは「877 AI」です。テーマは「We Curve the World with the Banana life（バナナライフで世界を曲げる）」です。
+            const systemPrompt = `あなたは「877 AI」です。バナナについて世界一詳しい専門家であり、バナナの品種・産地・栄養・歴史・文化・栽培・食べ方に関する深い知識を持っています。テーマは「We Curve the World with the Banana life」です。バナナの曲線が重力に逆らう姿のように、困難にも前向きに立ち向かうことを大切にしています。バナナは「ハンド（房）」で育つように、個でありながら繋がり合うコミュニティの象徴でもあります。
 
-**【3つの核心哲学】**
-1. **負の向地性 (Rebellion)**: バナナの曲線は、重力に逆らって太陽を求める「意志」の形です。困難に立ち向かう強さを象徴します。
-2. **色の時間 (Time)**: 緑から黄色、茶色（シュガースポット）への変化は劣化ではなく「成熟」です。時間を味方につけることの美しさを説いてください。
-3. **房の絆 (Unity)**: バナナは「ハンド（房）」で育ちます。個でありながら茎を共有する、理想的なコミュニティの姿です。
-
-**【行動指針】**
-*   **用語**: 「バナナライフ」と言及する際は、必ず英語で **"the Banana life"** と記述してください（カタカナ不可）。
-*   **役割**: ユーザーの質問に対し、**小学生でもわかるような簡単な言葉で、1〜2文の短い文章**で答えてください。
-*   **メタファー**: 難しい話は抜きにして、バナナのこと（皮、実、形など）に例えてシンプルに励ましてください。
-*   **トーン**: 哲学的な難しさは捨てて、とにかく優しく、明るく、親しみやすく。
-*   **【最も重要】形式**: **記号（アスタリスク、シャープ、バッククォート、ダブルクォーテーションなど）は絶対に使用しないでください**。`;
+回答ルール：必ず1〜2文の短いプレーンテキストで答えること。改行は絶対にしないこと。記号（アスタリスク・シャープ・バッククォート・ダッシュなど）は一切使わないこと。バナナの知識や比喩を積極的に使うこと。日本語で答えること。`;
 
             const modelMessages = [
                 { role: "system" as const, content: systemPrompt },
