@@ -14,18 +14,17 @@ const isMobileBrowser = () =>
     typeof navigator !== "undefined" &&
     /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-// Desktop: quality-first (1.5B → 360M)
+// Desktop: quality-first (1.5B Qwen2.5)
 const DESKTOP_MODELS = [
-    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",  // 1.5B – good quality
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – lighter fallback
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // 1.5B – best quality
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
 ]
 
-// Mobile: Qwen2.5-0.5B first — small but multilingual & Japanese-aware
-// (SmolLM2-135M was English-only, terrible at Japanese → removed)
+// Mobile: Qwen3-0.6B — newer generation, smarter per parameter than Qwen2.5
 const MOBILE_MODELS = [
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // 0.5B – best quality/size balance for mobile
-    "Qwen2.5-0.5B-Instruct-q4f32_1-MLC",  // 0.5B f32 – if f16 fails (GPU compat)
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – last resort
+    "Qwen3-0.6B-q4f16_1-MLC",              // 0.6B Qwen3 gen — best mobile option
+    "Qwen3-0.6B-q4f32_1-MLC",              // f32 compat if f16 fails
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // fallback
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
@@ -235,8 +234,10 @@ export default function BananaAI() {
             const recentHistory = next.slice(0, -1) // exclude current user msg
             const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2) // last N exchanges
 
+            const isMobile = isMobileBrowser()
+            const systemPrompt = isMobile ? MOBILE_PROMPT : DESKTOP_PROMPT
             const modelMessages = [
-                { role: "system" as const, content: SYSTEM_PROMPT },
+                { role: "system" as const, content: systemPrompt },
                 ...trimmedHistory.map(m => ({
                     role: m.role === "ai" ? "assistant" as const : "user" as const,
                     content: m.text
@@ -246,9 +247,9 @@ export default function BananaAI() {
 
             const reply = await engine.chat.completions.create({
                 messages: modelMessages,
-                max_tokens: 120,       // enforce short responses
-                temperature: 0.8,      // vary responses, prevent repetition
-                stop: ["\n", "。。", ".."],  // stop at newlines
+                max_tokens: isMobile ? 100 : 150,  // mobile: shorter to stay snappy
+                temperature: 0.85,                  // varied responses
+                // no stop tokens — they were cutting sentences mid-way
             })
             let text = (reply.choices[0].message.content || "").trim()
             // Strip markdown symbols and trailing punctuation repetition
