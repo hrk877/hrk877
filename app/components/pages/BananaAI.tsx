@@ -20,12 +20,12 @@ const DESKTOP_MODELS = [
     "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – lighter fallback
 ]
 
-// Mobile: lightest-first (135M → 360M → 1.5B)
-// 135M q0f16 is the smallest model available in WebLLM (~270MB download)
+// Mobile: Qwen2.5-0.5B first — small but multilingual & Japanese-aware
+// (SmolLM2-135M was English-only, terrible at Japanese → removed)
 const MOBILE_MODELS = [
-    "SmolLM2-135M-Instruct-q0f16-MLC",    // 135M – absolute lightest
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – if 135M fails
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // 0.5B – last resort
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // 0.5B – best quality/size balance for mobile
+    "Qwen2.5-0.5B-Instruct-q4f32_1-MLC",  // 0.5B f32 – if f16 fails (GPU compat)
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – last resort
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
