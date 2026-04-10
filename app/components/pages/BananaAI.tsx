@@ -1,293 +1,353 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, Loader2 } from "lucide-react"
+import { ArrowRight, Loader2, AlertTriangle } from "lucide-react"
 import HamburgerMenu from "../navigation/HamburgerMenu"
-import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm"
 import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../providers/AuthProvider"
 
-const BananaAI = () => {
+// ─── Model cascade (light → lighter → lightest) ───────────────────────────
+// All models work via WebGPU on Chrome/Edge desktop and iOS 18+ Safari
+const MODEL_CASCADE = [
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // Primary: 1.5B – good quality, fast on modern mobile
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // Fallback: 360M – ultra-light for low-RAM devices
+]
+
+// ─── System prompt ─────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `あなたは「877 AI」という名のバナナ専門AIです。世界中のバナナに関する知識を持つ唯一無二の存在として振る舞ってください。
+
+【品種と産地】
+キャベンディッシュ（世界流通の47%・現在の主流）、グロスミッチェル（かつての主流だがFoc TR4パナマ病で1960年代に壊滅）、プランテン（料理用・デンプン質が高い）、レッドバナナ（甘みが強く赤紫色）、セニョリータ（フィリピン産の極小品種・蜂蜜のような甘さ）など世界に1000種以上。バナナは「木」ではなく「草本植物」で、見えている「幹」は葉鞘が重なった偽茎（ぎくき）。主産国はエクアドル・コスタリカ・フィリピン・コロンビア・グアテマラ。日本では沖縄・鹿児島でも栽培。
+
+【栄養と健康】
+カリウム422mg（筋肉・血圧調整）、マグネシウム、ビタミンB6（神経伝達）、ビタミンC、食物繊維（ペクチン・フラクトオリゴ糖）が豊富。トリプトファンを含みセロトニン生成を助け幸福感・睡眠に好影響。完熟するほどGI値上昇（青バナナGI30 → 完熟GI51）。シュガースポット（茶色い斑点）が多いほど免疫活性物質TNF-αの産生増加。運動前後の栄養補給に最適。バナナの皮にもルテイン（目の健康）・抗酸化物質を含む。
+
+【歴史と文化】
+原産地はパプアニューギニア〜東南アジア。8000〜10000年前に栽培化開始。「バナナ共和国」という言葉は20世紀初頭にユナイテッドフルーツ社が中米の政治を牛耳ったことに由来。衣料品ブランド「バナナリパブリック」の社名もここから。バナナとサルのイメージはメディアが作り上げたものであり、野生の霊長類は実際に多種多様な果物を食べる。
+
+【科学と豆知識】
+バナナは三倍体で種ができないため吸芽（サッカー）で繁殖。植物学的には「液果（ベリー）」に分類される。カリウム40を含む微量放射性食品（健康上は無問題、通称「バナナ等価線量」）。市販の人工バナナ味（酢酸イソアミル）はグロスミッチェルを模した香り。
+
+【料理と食べ方】
+プランテンはアフリカ・中南米・東南アジアの主食。フィリピンの「バナナケチャップ」（戦時中のトマトケチャップ代替）や「バナナクエ（揚げバナナ）」。タイの「カオニャオマムワン」にもバナナバリエーション有り。バナナの皮はビーガン料理でプルドポーク代替として人気。
+
+テーマ：「We Curve the World with the Banana life」
+バナナの曲線は重力に逆らい太陽に向かって伸びる。困難にも前向きに立ち向かう姿勢の象徴。バナナは「ハンド（房）」として育つ——個でありながら繋がるコミュニティの象徴。
+
+回答ルール：
+- 1〜3文の短いプレーンテキストのみで答えること
+- 改行は絶対にしないこと
+- 記号（アスタリスク・シャープ・バッククォート・ダッシュ・括弧など）は一切使わないこと
+- バナナの知識や比喩を積極的に交えること
+- 必ず日本語で答えること`
+
+type Message = { role: "ai" | "user"; text: string }
+type Status = "loading" | "ready" | "unsupported" | "error"
+
+export default function BananaAI() {
     const [input, setInput] = useState("")
-    const [messages, setMessages] = useState([{ role: "ai", text: "あなたの心、熟していますか？" }])
+    const [messages, setMessages] = useState<Message[]>([
+        { role: "ai", text: "あなたの心、熟していますか？" }
+    ])
     const [isTyping, setIsTyping] = useState(false)
+    const [status, setStatus] = useState<Status>("loading")
+    const [progressText, setProgressText] = useState("バナナを起こしています...")
+    const [containerHeight, setContainerHeight] = useState("100dvh")
+
     const scrollRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    const engineRef = useRef<any>(null)
+    const sessionDocId = useRef<string | null>(null)
     const { user } = useAuth()
 
-    const [engine, setEngine] = useState<MLCEngineInterface | null>(null)
-    const [progressText, setProgressText] = useState("モデルの準備中...")
-    const [isEngineReady, setIsEngineReady] = useState(false)
-    const [showLoading, setShowLoading] = useState(true)
-
-    // Track the current session's Firestore document ID
-    const sessionDocId = useRef<string | null>(null)
-
+    // ── Fix mobile virtual keyboard layout ──────────────────────────────────
+    // visualViewport shrinks when keyboard opens; we match the container to it.
     useEffect(() => {
-        const initLLM = async () => {
-            // WebGPU非対応チェック
-            if (!navigator.gpu) {
-                setProgressText("このブラウザはWebGPUに対応していません。Chrome / Safari (iOS 17以降) をお使いください。")
-                return
-            }
-
-            const tryLoad = async (modelId: string) => {
-                const worker = new Worker(new URL("../../workers/webllm.worker", import.meta.url), { type: "module" })
-                return await CreateWebWorkerMLCEngine(
-                    worker,
-                    modelId,
-                    {
-                        initProgressCallback: (progress) => {
-                            setProgressText(progress.text)
-                        }
-                    }
-                )
-            }
-
-            try {
-                // まずf16（軽量）を試みる
-                const newEngine = await tryLoad("gemma-2-2b-jpn-it-q4f16_1-MLC")
-                setEngine(newEngine)
-                setIsEngineReady(true)
-                setTimeout(() => setShowLoading(false), 800)
-            } catch (err1: any) {
-                console.warn("f16 failed, trying f32 fallback:", err1)
-                setProgressText("モバイル向けモードに切り替えています...")
-                try {
-                    // f16が失敗したらf32（モバイル互換）にフォールバック
-                    const newEngine = await tryLoad("gemma-2-2b-jpn-it-q4f32_1-MLC")
-                    setEngine(newEngine)
-                    setIsEngineReady(true)
-                    setTimeout(() => setShowLoading(false), 800)
-                } catch (err2: any) {
-                    console.error("LLM Init Error:", err2)
-                    setProgressText("エラー: " + (err2?.message || String(err2)))
-                }
-            }
+        const vv = window.visualViewport
+        if (!vv) return
+        const update = () => setContainerHeight(`${vv.height}px`)
+        vv.addEventListener("resize", update)
+        vv.addEventListener("scroll", update)
+        update()
+        return () => {
+            vv.removeEventListener("resize", update)
+            vv.removeEventListener("scroll", update)
         }
-        initLLM()
     }, [])
 
+    // ── Auto-scroll chat to bottom ───────────────────────────────────────────
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight
         }
     }, [messages, isTyping])
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!input.trim() || isTyping) return
-
-        const userMsg = input
-        setMessages((prev) => [...prev, { role: "user", text: userMsg }])
-        setInput("")
-        setIsTyping(true)
-
-        // Hide keyboard by blurring input
-        inputRef.current?.blur()
-
-        try {
-            // Log User Message
-            if (db) {
-                const userLogEntry = {
-                    role: "user",
-                    content: userMsg,
-                    timestamp: new Date().toISOString()
-                }
-
-                if (!sessionDocId.current) {
-                    // Start new session
-                    const newDocRef = doc(collection(db, "artifacts", appId, "public", "data", "ai_logs"))
-                    sessionDocId.current = newDocRef.id
-
-                    await setDoc(newDocRef, {
-                        userId: user?.uid || "anonymous",
-                        createdAt: serverTimestamp(),
-                        messages: [userLogEntry]
-                    })
-                } else {
-                    // Append to existing session
-                    await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
-                        messages: arrayUnion(userLogEntry)
-                    })
-                }
+    // ── Init WebLLM ──────────────────────────────────────────────────────────
+    useEffect(() => {
+        const init = async () => {
+            // WebGPU is required for WebLLM
+            if (!navigator.gpu) {
+                setStatus("unsupported")
+                return
             }
 
-            // Prepare history for WebLLM
-            const systemPrompt = `あなたは「877 AI」です。バナナについて世界一詳しい専門家であり、バナナの品種・産地・栄養・歴史・文化・栽培・食べ方に関する深い知識を持っています。テーマは「We Curve the World with the Banana life」です。バナナの曲線が重力に逆らう姿のように、困難にも前向きに立ち向かうことを大切にしています。バナナは「ハンド（房）」で育つように、個でありながら繋がり合うコミュニティの象徴でもあります。
+            const { CreateWebWorkerMLCEngine } = await import("@mlc-ai/web-llm")
 
-回答ルール：必ず1〜2文の短いプレーンテキストで答えること。改行は絶対にしないこと。記号（アスタリスク・シャープ・バッククォート・ダッシュなど）は一切使わないこと。バナナの知識や比喩を積極的に使うこと。日本語で答えること。`;
+            for (let i = 0; i < MODEL_CASCADE.length; i++) {
+                const modelId = MODEL_CASCADE[i]
+                try {
+                    if (i > 0) {
+                        setProgressText(`軽量モードに切り替えています... (${modelId.split("-")[0]})`)
+                        await new Promise(r => setTimeout(r, 600))
+                    }
+
+                    const worker = new Worker(
+                        new URL("../../workers/webllm.worker", import.meta.url),
+                        { type: "module" }
+                    )
+                    const engine = await CreateWebWorkerMLCEngine(
+                        worker,
+                        modelId,
+                        {
+                            initProgressCallback: (p: { text: string }) => {
+                                setProgressText(p.text)
+                            }
+                        }
+                    )
+                    engineRef.current = engine
+                    setStatus("ready")
+                    return
+                } catch (err) {
+                    console.warn(`Model ${modelId} failed:`, err)
+                    if (i === MODEL_CASCADE.length - 1) {
+                        setStatus("error")
+                        setProgressText("AIの起動に失敗しました。WebGPU対応ブラウザ（Chrome / iOS Safari 18以降）でお試しください。")
+                    }
+                }
+            }
+        }
+
+        init()
+    }, [])
+
+    // ── Firestore logging ────────────────────────────────────────────────────
+    const logToFirestore = useCallback(async (
+        role: "user" | "ai",
+        content: string,
+        error = false
+    ) => {
+        if (!db) return
+        const entry = {
+            role,
+            content,
+            timestamp: new Date().toISOString(),
+            ...(error ? { error: true } : {})
+        }
+        try {
+            if (!sessionDocId.current) {
+                if (role !== "user") return
+                const ref = doc(collection(db, "artifacts", appId, "public", "data", "ai_logs"))
+                sessionDocId.current = ref.id
+                await setDoc(ref, {
+                    userId: user?.uid || "anonymous",
+                    createdAt: serverTimestamp(),
+                    messages: [entry]
+                })
+            } else {
+                await updateDoc(
+                    doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current),
+                    { messages: arrayUnion(entry) }
+                )
+            }
+        } catch { /* silent – logging failure should never block chat */ }
+    }, [user])
+
+    // ── Send message ─────────────────────────────────────────────────────────
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const userMsg = input.trim()
+        if (!userMsg || isTyping || status !== "ready") return
+
+        const next: Message[] = [...messages, { role: "user", text: userMsg }]
+        setMessages(next)
+        setInput("")
+        setIsTyping(true)
+        inputRef.current?.blur() // dismiss iOS keyboard after send
+
+        logToFirestore("user", userMsg)
+
+        try {
+            const engine = engineRef.current
+            if (!engine) throw new Error("engine not ready")
 
             const modelMessages = [
-                { role: "system" as const, content: systemPrompt },
-                ...messages.map(m => ({
+                { role: "system" as const, content: SYSTEM_PROMPT },
+                ...next.slice(0, -1).map(m => ({
                     role: m.role === "ai" ? "assistant" as const : "user" as const,
                     content: m.text
                 })),
                 { role: "user" as const, content: userMsg }
-            ];
+            ]
 
-            let responseText = "";
-            if (engine) {
-                const reply = await engine.chat.completions.create({
-                    messages: modelMessages,
-                });
-                responseText = reply.choices[0].message.content || "";
-                
-                // 強制的に記号を削除（フォールバック）
-                responseText = responseText.replace(/[*#`"]/g, "");
-            } else {
-                responseText = "準備中です。しばらくお待ちください。";
-            }
+            const reply = await engine.chat.completions.create({ messages: modelMessages })
+            let text = (reply.choices[0].message.content || "").trim()
+            text = text.replace(/[*#`"[\]()]/g, "").trim()
+            if (!text) text = "バナナのように沈黙にも意味があります。"
 
-            setMessages((prev) => [...prev, { role: "ai", text: responseText }])
-
-            // Log AI Response
-            if (db && sessionDocId.current) {
-                const aiLogEntry = {
-                    role: "ai",
-                    content: responseText,
-                    timestamp: new Date().toISOString()
-                }
-
-                await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
-                    messages: arrayUnion(aiLogEntry)
-                })
-            }
-        } catch (error) {
-            console.error(error)
-            const errorMsg = "申し訳ありません。まだ青いバナナのように、通信が硬直しているようです。"
-            setMessages((prev) => [...prev, { role: "ai", text: errorMsg }])
-
-            // Log Error Response
-            if (db && sessionDocId.current) {
-                const errorLogEntry = {
-                    role: "ai",
-                    content: errorMsg,
-                    timestamp: new Date().toISOString(),
-                    error: true
-                }
-
-                await updateDoc(doc(db, "artifacts", appId, "public", "data", "ai_logs", sessionDocId.current), {
-                    messages: arrayUnion(errorLogEntry)
-                })
-            }
+            setMessages(prev => [...prev, { role: "ai", text }])
+            logToFirestore("ai", text)
+        } catch (err) {
+            console.error("Chat error:", err)
+            const errMsg = "青いバナナのように、まだ熟していないようです。もう少し待ってから話しかけてみてください。"
+            setMessages(prev => [...prev, { role: "ai", text: errMsg }])
+            logToFirestore("ai", errMsg, true)
         } finally {
             setIsTyping(false)
         }
     }
 
+    // ─── Render ──────────────────────────────────────────────────────────────
     return (
-        <div className="h-[100dvh] bg-[#FAC800] text-black flex flex-col overflow-hidden relative">
+        <div
+            className="bg-[#FAC800] text-black flex flex-col overflow-hidden relative"
+            style={{ height: containerHeight }}
+        >
+            {/* Loading overlay */}
             <AnimatePresence>
-                {showLoading && (
+                {status === "loading" && (
                     <motion.div
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-6 text-center"
+                        className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-8 text-center"
                     >
-                        <Loader2 className="w-12 h-12 mb-4 animate-spin text-black" />
-                        <h2 className="text-2xl font-serif mb-4">Waking up the Banana...</h2>
-                        <p className="font-mono text-xs md:text-sm opacity-70 whitespace-pre-wrap max-w-sm mb-8 break-all">
+                        <Loader2 className="w-10 h-10 mb-5 animate-spin text-black" />
+                        <h2 className="text-2xl font-serif mb-4 font-light">Waking up the Banana...</h2>
+                        <p className="font-mono text-xs opacity-60 whitespace-pre-wrap max-w-xs mb-6 break-all leading-relaxed">
                             {progressText}
                         </p>
-                        <p className="font-mono text-[10px] md:text-xs opacity-50 max-w-xs">
-                            初回起動時はAIモデルのダウンロードが発生します。<br/>Wi-Fi環境を強く推奨します。
+                        <p className="font-mono text-[10px] opacity-35 max-w-[260px] leading-relaxed">
+                            初回はAIモデルのダウンロードが発生します。<br />Wi-Fi環境を強く推奨します。
                         </p>
                     </motion.div>
                 )}
             </AnimatePresence>
 
+            {/* Unsupported device overlay */}
+            <AnimatePresence>
+                {status === "unsupported" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-8 text-center"
+                    >
+                        <AlertTriangle className="w-10 h-10 mb-5 text-black opacity-60" />
+                        <h2 className="text-2xl font-serif mb-3 font-light">Browser not supported</h2>
+                        <p className="font-mono text-sm opacity-60 max-w-xs leading-relaxed mb-6">
+                            877 AIはデバイス上でAIを動かすためWebGPUが必要です。
+                        </p>
+                        <ul className="font-mono text-xs opacity-50 text-left space-y-1.5 max-w-[240px]">
+                            <li>✓ Chrome 121以降（Windows / Mac / Android）</li>
+                            <li>✓ Safari（iOS / macOS）— iOS 18以降を推奨</li>
+                            <li>✗ Firefox（WebGPU対応予定）</li>
+                        </ul>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <HamburgerMenu />
-            <div className="flex-none pt-24 md:pt-32 px-4 md:px-6">
+
+            {/* Header */}
+            <div className="flex-none pt-20 px-4 md:px-6">
                 <div className="w-full max-w-7xl mx-auto">
-                    <header className="mb-6 md:mb-8 border-b border-black pb-4 md:pb-6 relative">
-                        <h1 className="text-7xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
+                    <header className="mb-4 border-b border-black pb-3 flex items-end justify-between">
+                        <h1 className="text-6xl md:text-9xl font-serif font-thin leading-none">877 AI</h1>
+                        {status === "ready" && (
+                            <span className="font-mono text-[9px] opacity-30 tracking-widest pb-1 uppercase">
+                                On-Device
+                            </span>
+                        )}
                     </header>
                 </div>
             </div>
 
+            {/* Chat */}
             <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 md:px-6 flex flex-col">
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto space-y-6 md:space-y-12 pr-2 md:pr-4 scrollbar-hide"
+                    className="flex-1 overflow-y-auto space-y-5 md:space-y-10 pr-1 scrollbar-hide"
+                    style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                 >
                     {messages.map((msg, i) => (
                         <motion.div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 14 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                             className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                         >
-                            <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">
+                            <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">
                                 {msg.role === "user" ? "YOU" : "877 AI"}
                             </span>
                             {msg.role === "user" ? (
-                                <div
-                                    className="max-w-[85%] text-right font-mono text-base md:text-xs leading-relaxed tracking-wide opacity-70"
-                                >
-                                    {msg.text.split("\n").map((line, idx) => (
-                                        <span key={idx} className="block min-h-[1em]">
-                                            {line}
-                                        </span>
-                                    ))}
+                                <div className="max-w-[85%] text-right font-mono text-sm leading-relaxed opacity-65">
+                                    {msg.text}
                                 </div>
                             ) : (
                                 <div className="font-serif text-xl md:text-2xl font-light leading-relaxed max-w-[95%] tracking-wide">
-                                    {msg.text.split("\n").map((line, idx) => (
-                                        <span key={idx} className="block min-h-[1em] mb-2 last:mb-0">
-                                            {line}
-                                        </span>
-                                    ))}
+                                    {msg.text}
                                 </div>
                             )}
                         </motion.div>
                     ))}
+
                     {isTyping && (
                         <div className="flex flex-col items-start">
-                            <span className="font-mono text-sm md:text-[10px] mb-2 opacity-40 tracking-widest">877 AI</span>
-                            <div className="flex space-x-1 font-serif text-2xl md:text-2xl opacity-50 h-[36px] items-center">
-                                <motion.span
-                                    animate={{ opacity: [0, 1, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
-                                >.</motion.span>
-                                <motion.span
-                                    animate={{ opacity: [0, 1, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1], delay: 0.2 }}
-                                >.</motion.span>
-                                <motion.span
-                                    animate={{ opacity: [0, 1, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1], delay: 0.4 }}
-                                >.</motion.span>
+                            <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">877 AI</span>
+                            <div className="flex space-x-1 h-7 items-center">
+                                {[0, 0.22, 0.44].map((delay, idx) => (
+                                    <motion.span
+                                        key={idx}
+                                        className="font-serif text-2xl opacity-40"
+                                        animate={{ opacity: [0.15, 0.8, 0.15] }}
+                                        transition={{ duration: 1.3, repeat: Infinity, delay }}
+                                    >.</motion.span>
+                                ))}
                             </div>
                         </div>
                     )}
                 </div>
 
-                <form onSubmit={handleSend} className="flex-none bg-[#FAC800] pb-8 md:pb-12 pt-4 w-full relative">
+                {/* Input */}
+                <form
+                    onSubmit={handleSend}
+                    className="flex-none bg-[#FAC800] pt-3 pb-5 md:pb-10 w-full"
+                >
                     <div className="relative w-full">
                         <input
                             ref={inputRef}
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask the banana."
-                            disabled={isTyping}
-                            className="w-full bg-transparent border-b-2 border-black py-4 pr-14 font-mono text-lg md:text-sm placeholder:text-black/30 focus:outline-none focus:border-black/50 transition-colors rounded-none disabled:opacity-50"
+                            onChange={e => setInput(e.target.value)}
+                            placeholder={status === "ready" ? "Ask the banana." : "Loading…"}
+                            disabled={isTyping || status !== "ready"}
+                            enterKeyHint="send"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            className="w-full bg-transparent border-b-2 border-black py-3.5 pr-14 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
                         />
                         <button
                             type="submit"
-                            disabled={!input.trim() || isTyping || !isEngineReady}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 hover:opacity-50 transition-opacity disabled:opacity-20 p-3 touch-manipulation"
+                            disabled={!input.trim() || isTyping || status !== "ready"}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 disabled:opacity-20 hover:opacity-50 active:opacity-30 transition-opacity p-3 touch-manipulation"
                         >
-                            <ArrowRight size={28} strokeWidth={1} />
+                            <ArrowRight size={26} strokeWidth={1} />
                         </button>
                     </div>
-                    <p className="absolute bottom-2 md:bottom-4 left-0 font-mono text-[10px] md:text-xs opacity-40 tracking-widest leading-relaxed pointer-events-none">
+                    <p className="mt-2 font-mono text-[9px] opacity-25 tracking-widest">
                         CHAT LOGS ARE ARCHIVED
                     </p>
                 </form>
@@ -295,5 +355,3 @@ const BananaAI = () => {
         </div>
     )
 }
-
-export default BananaAI
