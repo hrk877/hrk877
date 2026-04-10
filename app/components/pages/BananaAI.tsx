@@ -20,11 +20,10 @@ const DESKTOP_MODELS = [
     "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
 ]
 
-// Mobile: Qwen3-0.6B — newer generation, smarter per parameter than Qwen2.5
+// Mobile: Qwen2.5-0.5B — Highly optimized for mobile WebGPU
 const MOBILE_MODELS = [
-    "Qwen3-0.6B-q4f16_1-MLC",              // 0.6B Qwen3 gen — best mobile option
-    "Qwen3-0.6B-q4f32_1-MLC",              // f32 compat if f16 fails
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // fallback
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // Reliable & fast
+    "SmolLM2-135M-Instruct-q4f16_1-MLC",  // Ultra-light fallback
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
@@ -55,6 +54,9 @@ const SYSTEM_PROMPT = `あなたは「877 AI」という名のバナナ専門AI�
 - バナナの知識や比喩を積極的に交えること
 - 必ず日本語で答えること`
 
+const DESKTOP_PROMPT = SYSTEM_PROMPT
+const MOBILE_PROMPT = SYSTEM_PROMPT + "\n- Respond even more concisely (1-2 sentences)."
+
 type Message = { role: "ai" | "user"; text: string }
 type Status = "loading" | "ready" | "unsupported" | "error"
 
@@ -75,7 +77,6 @@ export default function BananaAI() {
     const { user } = useAuth()
 
     // ── Fix mobile virtual keyboard layout ──────────────────────────────────
-    // visualViewport shrinks when keyboard opens; we match the container to it.
     useEffect(() => {
         const vv = window.visualViewport
         if (!vv) return
@@ -101,18 +102,15 @@ export default function BananaAI() {
         setStatus("loading")
         setProgressText("バナナを起こしています...")
 
-        // Step 1: Check WebGPU API exists
         if (!navigator.gpu) {
             setStatus("unsupported")
             return
         }
 
-        // Step 2: Check a real GPU adapter is available
-        // (navigator.gpu exists on iOS 18+ but adapter may still be null)
         try {
             const adapter = await navigator.gpu.requestAdapter()
             if (!adapter) {
-                console.warn("WebGPU adapter is null — device has no compatible GPU")
+                console.warn("WebGPU adapter is null")
                 setStatus("unsupported")
                 return
             }
@@ -122,7 +120,6 @@ export default function BananaAI() {
             return
         }
 
-        // Step 3: Dynamically import WebLLM (keeps initial bundle small)
         let CreateWebWorkerMLCEngine: any
         try {
             const mod = await import("@mlc-ai/web-llm")
@@ -134,7 +131,6 @@ export default function BananaAI() {
             return
         }
 
-        // Step 4: Try each model in cascade order (mobile = lightest first)
         const models = isMobileBrowser() ? MOBILE_MODELS : DESKTOP_MODELS
         for (let i = 0; i < models.length; i++) {
             const modelId = models[i]
@@ -162,7 +158,6 @@ export default function BananaAI() {
                 return
             } catch (err: any) {
                 console.warn(`Model ${modelId} failed:`, err)
-                // If this is the last model in the list, give up
                 if (i === models.length - 1) {
                     setStatus("error")
                     setProgressText(
@@ -171,7 +166,6 @@ export default function BananaAI() {
                             : "AIモデルの読み込みに失敗しました。"
                     )
                 }
-                // Otherwise continue to next model
             }
         }
     }, [])
@@ -207,7 +201,7 @@ export default function BananaAI() {
                     { messages: arrayUnion(entry) }
                 )
             }
-        } catch { /* silent – logging failure should never block chat */ }
+        } catch { /* silent */ }
     }, [user])
 
     // ── Send message ─────────────────────────────────────────────────────────
@@ -220,7 +214,7 @@ export default function BananaAI() {
         setMessages(next)
         setInput("")
         setIsTyping(true)
-        inputRef.current?.blur() // dismiss iOS keyboard after send
+        inputRef.current?.blur()
 
         logToFirestore("user", userMsg)
 
@@ -228,11 +222,9 @@ export default function BananaAI() {
             const engine = engineRef.current
             if (!engine) throw new Error("engine not ready")
 
-            // Keep history to last 3 exchanges (6 messages) to avoid context overflow
-            // Small models (0.5B/360M) have very limited context windows (~2048 tokens)
-            const MAX_HISTORY = 3
-            const recentHistory = next.slice(0, -1) // exclude current user msg
-            const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2) // last N exchanges
+            const MAX_HISTORY = 4
+            const recentHistory = next.slice(0, -1)
+            const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2)
 
             const isMobile = isMobileBrowser()
             const systemPrompt = isMobile ? MOBILE_PROMPT : DESKTOP_PROMPT
@@ -245,23 +237,46 @@ export default function BananaAI() {
                 { role: "user" as const, content: userMsg }
             ]
 
-            const reply = await engine.chat.completions.create({
-                messages: modelMessages,
-                max_tokens: isMobile ? 100 : 150,  // mobile: shorter to stay snappy
-                temperature: 0.85,                  // varied responses
-                // no stop tokens — they were cutting sentences mid-way
-            })
-            let text = (reply.choices[0].message.content || "").trim()
-            // Strip markdown symbols and trailing punctuation repetition
-            text = text.replace(/[*#`"[\]()]/g, "").replace(/。{2,}/g, "。").trim()
-            if (!text) text = "バナナのように沈黙にも意味があります。"
+            // Initial empty AI message for streaming
+            setMessages(prev => [...prev, { role: "ai", text: "" }])
 
-            setMessages(prev => [...prev, { role: "ai", text }])
-            logToFirestore("ai", text)
+            const chunks = await engine.chat.completions.create({
+                messages: modelMessages,
+                max_tokens: isMobile ? 120 : 256,
+                temperature: 0.8,
+                stream: true,
+            })
+
+            let fullText = ""
+            for await (const chunk of chunks) {
+                const content = chunk.choices[0]?.delta?.content || ""
+                fullText += content
+                
+                setMessages(prev => {
+                    const updated = [...prev]
+                    if (updated.length > 0) {
+                        updated[updated.length - 1] = { 
+                            ...updated[updated.length - 1], 
+                            text: fullText.replace(/[*#`"[\]()]/g, "").replace(/。{2,}/g, "。")
+                        }
+                    }
+                    return updated
+                })
+            }
+
+            if (!fullText.trim()) {
+                 setMessages(prev => {
+                    const updated = [...prev]
+                    updated[updated.length - 1].text = "バナナのように沈黙にも意味があります。"
+                    return updated
+                })
+            }
+            
+            logToFirestore("ai", fullText || "...")
         } catch (err) {
             console.error("Chat error:", err)
             const errMsg = "青いバナナのように、まだ熟していないようです。もう少し待ってから話しかけてみてください。"
-            setMessages(prev => [...prev, { role: "ai", text: errMsg }])
+            setMessages(prev => [...prev.slice(0, -1), { role: "ai", text: errMsg }])
             logToFirestore("ai", errMsg, true)
         } finally {
             setIsTyping(false)
@@ -274,13 +289,11 @@ export default function BananaAI() {
             className="bg-[#FAC800] text-black flex flex-col overflow-hidden relative"
             style={{ height: containerHeight }}
         >
-            {/* Loading overlay */}
             <AnimatePresence>
                 {status === "loading" && (
                     <motion.div
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5 }}
                         className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-8 text-center"
                     >
                         <Loader2 className="w-10 h-10 mb-5 animate-spin text-black" />
@@ -288,17 +301,10 @@ export default function BananaAI() {
                         <p className="font-mono text-xs opacity-60 whitespace-pre-wrap max-w-xs mb-5 break-all leading-relaxed">
                             {progressText}
                         </p>
-                        <div className="font-mono text-[10px] opacity-50 max-w-[260px] leading-relaxed space-y-1.5 text-left border border-black/20 rounded p-3">
-                            <p className="font-bold opacity-70 mb-1">📥 初回ダウンロードについて</p>
-                            <p>AIモデル（約300〜400MB）をブラウザのキャッシュに保存します。</p>
-                            <p className="text-black font-bold opacity-80">⚠️ Wi-Fi 接続を強く推奨します。</p>
-                            <p>2回目以降は即起動。ブラウザ設定からいつでも削除できます。</p>
-                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Unsupported device overlay */}
             <AnimatePresence>
                 {status === "unsupported" && (
                     <motion.div
@@ -311,16 +317,10 @@ export default function BananaAI() {
                         <p className="font-mono text-sm opacity-60 max-w-xs leading-relaxed mb-6">
                             877 AIはデバイス上でAIを動かすためWebGPUが必要です。
                         </p>
-                        <ul className="font-mono text-xs opacity-50 text-left space-y-1.5 max-w-[240px]">
-                            <li>✓ Chrome 121以降（Windows / Mac / Android）</li>
-                            <li>✓ Safari（iOS / macOS）— iOS 18以降を推奨</li>
-                            <li>✗ Firefox（WebGPU対応予定）</li>
-                        </ul>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Error overlay with retry */}
             <AnimatePresence>
                 {status === "error" && (
                     <motion.div
@@ -330,12 +330,6 @@ export default function BananaAI() {
                     >
                         <AlertTriangle className="w-10 h-10 mb-5 text-black opacity-60" />
                         <h2 className="text-2xl font-serif mb-3 font-light">起動に失敗しました</h2>
-                        <p className="font-mono text-xs opacity-50 max-w-xs leading-relaxed mb-2 break-all">
-                            {progressText}
-                        </p>
-                        <p className="font-mono text-[10px] opacity-35 max-w-[260px] leading-relaxed mb-8">
-                            ページをリロードするか、Wi-Fi環境でもう一度お試しください。
-                        </p>
                         <button
                             onClick={() => initLLM()}
                             className="font-mono text-xs tracking-widest border border-black px-6 py-3 hover:bg-black hover:text-[#FAC800] active:opacity-70 transition-colors touch-manipulation"
@@ -348,7 +342,6 @@ export default function BananaAI() {
 
             <HamburgerMenu />
 
-            {/* Header */}
             <div className="flex-none pt-20 px-4 md:px-6">
                 <div className="w-full max-w-7xl mx-auto">
                     <header className="mb-4 border-b border-black pb-3 flex items-end justify-between">
@@ -362,7 +355,6 @@ export default function BananaAI() {
                 </div>
             </div>
 
-            {/* Chat */}
             <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 md:px-6 flex flex-col">
                 <div
                     ref={scrollRef}
@@ -392,7 +384,7 @@ export default function BananaAI() {
                         </motion.div>
                     ))}
 
-                    {isTyping && (
+                    {isTyping && messages[messages.length-1].text === "" && (
                         <div className="flex flex-col items-start">
                             <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">877 AI</span>
                             <div className="flex space-x-1 h-7 items-center">
@@ -409,7 +401,6 @@ export default function BananaAI() {
                     )}
                 </div>
 
-                {/* Input */}
                 <form
                     onSubmit={handleSend}
                     className="flex-none bg-[#FAC800] pt-3 pb-5 md:pb-10 w-full"
@@ -421,10 +412,6 @@ export default function BananaAI() {
                             onChange={e => setInput(e.target.value)}
                             placeholder={status === "ready" ? "Ask the banana." : "Loading…"}
                             disabled={isTyping || status !== "ready"}
-                            enterKeyHint="send"
-                            autoComplete="off"
-                            autoCorrect="off"
-                            spellCheck={false}
                             className="w-full bg-transparent border-b-2 border-black py-3.5 pr-14 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
                         />
                         <button
@@ -435,9 +422,6 @@ export default function BananaAI() {
                             <ArrowRight size={26} strokeWidth={1} />
                         </button>
                     </div>
-                    <p className="mt-2 font-mono text-[9px] opacity-25 tracking-widest">
-                        CHAT LOGS ARE ARCHIVED
-                    </p>
                 </form>
             </div>
         </div>
