@@ -14,16 +14,14 @@ const isMobileBrowser = () =>
     typeof navigator !== "undefined" &&
     /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-// Desktop: quality-first (1.5B Qwen2.5)
+// Desktop: high-quality primary model (1.5B Qwen2.5)
 const DESKTOP_MODELS = [
-    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // 1.5B – best quality
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
 ]
 
-// Mobile: Highly optimized for mobile WebGPU (Ultra-lightweight)
+// Mobile: optimized primary model (0.5B Qwen2.5)
 const MOBILE_MODELS = [
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // Reliable & fast
-    "SmolLM2-135M-Instruct-q4f16_1-MLC",  // Ultra-light fallback
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
