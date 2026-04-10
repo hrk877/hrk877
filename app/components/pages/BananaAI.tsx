@@ -20,10 +20,10 @@ const DESKTOP_MODELS = [
     "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
 ]
 
-// Mobile: Using the same high-quality models as Desktop (1.5B)
+// Mobile: Highly optimized for mobile WebGPU (Ultra-lightweight)
 const MOBILE_MODELS = [
-    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // 1.5B – same quality as Desktop
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // Reliable & fast
+    "SmolLM2-135M-Instruct-q4f16_1-MLC",  // Ultra-light fallback
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
@@ -224,6 +224,7 @@ export default function BananaAI() {
             const recentHistory = next.slice(0, -1)
             const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2)
 
+            const isMobile = isMobileBrowser()
             const modelMessages = [
                 { role: "system" as const, content: SYSTEM_PROMPT },
                 ...trimmedHistory.map(m => ({
@@ -237,7 +238,7 @@ export default function BananaAI() {
 
             const chunks = await engine.chat.completions.create({
                 messages: modelMessages,
-                max_tokens: 256,
+                max_tokens: isMobile ? 128 : 256,
                 temperature: 0.8,
                 stream: true,
             })
