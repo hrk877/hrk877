@@ -86,52 +86,85 @@ export default function BananaAI() {
     }, [messages, isTyping])
 
     // ── Init WebLLM ──────────────────────────────────────────────────────────
-    useEffect(() => {
-        const init = async () => {
-            // WebGPU is required for WebLLM
-            if (!navigator.gpu) {
+    const initLLM = useCallback(async () => {
+        setStatus("loading")
+        setProgressText("バナナを起こしています...")
+
+        // Step 1: Check WebGPU API exists
+        if (!navigator.gpu) {
+            setStatus("unsupported")
+            return
+        }
+
+        // Step 2: Check a real GPU adapter is available
+        // (navigator.gpu exists on iOS 18+ but adapter may still be null)
+        try {
+            const adapter = await navigator.gpu.requestAdapter()
+            if (!adapter) {
+                console.warn("WebGPU adapter is null — device has no compatible GPU")
                 setStatus("unsupported")
                 return
             }
-
-            const { CreateWebWorkerMLCEngine } = await import("@mlc-ai/web-llm")
-
-            for (let i = 0; i < MODEL_CASCADE.length; i++) {
-                const modelId = MODEL_CASCADE[i]
-                try {
-                    if (i > 0) {
-                        setProgressText(`軽量モードに切り替えています... (${modelId.split("-")[0]})`)
-                        await new Promise(r => setTimeout(r, 600))
-                    }
-
-                    const worker = new Worker(
-                        new URL("../../workers/webllm.worker", import.meta.url),
-                        { type: "module" }
-                    )
-                    const engine = await CreateWebWorkerMLCEngine(
-                        worker,
-                        modelId,
-                        {
-                            initProgressCallback: (p: { text: string }) => {
-                                setProgressText(p.text)
-                            }
-                        }
-                    )
-                    engineRef.current = engine
-                    setStatus("ready")
-                    return
-                } catch (err) {
-                    console.warn(`Model ${modelId} failed:`, err)
-                    if (i === MODEL_CASCADE.length - 1) {
-                        setStatus("error")
-                        setProgressText("AIの起動に失敗しました。WebGPU対応ブラウザ（Chrome / iOS Safari 18以降）でお試しください。")
-                    }
-                }
-            }
+        } catch (adapterErr) {
+            console.warn("WebGPU adapter request failed:", adapterErr)
+            setStatus("unsupported")
+            return
         }
 
-        init()
+        // Step 3: Dynamically import WebLLM (keeps initial bundle small)
+        let CreateWebWorkerMLCEngine: any
+        try {
+            const mod = await import("@mlc-ai/web-llm")
+            CreateWebWorkerMLCEngine = mod.CreateWebWorkerMLCEngine
+        } catch (importErr) {
+            console.error("Failed to import web-llm:", importErr)
+            setStatus("error")
+            setProgressText(String(importErr))
+            return
+        }
+
+        // Step 4: Try each model in cascade order
+        for (let i = 0; i < MODEL_CASCADE.length; i++) {
+            const modelId = MODEL_CASCADE[i]
+            try {
+                if (i > 0) {
+                    setProgressText(`軽量モードに切り替えています (${MODEL_CASCADE[i].split("-").slice(0,2).join("-")})`)
+                    await new Promise(r => setTimeout(r, 400))
+                }
+
+                const worker = new Worker(
+                    new URL("../../workers/webllm.worker", import.meta.url),
+                    { type: "module" }
+                )
+                const engine = await CreateWebWorkerMLCEngine(
+                    worker,
+                    modelId,
+                    {
+                        initProgressCallback: (p: { text: string }) => {
+                            setProgressText(p.text)
+                        }
+                    }
+                )
+                engineRef.current = engine
+                setStatus("ready")
+                return
+            } catch (err: any) {
+                console.warn(`Model ${modelId} failed:`, err)
+                // If this is the last model in the list, give up
+                if (i === MODEL_CASCADE.length - 1) {
+                    setStatus("error")
+                    setProgressText(
+                        err?.message
+                            ? `エラー: ${err.message}`
+                            : "AIモデルの読み込みに失敗しました。"
+                    )
+                }
+                // Otherwise continue to next model
+            }
+        }
     }, [])
+
+    useEffect(() => { initLLM() }, [initLLM])
 
     // ── Firestore logging ────────────────────────────────────────────────────
     const logToFirestore = useCallback(async (
@@ -254,6 +287,32 @@ export default function BananaAI() {
                             <li>✓ Safari（iOS / macOS）— iOS 18以降を推奨</li>
                             <li>✗ Firefox（WebGPU対応予定）</li>
                         </ul>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Error overlay with retry */}
+            <AnimatePresence>
+                {status === "error" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 z-50 bg-[#FAC800] flex flex-col items-center justify-center p-8 text-center"
+                    >
+                        <AlertTriangle className="w-10 h-10 mb-5 text-black opacity-60" />
+                        <h2 className="text-2xl font-serif mb-3 font-light">起動に失敗しました</h2>
+                        <p className="font-mono text-xs opacity-50 max-w-xs leading-relaxed mb-2 break-all">
+                            {progressText}
+                        </p>
+                        <p className="font-mono text-[10px] opacity-35 max-w-[260px] leading-relaxed mb-8">
+                            ページをリロードするか、Wi-Fi環境でもう一度お試しください。
+                        </p>
+                        <button
+                            onClick={() => initLLM()}
+                            className="font-mono text-xs tracking-widest border border-black px-6 py-3 hover:bg-black hover:text-[#FAC800] active:opacity-70 transition-colors touch-manipulation"
+                        >
+                            RETRY
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
