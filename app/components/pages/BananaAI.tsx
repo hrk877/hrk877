@@ -20,10 +20,10 @@ const DESKTOP_MODELS = [
     "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
 ]
 
-// Mobile: Qwen2.5-0.5B — Highly optimized for mobile WebGPU
+// Mobile: Using the same high-quality models as Desktop (1.5B)
 const MOBILE_MODELS = [
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // Reliable & fast
-    "SmolLM2-135M-Instruct-q4f16_1-MLC",  // Ultra-light fallback
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // 1.5B – same quality as Desktop
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // 360M – fallback
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
