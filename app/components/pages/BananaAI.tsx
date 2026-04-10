@@ -229,18 +229,30 @@ export default function BananaAI() {
             const engine = engineRef.current
             if (!engine) throw new Error("engine not ready")
 
+            // Keep history to last 3 exchanges (6 messages) to avoid context overflow
+            // Small models (0.5B/360M) have very limited context windows (~2048 tokens)
+            const MAX_HISTORY = 3
+            const recentHistory = next.slice(0, -1) // exclude current user msg
+            const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2) // last N exchanges
+
             const modelMessages = [
                 { role: "system" as const, content: SYSTEM_PROMPT },
-                ...next.slice(0, -1).map(m => ({
+                ...trimmedHistory.map(m => ({
                     role: m.role === "ai" ? "assistant" as const : "user" as const,
                     content: m.text
                 })),
                 { role: "user" as const, content: userMsg }
             ]
 
-            const reply = await engine.chat.completions.create({ messages: modelMessages })
+            const reply = await engine.chat.completions.create({
+                messages: modelMessages,
+                max_tokens: 120,       // enforce short responses
+                temperature: 0.8,      // vary responses, prevent repetition
+                stop: ["\n", "。。", ".."],  // stop at newlines
+            })
             let text = (reply.choices[0].message.content || "").trim()
-            text = text.replace(/[*#`"[\]()]/g, "").trim()
+            // Strip markdown symbols and trailing punctuation repetition
+            text = text.replace(/[*#`"[\]()]/g, "").replace(/。{2,}/g, "。").trim()
             if (!text) text = "バナナのように沈黙にも意味があります。"
 
             setMessages(prev => [...prev, { role: "ai", text }])
@@ -272,12 +284,15 @@ export default function BananaAI() {
                     >
                         <Loader2 className="w-10 h-10 mb-5 animate-spin text-black" />
                         <h2 className="text-2xl font-serif mb-4 font-light">Waking up the Banana...</h2>
-                        <p className="font-mono text-xs opacity-60 whitespace-pre-wrap max-w-xs mb-6 break-all leading-relaxed">
+                        <p className="font-mono text-xs opacity-60 whitespace-pre-wrap max-w-xs mb-5 break-all leading-relaxed">
                             {progressText}
                         </p>
-                        <p className="font-mono text-[10px] opacity-35 max-w-[260px] leading-relaxed">
-                            初回はAIモデルのダウンロードが発生します。<br />Wi-Fi環境を強く推奨します。
-                        </p>
+                        <div className="font-mono text-[10px] opacity-50 max-w-[260px] leading-relaxed space-y-1.5 text-left border border-black/20 rounded p-3">
+                            <p className="font-bold opacity-70 mb-1">📥 初回ダウンロードについて</p>
+                            <p>AIモデル（約300〜400MB）をブラウザのキャッシュに保存します。</p>
+                            <p className="text-black font-bold opacity-80">⚠️ Wi-Fi 接続を強く推奨します。</p>
+                            <p>2回目以降は即起動。ブラウザ設定からいつでも削除できます。</p>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
