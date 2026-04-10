@@ -8,6 +8,7 @@ import HamburgerMenu from "../navigation/HamburgerMenu"
 import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore"
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../providers/AuthProvider"
+import { getRandomBananaMessage } from "@/app/actions/bananaMessages"
 
 // ─── Detect mobile to choose lighter models first ─────────────────────────
 const isMobileBrowser = () =>
@@ -97,6 +98,11 @@ export default function BananaAI() {
     const initLLM = useCallback(async () => {
         setStatus("loading")
         setProgressText("バナナを起こしています...")
+
+        if (isMobileBrowser()) {
+            setStatus("ready")
+            return
+        }
 
         if (!navigator.gpu) {
             setStatus("unsupported")
@@ -218,6 +224,16 @@ export default function BananaAI() {
         logToFirestore("user", userMsg)
 
         try {
+            if (isMobileBrowser()) {
+                // Original random message logic for mobile
+                await new Promise(r => setTimeout(r, 800 + Math.random() * 1000)) // simulate thinking
+                const randomMsg = getRandomBananaMessage()
+                setMessages(prev => [...prev, { role: "ai", text: randomMsg }])
+                logToFirestore("ai", randomMsg)
+                setIsTyping(false)
+                return
+            }
+
             const engine = engineRef.current
             if (!engine) throw new Error("engine not ready")
 
@@ -225,7 +241,6 @@ export default function BananaAI() {
             const recentHistory = next.slice(0, -1)
             const trimmedHistory = recentHistory.slice(-MAX_HISTORY * 2)
 
-            const isMobile = isMobileBrowser()
             const modelMessages = [
                 { role: "system" as const, content: SYSTEM_PROMPT },
                 ...trimmedHistory.map(m => ({
@@ -239,8 +254,8 @@ export default function BananaAI() {
 
             const chunks = await engine.chat.completions.create({
                 messages: modelMessages,
-                max_tokens: isMobile ? 128 : 256,
-                temperature: 0.8,
+                max_tokens: 256,
+                temperature: 0.7,
                 stream: true,
             })
 
@@ -249,12 +264,19 @@ export default function BananaAI() {
                 const content = chunk.choices[0]?.delta?.content || ""
                 fullText += content
                 
+                // Final sanitization for PC Expert: strip newlines and symbols
+                const sanitized = fullText
+                    .replace(/[\n\r]/g, "") 
+                    .replace(/[*#`"[\]()]/g, "")
+                    .replace(/。{2,}/g, "。")
+                    .trim()
+
                 setMessages(prev => {
                     const updated = [...prev]
                     if (updated.length > 0) {
                         updated[updated.length - 1] = { 
                             ...updated[updated.length - 1], 
-                            text: fullText.replace(/[*#`"[\]()]/g, "").replace(/。{2,}/g, "。")
+                            text: sanitized
                         }
                     }
                     return updated
