@@ -9,11 +9,23 @@ import { collection, serverTimestamp, doc, setDoc, updateDoc, arrayUnion } from 
 import { db, appId } from "@/lib/firebase"
 import { useAuth } from "../providers/AuthProvider"
 
-// ─── Model cascade (light → lighter → lightest) ───────────────────────────
-// All models work via WebGPU on Chrome/Edge desktop and iOS 18+ Safari
-const MODEL_CASCADE = [
-    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",   // Primary: 1.5B – good quality, fast on modern mobile
-    "SmolLM2-360M-Instruct-q4f16_1-MLC",   // Fallback: 360M – ultra-light for low-RAM devices
+// ─── Detect mobile to choose lighter models first ─────────────────────────
+const isMobileBrowser = () =>
+    typeof navigator !== "undefined" &&
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+// Desktop: quality-first (1.5B → 360M)
+const DESKTOP_MODELS = [
+    "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",  // 1.5B – good quality
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – lighter fallback
+]
+
+// Mobile: lightest-first (135M → 360M → 1.5B)
+// 135M q0f16 is the smallest model available in WebLLM (~270MB download)
+const MOBILE_MODELS = [
+    "SmolLM2-135M-Instruct-q0f16-MLC",    // 135M – absolute lightest
+    "SmolLM2-360M-Instruct-q4f16_1-MLC",  // 360M – if 135M fails
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",  // 0.5B – last resort
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
@@ -123,12 +135,13 @@ export default function BananaAI() {
             return
         }
 
-        // Step 4: Try each model in cascade order
-        for (let i = 0; i < MODEL_CASCADE.length; i++) {
-            const modelId = MODEL_CASCADE[i]
+        // Step 4: Try each model in cascade order (mobile = lightest first)
+        const models = isMobileBrowser() ? MOBILE_MODELS : DESKTOP_MODELS
+        for (let i = 0; i < models.length; i++) {
+            const modelId = models[i]
             try {
                 if (i > 0) {
-                    setProgressText(`軽量モードに切り替えています (${MODEL_CASCADE[i].split("-").slice(0,2).join("-")})`)
+                    setProgressText(`軽量モードに切り替えています (${models[i].split("-").slice(0, 2).join("-")})`)
                     await new Promise(r => setTimeout(r, 400))
                 }
 
@@ -151,7 +164,7 @@ export default function BananaAI() {
             } catch (err: any) {
                 console.warn(`Model ${modelId} failed:`, err)
                 // If this is the last model in the list, give up
-                if (i === MODEL_CASCADE.length - 1) {
+                if (i === models.length - 1) {
                     setStatus("error")
                     setProgressText(
                         err?.message
