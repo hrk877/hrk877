@@ -19,9 +19,10 @@ const DESKTOP_MODELS = [
     "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
 ]
 
-// Mobile: optimized primary model (0.5B Qwen2.5)
+// Mobile: Middle-ground (1B Llama-3.2) - Smarter than 0.5B, lighter than 1.5B
 const MOBILE_MODELS = [
-    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
+    "Llama-3.2-1B-Instruct-q4f16_1-MLC",   // 1B – Natural Japanese & balanced
+    "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",   // 0.5B – fallback for low memory
 ]
 
 // ─── System prompt ─────────────────────────────────────────────────────────
@@ -139,6 +140,7 @@ export default function BananaAI() {
                     new URL("../../workers/webllm.worker", import.meta.url),
                     { type: "module" }
                 )
+                const isMobile = isMobileBrowser()
                 const engine = await CreateWebWorkerMLCEngine(
                     worker,
                     modelId,
@@ -147,7 +149,8 @@ export default function BananaAI() {
                             const cleanText = p.text.replace(/\[\d+\/\d+\]\s*/, "")
                             setProgressText(cleanText || "Preparing...")
                         }
-                    }
+                    },
+                    isMobile ? { context_window_size: 2048 } : undefined
                 )
                 engineRef.current = engine
                 setStatus("ready")
