@@ -65,24 +65,29 @@ export default function BananaAI() {
     const [isTyping, setIsTyping] = useState(false)
     const [status, setStatus] = useState<Status>("loading")
     const [progressText, setProgressText] = useState("バナナを起こしています...")
-    const [mobileHeight, setMobileHeight] = useState<string>("100dvh")
 
-    const scrollRef = useRef<HTMLDivElement>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)     // mobile messages scroll
+    const scrollRefPC = useRef<HTMLDivElement>(null)   // PC messages scroll
+    const mobileWrapRef = useRef<HTMLDivElement>(null) // mobile outer container
     const inputRef = useRef<HTMLInputElement>(null)
     const engineRef = useRef<any>(null)
     const sessionDocId = useRef<string | null>(null)
     const { user } = useAuth()
 
-    // ── Track visualViewport height for mobile keyboard handling ─────────────
-    // iOS Safari: 100dvh does NOT shrink when the keyboard opens.
-    // visualViewport.height gives the true visible area, so the footer
-    // always sits just above the keyboard — exactly like ChatGPT/Gemini.
+    // ── Mobile keyboard handling via visualViewport + position:fixed ──────────
+    // The mobile container uses position:fixed so iOS Safari can't scroll the
+    // page when the input is focused (which caused the "jump to top" bug).
+    // We then directly mutate the container's height/top via a ref — no setState
+    // means no React re-renders during the keyboard animation = silky smooth.
     useEffect(() => {
         const vv = window.visualViewport
         if (!vv) return
         const update = () => {
-            setMobileHeight(`${vv.height}px`)
-            // Keep latest message in view after keyboard resize
+            if (mobileWrapRef.current) {
+                mobileWrapRef.current.style.height = `${vv.height}px`
+                mobileWrapRef.current.style.top = `${vv.offsetTop}px`
+            }
+            // Keep latest message visible after keyboard animates
             requestAnimationFrame(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -98,11 +103,11 @@ export default function BananaAI() {
         }
     }, [])
 
-    // ── Auto-scroll chat to bottom ───────────────────────────────────────────
+    // ── Auto-scroll both containers to bottom ────────────────────────────────
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        }
+        ;[scrollRef, scrollRefPC].forEach(ref => {
+            if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
+        })
     }, [messages, isTyping])
 
     // ── Init WebLLM ──────────────────────────────────────────────────────────
@@ -386,7 +391,7 @@ export default function BananaAI() {
                 </div>
                 <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-6 flex flex-col">
                     <div
-                        ref={scrollRef}
+                        ref={scrollRefPC}
                         className="flex-1 overflow-y-auto space-y-10 pr-1 scrollbar-hide"
                         style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                     >
@@ -454,76 +459,80 @@ export default function BananaAI() {
                 </div>
             </div>
 
-            {/* ── Mobile layout: fixed header + scrollable area + fixed footer ── */}
-            {/* mobileHeight tracks visualViewport.height so the container shrinks
-                exactly when the keyboard opens, keeping the footer above the keyboard */}
-            <div className="flex md:hidden flex-col" style={{ height: mobileHeight }}>
-                {/* Fixed header */}
-                <div className="flex-none bg-[#FAC800]" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-                    <HamburgerMenu />
-                    <div className="px-4 pt-14 pb-3 border-b border-black/20 flex items-end justify-between">
-                        <h1 className="text-5xl font-serif font-thin leading-none">877 AI</h1>
-                        {status === "ready" && (
-                            <span className="font-mono text-[9px] opacity-30 tracking-widest pb-1 uppercase">
-                                On-Device
-                            </span>
-                        )}
+            {/* ── Mobile layout: original design + position:fixed keyboard fix ── */}
+            {/* position:fixed prevents iOS from scrolling the page on input focus.
+                visualViewport events then resize this container smoothly, keeping
+                the input form pinned just above the keyboard — Gemini-style. */}
+            <div
+                ref={mobileWrapRef}
+                className="flex md:hidden flex-col overflow-hidden bg-[#FAC800]"
+                style={{ position: "fixed", left: 0, right: 0, top: 0, height: "100dvh" }}
+            >
+                <HamburgerMenu />
+
+                <div className="flex-none pt-20 px-4">
+                    <div className="w-full max-w-7xl mx-auto">
+                        <header className="mb-4 border-b border-black pb-3 flex items-end justify-between">
+                            <h1 className="text-6xl font-serif font-thin leading-none">877 AI</h1>
+                            {status === "ready" && (
+                                <span className="font-mono text-[9px] opacity-30 tracking-widest pb-1 uppercase">
+                                    On-Device
+                                </span>
+                            )}
+                        </header>
                     </div>
                 </div>
 
-                {/* Scrollable messages – flex-1 fills remaining space between header & footer */}
-                <div
-                    ref={scrollRef}
-                    className="flex-1 overflow-y-auto px-4 pt-6 pb-4 space-y-6"
-                    style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
-                >
-                    {messages.map((msg, i) => {
-                        const isLastMsg = i === messages.length - 1
-                        const isEmptyAiMsg = msg.role === "ai" && msg.text === ""
-                        const showDots = isTyping && isLastMsg && isEmptyAiMsg
-                        return (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                                className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-                            >
-                                <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">
-                                    {msg.role === "user" ? "YOU" : "877 AI"}
-                                </span>
-                                {msg.role === "user" ? (
-                                    <div className="max-w-[80%] font-mono text-sm leading-relaxed text-right opacity-65">
-                                        {msg.text}
-                                    </div>
-                                ) : showDots ? (
-                                    <div className="flex space-x-1 h-7 items-center">
-                                        {[0, 0.22, 0.44].map((delay, idx) => (
-                                            <motion.span
-                                                key={idx}
-                                                className="font-serif text-2xl opacity-40"
-                                                animate={{ opacity: [0.15, 0.8, 0.15] }}
-                                                transition={{ duration: 1.3, repeat: Infinity, delay }}
-                                            >.</motion.span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="font-serif text-xl font-light leading-relaxed max-w-[90%] tracking-wide">
-                                        {msg.text}
-                                    </div>
-                                )}
-                            </motion.div>
-                        )
-                    })}
-                    <div className="h-1" />
-                </div>
+                <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 flex flex-col">
+                    <div
+                        ref={scrollRef}
+                        className="flex-1 overflow-y-auto space-y-5 pr-1 scrollbar-hide"
+                        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                    >
+                        {messages.map((msg, i) => {
+                            const isLastMsg = i === messages.length - 1
+                            const isEmptyAiMsg = msg.role === "ai" && msg.text === ""
+                            const showDots = isTyping && isLastMsg && isEmptyAiMsg
+                            return (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 14 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                                    className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+                                >
+                                    <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">
+                                        {msg.role === "user" ? "YOU" : "877 AI"}
+                                    </span>
+                                    {msg.role === "user" ? (
+                                        <div className="max-w-[85%] text-right font-mono text-sm leading-relaxed opacity-65">
+                                            {msg.text}
+                                        </div>
+                                    ) : showDots ? (
+                                        <div className="flex space-x-1 h-7 items-center">
+                                            {[0, 0.22, 0.44].map((delay, idx) => (
+                                                <motion.span
+                                                    key={idx}
+                                                    className="font-serif text-2xl opacity-40"
+                                                    animate={{ opacity: [0.15, 0.8, 0.15] }}
+                                                    transition={{ duration: 1.3, repeat: Infinity, delay }}
+                                                >.</motion.span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="font-serif text-xl font-light leading-relaxed max-w-[95%] tracking-wide">
+                                            {msg.text}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )
+                        })}
+                    </div>
 
-                {/* Fixed footer input */}
-                <div
-                    className="flex-none bg-[#FAC800] border-t border-black/15 px-4 pt-3"
-                    style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
-                >
-                    <form onSubmit={handleSend}>
+                    <form
+                        onSubmit={handleSend}
+                        className="flex-none bg-[#FAC800] pt-3 pb-5 w-full"
+                    >
                         <div className="relative w-full">
                             <input
                                 ref={inputRef}
@@ -532,14 +541,14 @@ export default function BananaAI() {
                                 placeholder={status === "ready" ? "Ask the banana." : "Loading…"}
                                 disabled={isTyping || status !== "ready"}
                                 enterKeyHint="send"
-                                className="w-full bg-transparent border-b-2 border-black py-3 pr-12 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
+                                className="w-full bg-transparent border-b-2 border-black py-3.5 pr-14 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
                             />
                             <button
                                 type="submit"
                                 disabled={!input.trim() || isTyping || status !== "ready"}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 disabled:opacity-20 active:opacity-30 transition-opacity p-2 touch-manipulation"
+                                className="absolute right-0 top-1/2 -translate-y-1/2 disabled:opacity-20 active:opacity-30 transition-opacity p-3 touch-manipulation"
                             >
-                                <ArrowRight size={24} strokeWidth={1} />
+                                <ArrowRight size={26} strokeWidth={1} />
                             </button>
                         </div>
                     </form>
