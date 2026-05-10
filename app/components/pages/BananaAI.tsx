@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, Loader2, AlertTriangle } from "lucide-react"
 import HamburgerMenu from "../navigation/HamburgerMenu"
@@ -72,7 +72,25 @@ export default function BananaAI() {
     const inputRef = useRef<HTMLInputElement>(null)
     const engineRef = useRef<any>(null)
     const sessionDocId = useRef<string | null>(null)
+    // Stores the last JS-computed top/height so useLayoutEffect can reapply
+    // them synchronously after every React re-render, preventing the 1-frame
+    // flicker caused by React resetting the inline style to its JSX defaults.
+    const vpTopRef = useRef(0)
+    const vpHeightRef = useRef<number | null>(null)
     const { user } = useAuth()
+
+    // ── Reapply viewport styles synchronously after every render ─────────────
+    // React overwrites inline styles on reconcile. useLayoutEffect (runs after
+    // DOM write, before paint) puts the correct values back before the user
+    // sees the intermediate "reset" frame.
+    useLayoutEffect(() => {
+        if (typeof window === "undefined" || window.innerWidth >= 768) return
+        if (vpHeightRef.current === null) return
+        const container = mobileWrapRef.current
+        if (!container) return
+        container.style.top = `${vpTopRef.current}px`
+        container.style.height = `${vpHeightRef.current}px`
+    })
 
     // ── Force yellow background on html/body for iOS status bar ──────────────
     // iOS reads the html/body background for the status bar area (black-translucent).
@@ -114,10 +132,13 @@ export default function BananaAI() {
         const vv = window.visualViewport
 
         const update = () => {
-            const container = mobileWrapRef.current
-            if (!container) return
             const scrollY = window.scrollY || 0
             const height = vv ? vv.height : window.innerHeight
+            // Persist so useLayoutEffect can reapply after every React render
+            vpTopRef.current = scrollY
+            vpHeightRef.current = height
+            const container = mobileWrapRef.current
+            if (!container) return
             container.style.top = `${scrollY}px`
             container.style.height = `${height}px`
             requestAnimationFrame(() => {
