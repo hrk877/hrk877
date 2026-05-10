@@ -90,17 +90,17 @@ export default function BananaAI() {
     }, [])
 
     // ── Mobile keyboard handling via visualViewport ───────────────────────────
-    // When the keyboard opens, vv.height shrinks → we clamp the container to
-    // that height so the input stays just above the keyboard.
+    // iOS has a known bug: position:fixed elements scroll with the page when
+    // the keyboard appears (violating CSS spec). When the keyboard opens, iOS
+    // increases window.scrollY by the amount needed to bring the input into
+    // view. The fixed container — which should stay at the screen top — gets
+    // pushed upward off-screen by that same amount.
     //
-    // Two iOS-specific pitfalls to avoid:
-    // 1. position:fixed on <body> creates a new containing block, which breaks
-    //    child position:fixed elements (they'd anchor to body, not viewport).
-    //    Use overflow:hidden instead — it blocks scroll without creating a new
-    //    containing block.
-    // 2. iOS fires touchmove on the document when the keyboard appears and
-    //    auto-scrolls to the focused input. We block all document-level
-    //    touchmove except within the messages scroll area.
+    // Fix: set  top = window.scrollY  (cancels the upward shift)
+    //           height = vv.height    (clips container to the area above keyboard)
+    //
+    // On browsers that behave correctly, overflow:hidden keeps scrollY = 0 so
+    // top stays 0 and no compensation is needed.
     useEffect(() => {
         if (typeof window === "undefined" || window.innerWidth >= 768) return
 
@@ -111,36 +111,35 @@ export default function BananaAI() {
         htmlEl.style.overflow = "hidden"
         bodyEl.style.overflow = "hidden"
 
-        // Block page-level touchmove so iOS cannot scroll the layout viewport.
-        // Touches inside the messages area are allowed through so it stays scrollable.
-        const blockPageScroll = (e: TouchEvent) => {
-            if (scrollRef.current?.contains(e.target as Node)) return
-            e.preventDefault()
-        }
-        document.addEventListener("touchmove", blockPageScroll, { passive: false })
-
         const vv = window.visualViewport
+
         const update = () => {
-            if (mobileWrapRef.current && vv) {
-                mobileWrapRef.current.style.height = `${vv.height}px`
-            }
+            const container = mobileWrapRef.current
+            if (!container) return
+            const scrollY = window.scrollY || 0
+            const height = vv ? vv.height : window.innerHeight
+            container.style.top = `${scrollY}px`
+            container.style.height = `${height}px`
             requestAnimationFrame(() => {
-                if (scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-                }
+                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
             })
         }
 
+        window.addEventListener("scroll", update, { passive: true })
         if (vv) {
             vv.addEventListener("resize", update)
-            update()
+            vv.addEventListener("scroll", update)
         }
+        update()
 
         return () => {
             htmlEl.style.overflow = prevHtmlOverflow
             bodyEl.style.overflow = prevBodyOverflow
-            document.removeEventListener("touchmove", blockPageScroll)
-            if (vv) vv.removeEventListener("resize", update)
+            window.removeEventListener("scroll", update)
+            if (vv) {
+                vv.removeEventListener("resize", update)
+                vv.removeEventListener("scroll", update)
+            }
         }
     }, [])
 
