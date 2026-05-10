@@ -66,30 +66,29 @@ export default function BananaAI() {
     const [status, setStatus] = useState<Status>("loading")
     const [progressText, setProgressText] = useState("バナナを起こしています...")
 
-    const scrollRef = useRef<HTMLDivElement>(null)     // mobile messages scroll
-    const scrollRefPC = useRef<HTMLDivElement>(null)   // PC messages scroll
-    const mobileWrapRef = useRef<HTMLDivElement>(null) // mobile outer container
+    const scrollRef = useRef<HTMLDivElement>(null)    // mobile messages scroll
+    const scrollRefPC = useRef<HTMLDivElement>(null)  // PC messages scroll
+    const formWrapRef = useRef<HTMLDivElement>(null)  // mobile floating form
     const inputRef = useRef<HTMLInputElement>(null)
     const engineRef = useRef<any>(null)
     const sessionDocId = useRef<string | null>(null)
     const { user } = useAuth()
 
-    // ── Mobile keyboard handling via visualViewport + position:fixed ──────────
-    // The mobile container uses position:fixed so iOS Safari can't scroll the
-    // page when the input is focused (which caused the "jump to top" bug).
-    // We then directly mutate the container's height/top via a ref — no setState
-    // means no React re-renders during the keyboard animation = silky smooth.
+    // ── Mobile: float the form above the keyboard via transform ───────────────
+    // The main layout (header + messages) is position:fixed;inset:0 and NEVER
+    // changes. Only the form element moves, using translateY(-keyboardHeight).
+    // This means 877 AI, the messages, everything stays put — only the input
+    // box slides up with the keyboard.
     useEffect(() => {
         const vv = window.visualViewport
         if (!vv) return
         const update = () => {
-            if (mobileWrapRef.current) {
-                mobileWrapRef.current.style.height = `${vv.height}px`
-                // NOTE: Do NOT set .style.top — always keep the container anchored
-                // at top:0 so it covers the status bar area with the yellow background.
-                // Setting top = vv.offsetTop would create a gap that shows black.
+            // How much the keyboard is occupying at the bottom
+            const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+            if (formWrapRef.current) {
+                formWrapRef.current.style.transform = `translateY(-${keyboardHeight}px)`
             }
-            // Keep latest message visible after keyboard animates
+            // Keep latest message in view
             requestAnimationFrame(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -461,14 +460,11 @@ export default function BananaAI() {
                 </div>
             </div>
 
-            {/* ── Mobile layout: original design + position:fixed keyboard fix ── */}
-            {/* position:fixed prevents iOS from scrolling the page on input focus.
-                visualViewport events then resize this container smoothly, keeping
-                the input form pinned just above the keyboard — Gemini-style. */}
+            {/* ── Mobile: main area (NEVER MOVES) ────────────────────────── */}
+            {/* position:fixed;inset:0 — header, title, messages are 100% static */}
             <div
-                ref={mobileWrapRef}
                 className="flex md:hidden flex-col overflow-hidden bg-[#FAC800]"
-                style={{ position: "fixed", left: 0, right: 0, top: 0, height: "100dvh" }}
+                style={{ position: "fixed", inset: 0 }}
             >
                 <HamburgerMenu />
 
@@ -485,76 +481,90 @@ export default function BananaAI() {
                     </div>
                 </div>
 
-                <div className="flex-1 min-h-0 w-full max-w-4xl mx-auto px-4 flex flex-col">
-                    <div
-                        ref={scrollRef}
-                        className="flex-1 overflow-y-auto space-y-5 pr-1 scrollbar-hide"
-                        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
-                    >
-                        {messages.map((msg, i) => {
-                            const isLastMsg = i === messages.length - 1
-                            const isEmptyAiMsg = msg.role === "ai" && msg.text === ""
-                            const showDots = isTyping && isLastMsg && isEmptyAiMsg
-                            return (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, y: 14 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                                    className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-                                >
-                                    <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">
-                                        {msg.role === "user" ? "YOU" : "877 AI"}
-                                    </span>
-                                    {msg.role === "user" ? (
-                                        <div className="max-w-[85%] text-right font-mono text-sm leading-relaxed opacity-65">
-                                            {msg.text}
-                                        </div>
-                                    ) : showDots ? (
-                                        <div className="flex space-x-1 h-7 items-center">
-                                            {[0, 0.22, 0.44].map((delay, idx) => (
-                                                <motion.span
-                                                    key={idx}
-                                                    className="font-serif text-2xl opacity-40"
-                                                    animate={{ opacity: [0.15, 0.8, 0.15] }}
-                                                    transition={{ duration: 1.3, repeat: Infinity, delay }}
-                                                >.</motion.span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="font-serif text-xl font-light leading-relaxed max-w-[95%] tracking-wide">
-                                            {msg.text}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )
-                        })}
-                    </div>
-
-                    <form
-                        onSubmit={handleSend}
-                        className="flex-none bg-[#FAC800] pt-3 pb-5 w-full"
-                    >
-                        <div className="relative w-full">
-                            <input
-                                ref={inputRef}
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                placeholder={status === "ready" ? "Ask the banana." : "Loading…"}
-                                disabled={isTyping || status !== "ready"}
-                                enterKeyHint="send"
-                                className="w-full bg-transparent border-b-2 border-black py-3.5 pr-14 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
-                            />
-                            <button
-                                type="submit"
-                                disabled={!input.trim() || isTyping || status !== "ready"}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 disabled:opacity-20 active:opacity-30 transition-opacity p-3 touch-manipulation"
+                {/* Messages — pb-24 leaves room so last message isn't behind the form */}
+                <div
+                    ref={scrollRef}
+                    className="flex-1 overflow-y-auto px-4 space-y-5 pr-1 scrollbar-hide"
+                    style={{
+                        paddingBottom: "96px",
+                        WebkitOverflowScrolling: "touch"
+                    } as React.CSSProperties}
+                >
+                    {messages.map((msg, i) => {
+                        const isLastMsg = i === messages.length - 1
+                        const isEmptyAiMsg = msg.role === "ai" && msg.text === ""
+                        const showDots = isTyping && isLastMsg && isEmptyAiMsg
+                        return (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 14 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                                className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
                             >
-                                <ArrowRight size={26} strokeWidth={1} />
-                            </button>
-                        </div>
-                    </form>
+                                <span className="font-mono text-[9px] mb-1.5 opacity-35 tracking-widest">
+                                    {msg.role === "user" ? "YOU" : "877 AI"}
+                                </span>
+                                {msg.role === "user" ? (
+                                    <div className="max-w-[85%] text-right font-mono text-sm leading-relaxed opacity-65">
+                                        {msg.text}
+                                    </div>
+                                ) : showDots ? (
+                                    <div className="flex space-x-1 h-7 items-center">
+                                        {[0, 0.22, 0.44].map((delay, idx) => (
+                                            <motion.span
+                                                key={idx}
+                                                className="font-serif text-2xl opacity-40"
+                                                animate={{ opacity: [0.15, 0.8, 0.15] }}
+                                                transition={{ duration: 1.3, repeat: Infinity, delay }}
+                                            >.</motion.span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="font-serif text-xl font-light leading-relaxed max-w-[95%] tracking-wide">
+                                        {msg.text}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )
+                    })}
                 </div>
+            </div>
+
+            {/* ── Mobile: floating form (slides up with keyboard only) ────────── */}
+            {/* Separate from the main area so ONLY the form moves — everything  */}
+            {/* else above stays completely still.                               */}
+            <div
+                ref={formWrapRef}
+                className="flex md:hidden bg-[#FAC800] px-4 pt-3 z-10"
+                style={{
+                    position: "fixed",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    paddingBottom: "max(env(safe-area-inset-bottom), 20px)",
+                }}
+            >
+                <form onSubmit={handleSend} className="w-full">
+                    <div className="relative w-full">
+                        <input
+                            ref={inputRef}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            placeholder={status === "ready" ? "Ask the banana." : "Loading…"}
+                            disabled={isTyping || status !== "ready"}
+                            enterKeyHint="send"
+                            className="w-full bg-transparent border-b-2 border-black py-3.5 pr-14 font-mono text-base placeholder:text-black/30 focus:outline-none disabled:opacity-40 transition-opacity rounded-none"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!input.trim() || isTyping || status !== "ready"}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 disabled:opacity-20 active:opacity-30 transition-opacity p-3 touch-manipulation"
+                        >
+                            <ArrowRight size={26} strokeWidth={1} />
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     )
