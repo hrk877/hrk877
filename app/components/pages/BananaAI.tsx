@@ -467,7 +467,7 @@ export default function BananaAI() {
                 the input form pinned just above the keyboard — Gemini-style. */}
             <div
                 ref={mobileWrapRef}
-                className="flex md:hidden flex-col bg-[#FAC800]"
+                className="flex md:hidden flex-col overflow-hidden bg-[#FAC800]"
                 style={{ position: "fixed", left: 0, right: 0, top: 0, height: "100dvh" }}
             >
                 <HamburgerMenu />
