@@ -85,7 +85,9 @@ export default function BananaAI() {
         const update = () => {
             if (mobileWrapRef.current) {
                 mobileWrapRef.current.style.height = `${vv.height}px`
-                mobileWrapRef.current.style.top = `${vv.offsetTop}px`
+                // NOTE: Do NOT set .style.top — always keep the container anchored
+                // at top:0 so it covers the status bar area with the yellow background.
+                // Setting top = vv.offsetTop would create a gap that shows black.
             }
             // Keep latest message visible after keyboard animates
             requestAnimationFrame(() => {
@@ -465,7 +467,7 @@ export default function BananaAI() {
                 the input form pinned just above the keyboard — Gemini-style. */}
             <div
                 ref={mobileWrapRef}
-                className="flex md:hidden flex-col overflow-hidden bg-[#FAC800]"
+                className="flex md:hidden flex-col bg-[#FAC800]"
                 style={{ position: "fixed", left: 0, right: 0, top: 0, height: "100dvh" }}
             >
                 <HamburgerMenu />
