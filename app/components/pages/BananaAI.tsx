@@ -90,27 +90,34 @@ export default function BananaAI() {
     }, [])
 
     // ── Mobile keyboard handling via visualViewport ───────────────────────────
-    // When the keyboard opens, visualViewport.height shrinks. We clamp the
-    // container height to vv.height so the input stays just above the keyboard.
+    // When the keyboard opens, vv.height shrinks → we clamp the container to
+    // that height so the input stays just above the keyboard.
     //
-    // Critical: we also lock document.body scroll. Without this, iOS Safari
-    // scrolls the layout viewport when the keyboard appears, which pushes the
-    // position:fixed container off-screen. Listening only to "resize" (not
-    // "scroll") avoids a feedback loop that causes the blank-screen bug.
+    // Two iOS-specific pitfalls to avoid:
+    // 1. position:fixed on <body> creates a new containing block, which breaks
+    //    child position:fixed elements (they'd anchor to body, not viewport).
+    //    Use overflow:hidden instead — it blocks scroll without creating a new
+    //    containing block.
+    // 2. iOS fires touchmove on the document when the keyboard appears and
+    //    auto-scrolls to the focused input. We block all document-level
+    //    touchmove except within the messages scroll area.
     useEffect(() => {
         if (typeof window === "undefined" || window.innerWidth >= 768) return
 
-        // Lock body to prevent iOS from scrolling the layout viewport
-        const prev = {
-            overflow: document.body.style.overflow,
-            position: document.body.style.position,
-            width: document.body.style.width,
-            top: document.body.style.top,
+        const htmlEl = document.documentElement
+        const bodyEl = document.body
+        const prevHtmlOverflow = htmlEl.style.overflow
+        const prevBodyOverflow = bodyEl.style.overflow
+        htmlEl.style.overflow = "hidden"
+        bodyEl.style.overflow = "hidden"
+
+        // Block page-level touchmove so iOS cannot scroll the layout viewport.
+        // Touches inside the messages area are allowed through so it stays scrollable.
+        const blockPageScroll = (e: TouchEvent) => {
+            if (scrollRef.current?.contains(e.target as Node)) return
+            e.preventDefault()
         }
-        document.body.style.overflow = "hidden"
-        document.body.style.position = "fixed"
-        document.body.style.width = "100%"
-        document.body.style.top = "0"
+        document.addEventListener("touchmove", blockPageScroll, { passive: false })
 
         const vv = window.visualViewport
         const update = () => {
@@ -130,8 +137,10 @@ export default function BananaAI() {
         }
 
         return () => {
+            htmlEl.style.overflow = prevHtmlOverflow
+            bodyEl.style.overflow = prevBodyOverflow
+            document.removeEventListener("touchmove", blockPageScroll)
             if (vv) vv.removeEventListener("resize", update)
-            Object.assign(document.body.style, prev)
         }
     }, [])
 
