@@ -74,6 +74,21 @@ export default function BananaAI() {
     const sessionDocId = useRef<string | null>(null)
     const { user } = useAuth()
 
+    // ── Force yellow background on html/body for iOS status bar ──────────────
+    // iOS reads the html/body background for the status bar area (especially with
+    // black-translucent). Since body defaults to white in globals.css, we override
+    // it here so the status bar on the AI page is always banana yellow.
+    useEffect(() => {
+        const prevHtml = document.documentElement.style.backgroundColor
+        const prevBody = document.body.style.backgroundColor
+        document.documentElement.style.backgroundColor = "#FAC800"
+        document.body.style.backgroundColor = "#FAC800"
+        return () => {
+            document.documentElement.style.backgroundColor = prevHtml
+            document.body.style.backgroundColor = prevBody
+        }
+    }, [])
+
     // ── Mobile: float the form above the keyboard via transform ───────────────
     // The main layout (header + messages) is position:fixed;inset:0 and NEVER
     // changes. Only the form element moves, using translateY(-keyboardHeight).
