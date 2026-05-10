@@ -90,17 +90,32 @@ export default function BananaAI() {
     }, [])
 
     // ── Mobile keyboard handling via visualViewport ───────────────────────────
-    // When the keyboard opens, visualViewport.height shrinks. We update the
-    // container height directly via a ref (no setState = no re-render jank).
-    // top is NEVER changed — always 0 — so the status bar stays yellow.
-    // overflow:hidden is intentionally absent so iOS can't clip the header.
+    // When the keyboard opens, visualViewport.height shrinks. We clamp the
+    // container height to vv.height so the input stays just above the keyboard.
+    //
+    // Critical: we also lock document.body scroll. Without this, iOS Safari
+    // scrolls the layout viewport when the keyboard appears, which pushes the
+    // position:fixed container off-screen. Listening only to "resize" (not
+    // "scroll") avoids a feedback loop that causes the blank-screen bug.
     useEffect(() => {
+        if (typeof window === "undefined" || window.innerWidth >= 768) return
+
+        // Lock body to prevent iOS from scrolling the layout viewport
+        const prev = {
+            overflow: document.body.style.overflow,
+            position: document.body.style.position,
+            width: document.body.style.width,
+            top: document.body.style.top,
+        }
+        document.body.style.overflow = "hidden"
+        document.body.style.position = "fixed"
+        document.body.style.width = "100%"
+        document.body.style.top = "0"
+
         const vv = window.visualViewport
-        if (!vv) return
         const update = () => {
-            if (mobileWrapRef.current) {
+            if (mobileWrapRef.current && vv) {
                 mobileWrapRef.current.style.height = `${vv.height}px`
-                // Do NOT set .style.top — always keep anchored at top:0
             }
             requestAnimationFrame(() => {
                 if (scrollRef.current) {
@@ -108,12 +123,15 @@ export default function BananaAI() {
                 }
             })
         }
-        vv.addEventListener("resize", update)
-        vv.addEventListener("scroll", update)
-        update()
+
+        if (vv) {
+            vv.addEventListener("resize", update)
+            update()
+        }
+
         return () => {
-            vv.removeEventListener("resize", update)
-            vv.removeEventListener("scroll", update)
+            if (vv) vv.removeEventListener("resize", update)
+            Object.assign(document.body.style, prev)
         }
     }, [])
 
@@ -473,11 +491,11 @@ export default function BananaAI() {
             </div>
 
             {/* ── Mobile: single container, height tracks visualViewport ────────── */}
-            {/* No overflow:hidden so iOS can't clip the header during resize.  */}
-            {/* top is always 0 so the status bar area stays yellow.            */}
+            {/* Body scroll is locked on mount so iOS can't push this off-screen. */}
+            {/* overflow-hidden clips content to the container bounds.            */}
             <div
                 ref={mobileWrapRef}
-                className="flex md:hidden flex-col bg-[#FAC800]"
+                className="flex md:hidden flex-col bg-[#FAC800] overflow-hidden"
                 style={{ position: "fixed", left: 0, right: 0, top: 0, height: "100dvh" }}
             >
                 <HamburgerMenu />
