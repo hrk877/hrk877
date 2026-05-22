@@ -85,6 +85,12 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
       
+      // Shop Products - 誰でも読み取り可能、管理者のみ書き込み
+      match /shop_products/{productId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+
       // Letters - 誰でも読み書き可能
       match /letters/{letterId} {
         allow read, write: if true;
