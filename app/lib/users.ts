@@ -2,8 +2,10 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export const EXCLUDED_EMAILS = [
-    "miso.blye17@gmail.com"
+    "miso.blye17@gmail.com",
+    "uratamomona@gmail.com"
 ];
+
 
 export async function getAllUserEmails(): Promise<string[]> {
     if (!db) return []

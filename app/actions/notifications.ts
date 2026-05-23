@@ -4,7 +4,7 @@ import { adminDb } from "@/lib/firebase-admin"
 import { sendBroadcastEmail } from "@/app/actions/email"
 
 const SITE_URL = "https://877hand.vercel.app"
-const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"]
+const EXCLUDED_EMAILS = ["miso.blye17@gmail.com", "uratamomona@gmail.com"]
 
 export async function notifyCommunityServer(type: 'banana' | 'museum' | 'journal', _content: string) {
     try {

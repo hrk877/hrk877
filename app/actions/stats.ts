@@ -162,7 +162,7 @@ export async function getDevelopmentStats() {
                 // Fetch all users with emails using Admin SDK to bypass Firestore rules
                 const usersSnapshot = await adminDb.collection("users").get();
                 const emails: string[] = [];
-                const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"];
+                const EXCLUDED_EMAILS = ["miso.blye17@gmail.com", "uratamomona@gmail.com"];
 
                 usersSnapshot.forEach(doc => {
                     const data = doc.data();

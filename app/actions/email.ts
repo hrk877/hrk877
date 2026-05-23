@@ -68,7 +68,7 @@ export async function sendCustomBroadcast(subject: string, message: string) {
         }
         const usersSnapshot = await adminDb.collection("users").get();
         const recipients: string[] = [];
-        const EXCLUDED_EMAILS = ["miso.blye17@gmail.com"];
+        const EXCLUDED_EMAILS = ["miso.blye17@gmail.com", "uratamomona@gmail.com"];
 
         usersSnapshot.forEach(doc => {
             const data = doc.data();
