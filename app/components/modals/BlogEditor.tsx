@@ -170,7 +170,7 @@ const BlogEditor = ({
                                         required
                                     />
                                     <div className="flex items-center gap-3 font-mono text-[10px] opacity-20 tracking-wider">
-                                        <span>BY {user?.displayName || "HRK.877"}</span>
+                                        <span>BY {user?.displayName || "Mr. Sugar Spot"}</span>
                                         <span>•</span>
                                         <span>{new Date().toLocaleDateString('ja-JP').replace(/\//g, '.')}</span>
                                     </div>
