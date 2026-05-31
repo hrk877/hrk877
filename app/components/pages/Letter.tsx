@@ -22,7 +22,7 @@ const Letter = () => {
             const lettersRef = collection(db, "artifacts", appId, "public", "data", "letters")
             await addDoc(lettersRef, {
                 message,
-                to: "hrk.877",
+                to: "Mr. Sugar Spot",
                 createdAt: serverTimestamp(),
                 isAnonymous: true,
             })

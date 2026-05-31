@@ -142,7 +142,7 @@ function JournalPageContent() {
                     </div>
                     <div className="text-left mt-6 md:mt-0 flex flex-col items-start gap-4">
                         <p className="font-mono text-lg md:text-xs opacity-60">
-                            Written by <span className="cursor-pointer select-none hover:text-white transition-colors" onClick={handleSecretClick}>HRK.877</span>
+                            Written by <span className="cursor-pointer select-none hover:text-white transition-colors" onClick={handleSecretClick}>Mr. Sugar Spot</span>
                             <br />
                             Tokyo, Japan
                         </p>
