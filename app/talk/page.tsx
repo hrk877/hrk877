@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
-import BananaCanvas   from "./BananaCanvas"
+import BananaScene    from "./BananaScene"
 import { useTalkController } from "./useTalkController"
 
 // ── Animated sound-bar indicator ────────────────────────────────────────────
@@ -72,7 +72,7 @@ export default function TalkPage() {
         {/* ── Canvas ─────────────────────────────────────────────────────── */}
         <div className="w-full max-w-4xl mb-6 md:mb-8">
           <div className="border border-black/10 overflow-hidden w-full">
-            <BananaCanvas
+            <BananaScene
               canvasRef={canvasRef}
               mouthState={mouthState}
               isTalking={isTalking}
