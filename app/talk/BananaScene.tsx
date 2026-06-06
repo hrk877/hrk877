@@ -15,20 +15,44 @@ function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElem
   return null
 }
 
-// ── 口の頂点を解析してモーフターゲット（デルタ）を生成 ──────────────────────
-// GLB座標系: X[-1,1] Y[-0.56,0.56] Z[-0.27,0.27]
-// 口の領域:  Z > 0.08, |X| < 0.48, -0.32 < Y < 0.12
-function buildMouthCloseDelta(geometry: THREE.BufferGeometry): Float32Array {
+// ─────────────────────────────────────────────────────────────────────────────
+// 口閉じモーフターゲット生成
+//
+// GLB座標系（実測）:
+//   X: -0.55 ~ +0.55  (口の幅)
+//   Y:  0.04 ~ -0.40  (口の高さ: 上端0.04, 下端-0.40)
+//   Z: -0.27 ~ +0.27  (前後: 前面=正, 後面=負)
+//
+// 口腔内 (Z>0.15): 28,013頂点
+//   上グループ (Y > -0.08): 上顎・上の歯
+//   下グループ (Y < -0.12): 下顎・下の歯
+//
+// ★ 解法: 剛体平行移動（Rigid Body Translation）
+//   各グループ内の頂点は全て同じΔYだけ移動 → 歯の形が崩れない
+//   前後圧縮（ΔZ）も一様に適用
+// ─────────────────────────────────────────────────────────────────────────────
+function buildMouthMorph(geometry: THREE.BufferGeometry): Float32Array {
   const pos    = geometry.attributes.position as THREE.BufferAttribute
   const count  = pos.count
-  const deltas = new Float32Array(count * 3) // 全頂点ゼロ初期化
+  const deltas = new Float32Array(count * 3)
 
-  const X_MAX    = 0.48
-  const Y_MIN    = -0.33
-  const Y_MAX    = 0.13
-  const Y_CENTER = (Y_MIN + Y_MAX) / 2  // ≈ -0.10（口の中心Y）
-  const Z_OUTER  = 0.08   // 唇の外縁
-  const Z_INNER  = 0.22   // 奥歯・喉付近
+  // ── 閉じる量 ──────────────────────────────────────────────────────────────
+  const UPPER_DY = -0.10   // 上グループ: 下に0.10移動
+  const LOWER_DY = +0.13   // 下グループ: 上に0.13移動
+  const INNER_DZ = -0.06   // 奥行きを縮める
+
+  // ── 境界 ─────────────────────────────────────────────────────────────────
+  const SEAM_HI  = -0.08   // 上グループ下端 (Y > SEAM_HI → 上グループ)
+  const SEAM_LO  = -0.14   // 下グループ上端 (Y < SEAM_LO → 下グループ)
+  // SEAM_HI ~ SEAM_LO 間はブレンド
+
+  // ── 口の領域 ─────────────────────────────────────────────────────────────
+  const Z_OUTER  = 0.07    // 口の外縁Z（これより小さいと口の外）
+  const Z_INNER  = 0.16    // 完全な内側Z（これより大きいと奥歯・喉）
+  const X_FULL   = 0.42    // この内側は100%効果
+  const X_EDGE   = 0.56    // この外側はゼロ（境界フェード）
+  const Y_TOP    = 0.08    // 口の上端
+  const Y_BOT    = -0.42   // 口の下端
 
   for (let i = 0; i < count; i++) {
     const x = pos.getX(i)
@@ -36,21 +60,40 @@ function buildMouthCloseDelta(geometry: THREE.BufferGeometry): Float32Array {
     const z = pos.getZ(i)
 
     // 口の領域外はスキップ
-    if (Math.abs(x) >= X_MAX || y <= Y_MIN || y >= Y_MAX || z <= Z_OUTER) continue
+    if (z <= Z_OUTER) continue
+    if (Math.abs(x) >= X_EDGE) continue
+    if (y >= Y_TOP || y <= Y_BOT) continue
 
-    // 深さ方向の強度（奥ほど強く動く）
-    const depth = Math.max(0, Math.min(1, (z - Z_OUTER) / (Z_INNER - Z_OUTER)))
+    // ── X方向フォールオフ: 両端のみなだらかにフェード ──────────────────────
+    const ax = Math.abs(x)
+    const xFall = ax <= X_FULL
+      ? 1.0
+      : 1.0 - ((ax - X_FULL) / (X_EDGE - X_FULL)) ** 2
+    if (xFall <= 0) continue
 
-    // X方向のフォールオフ（端ほど弱く）
-    const xFall = Math.max(0, 1 - (Math.abs(x) / X_MAX) ** 1.4)
+    // ── Z方向フォールオフ: 奥ほど強く動く ─────────────────────────────────
+    // 外縁(Z=Z_OUTER)→0、内側(Z=Z_INNER以上)→1
+    const zFactor = Math.max(0, Math.min(1, (z - Z_OUTER) / (Z_INNER - Z_OUTER)))
 
-    // 総合強度
-    const inf = depth * xFall
+    // ── 剛体平行移動: 上グループ/下グループで固定量を適用 ──────────────────
+    let rigidDY: number
+    if (y > SEAM_HI) {
+      // 上グループ: 全頂点を同じ量だけ下に移動
+      rigidDY = UPPER_DY
+    } else if (y < SEAM_LO) {
+      // 下グループ: 全頂点を同じ量だけ上に移動
+      rigidDY = LOWER_DY
+    } else {
+      // 境界ブレンドゾーン (-0.14 ~ -0.08)
+      const t = (y - SEAM_LO) / (SEAM_HI - SEAM_LO)  // 0→下, 1→上
+      rigidDY = LOWER_DY + t * (UPPER_DY - LOWER_DY)
+    }
 
-    // 口を閉じる: 上下の頂点を Y_CENTER に向けて寄せる
-    deltas[i * 3 + 0] = 0                              // ΔX なし
-    deltas[i * 3 + 1] = (Y_CENTER - y) * inf * 0.80   // ΔY: 上は下へ・下は上へ
-    deltas[i * 3 + 2] = -0.10 * inf * depth            // ΔZ: 奥行きを縮める
+    const inf = xFall * zFactor
+
+    deltas[i * 3 + 0] = 0                // ΔX なし
+    deltas[i * 3 + 1] = rigidDY * inf    // ΔY: 剛体移動
+    deltas[i * 3 + 2] = INNER_DZ * inf   // ΔZ: 奥行きを縮める
   }
 
   return deltas
@@ -70,31 +113,27 @@ function BananaModel({
   const groupRef    = useRef<THREE.Group>(null)
   const meshRef     = useRef<THREE.Mesh | null>(null)
   const frame       = useRef(0)
-  const morphTarget = useRef(0) // 現在のモーフ値（0=開, 1=閉）
+  const morphVal    = useRef(0)  // 0=開, 1=閉
 
   useEffect(() => {
-    // シーンの中心合わせ・スケール正規化
+    // 中心合わせ・スケール正規化
     const box    = new THREE.Box3().setFromObject(scene)
     const center = box.getCenter(new THREE.Vector3())
     const size   = box.getSize(new THREE.Vector3())
-    const maxDim = Math.max(size.x, size.y, size.z)
     scene.position.sub(center)
-    scene.scale.setScalar(1.8 / maxDim)
+    scene.scale.setScalar(1.8 / Math.max(size.x, size.y, size.z))
 
-    // メッシュを取得してモーフターゲットを設定
+    // モーフターゲット設定
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
-      if (!child.geometry?.attributes?.position)  return
+      if (!child.geometry?.attributes?.position) return
 
       const geo    = child.geometry
-      const deltas = buildMouthCloseDelta(geo)
+      const deltas = buildMouthMorph(geo)
 
-      geo.morphAttributes.position = [
-        new THREE.BufferAttribute(deltas, 3),
-      ]
-      geo.morphTargetsRelative = true  // デルタ方式（元の形 + 差分）
-
-      child.morphTargetInfluences = [0]  // 初期値: 口が開いた状態
+      geo.morphAttributes.position = [new THREE.BufferAttribute(deltas, 3)]
+      geo.morphTargetsRelative = true
+      child.morphTargetInfluences = [0]  // 0=開いた状態
       child.updateMorphTargets()
 
       meshRef.current = child
@@ -108,25 +147,29 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // ── ボブ＆ゆれアニメーション ──────────────────────────────────────────
+    // ── ボブ・ゆれ ─────────────────────────────────────────────────────────
     const bobAmp  = isTalking ? 0.055 : 0.016
     const bobFreq = isTalking ? 0.10  : 0.022
     groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
 
     const targetZ = isTalking ? Math.sin(t * 0.08) * 0.028 : 0
-    groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, targetZ, 0.06)
+    groupRef.current.rotation.z =
+      THREE.MathUtils.lerp(groupRef.current.rotation.z, targetZ, 0.06)
 
     const targetScale = mouthState === "open_full" ? 1.04 : 1.0
     const cs = groupRef.current.scale.x
     groupRef.current.scale.setScalar(THREE.MathUtils.lerp(cs, targetScale, 0.14))
 
-    // ── 口の開閉モーフ ────────────────────────────────────────────────────
-    // 0 = 開いてる, 1 = 閉じてる
+    // ── 口の開閉モーフ ─────────────────────────────────────────────────────
+    // 0=完全に開いた状態, 1=閉じた状態
     const targetMorph = mouthState === "rest" ? 1.0 : 0.0
-    morphTarget.current = THREE.MathUtils.lerp(morphTarget.current, targetMorph, 0.10)
+
+    // 開く時は速く・閉じる時はゆっくり（自然な顎の動き）
+    const lerpSpeed = targetMorph < morphVal.current ? 0.14 : 0.09
+    morphVal.current = THREE.MathUtils.lerp(morphVal.current, targetMorph, lerpSpeed)
 
     if (meshRef.current?.morphTargetInfluences) {
-      meshRef.current.morphTargetInfluences[0] = morphTarget.current
+      meshRef.current.morphTargetInfluences[0] = morphVal.current
     }
   })
 
@@ -141,7 +184,7 @@ function BananaModel({
 function Loader() {
   return (
     <mesh>
-      <sphereGeometry args={[0.08, 8, 8]} />
+      <sphereGeometry args={[0.06, 8, 8]} />
       <meshBasicMaterial color="#FAC800" />
     </mesh>
   )
@@ -176,7 +219,11 @@ export default function BananaScene({
       <Canvas
         camera={{ position: [0, 0.05, 3.2], fov: 42 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
-        style={{ background: "transparent", opacity: loaded ? 1 : 0, transition: "opacity 0.6s" }}
+        style={{
+          background: "transparent",
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 0.6s",
+        }}
       >
         <CanvasBridge canvasRef={canvasRef} />
         <ambientLight intensity={1.4} />
