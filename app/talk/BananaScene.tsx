@@ -16,70 +16,17 @@ function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElem
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 口閉じモーフターゲット生成
+// バナナモデル
 //
-// 戦略: Y方向（上下）ではなく Z方向（奥行き）で「隠す」
-//   開いた状態: 奥歯・口腔内が正面から見える (Z > 0.15)
-//   閉じた状態: 奥歯・口腔内をZ方向に後退させてバナナの皮の裏に隠す
-//   → 歯が交差する問題が物理的に発生しない
+// 方針: 頂点操作は一切行わない（単一メッシュの性質上アーティファクトが出るため）
+// モデルは常に「口が開いたスマイル」= キャラクターの表情として扱う
 //
-// 加えて: ごく小さなY移動で唇の「すぼまり感」を演出
+// しゃべってる感の表現:
+//   ① Y軸スケールの脈動 → 顎が上下する印象
+//   ② 上下ボブ           → 頭が弾む
+//   ③ Z軸回転ゆれ        → 身体がのりのりになる
+//   ④ open_full時に前傾き → 「大きく開いた」強調
 // ─────────────────────────────────────────────────────────────────────────────
-function buildMouthMorph(geometry: THREE.BufferGeometry): Float32Array {
-  const pos    = geometry.attributes.position as THREE.BufferAttribute
-  const count  = pos.count
-  const deltas = new Float32Array(count * 3)
-
-  // ── パラメータ ─────────────────────────────────────────────────────────────
-  const CLOSE_Z      = -0.18   // 奥歯・口腔内をZ方向に後退（皮の裏へ隠す）
-  const LIP_CLOSE_Y  = 0.025   // 唇の微小な閉じ（上下それぞれ ±0.025 のみ）
-
-  // ── 境界 ─────────────────────────────────────────────────────────────────
-  const Z_LIP    = 0.07    // 唇外縁（これより小さいと口の外）
-  const Z_TEETH  = 0.15    // 歯・口腔内の境界
-  const X_FULL   = 0.42    // この内側は100%効果
-  const X_EDGE   = 0.57    // この外側はゼロ
-  const Y_SEAM   = -0.09   // 上唇と下唇の境界
-
-  for (let i = 0; i < count; i++) {
-    const x = pos.getX(i)
-    const y = pos.getY(i)
-    const z = pos.getZ(i)
-
-    // 口の外はスキップ
-    if (z <= Z_LIP)           continue
-    if (Math.abs(x) >= X_EDGE) continue
-    if (y >= 0.09 || y <= -0.43) continue
-
-    // X方向フォールオフ（端だけなめらかにフェード）
-    const ax = Math.abs(x)
-    const xFall = ax <= X_FULL
-      ? 1.0
-      : Math.max(0, 1 - ((ax - X_FULL) / (X_EDGE - X_FULL)) ** 1.5)
-    if (xFall <= 0) continue
-
-    // Z方向: 奥ほど強く後退
-    // 唇外縁(Z_LIP)→0, 歯・口腔内(Z_TEETH以上)→1
-    const zFactor = z >= Z_TEETH
-      ? 1.0
-      : (z - Z_LIP) / (Z_TEETH - Z_LIP)
-
-    const inf = xFall * zFactor
-
-    // ── 奥行き圧縮（主）: 歯・口腔内を後退させる ─────────────────────────
-    deltas[i * 3 + 2] = CLOSE_Z * inf
-
-    // ── Y方向（微量）: 唇のすぼまり感のみ。歯の交差は絶対に起きないサイズ ─
-    const lipY = y > Y_SEAM
-      ? -LIP_CLOSE_Y * inf          // 上唇: わずかに下へ
-      : +LIP_CLOSE_Y * inf * 0.6    // 下唇: わずかに上へ（控えめ）
-    deltas[i * 3 + 1] = lipY
-  }
-
-  return deltas
-}
-
-// ── バナナモデル ─────────────────────────────────────────────────────────────
 function BananaModel({
   isTalking,
   mouthState,
@@ -89,43 +36,27 @@ function BananaModel({
   mouthState: MouthState
   onLoaded:   () => void
 }) {
-  const { scene }   = useGLTF("/banana-talk.glb")
-  const groupRef    = useRef<THREE.Group>(null)
-  const meshRef     = useRef<THREE.Mesh | null>(null)
-  const frame       = useRef(0)
-  const morphVal    = useRef(0)   // 0=開 1=閉
+  const { scene } = useGLTF("/banana-talk.glb")
+  const groupRef  = useRef<THREE.Group>(null)
+  const frame     = useRef(0)
 
+  // モデルのセットアップ（形状・材質のみ）
   useEffect(() => {
-    // 中心合わせ・スケール正規化
     const box    = new THREE.Box3().setFromObject(scene)
     const center = box.getCenter(new THREE.Vector3())
     const size   = box.getSize(new THREE.Vector3())
     scene.position.sub(center)
     scene.scale.setScalar(1.8 / Math.max(size.x, size.y, size.z))
 
+    // 材質修正: metallicFactor=1 → 0.05（バナナは非金属）
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
-
-      // ── 材質修正: metallicFactor=1 を補正してテクスチャを正しく表示 ──────
-      if (child.material) {
-        const mat = child.material as THREE.MeshStandardMaterial
-        mat.metalness = 0.05   // ほぼ非金属（バナナは有機物）
-        mat.roughness = 0.65   // 適度なざらつき
-        mat.envMapIntensity = 0.4  // 環境反射を抑える
-        mat.needsUpdate = true
-      }
-
-      if (!child.geometry?.attributes?.position) return
-
-      const geo    = child.geometry
-      const deltas = buildMouthMorph(geo)
-
-      geo.morphAttributes.position = [new THREE.BufferAttribute(deltas, 3)]
-      geo.morphTargetsRelative = true
-      child.updateMorphTargets()
-      child.morphTargetInfluences![0] = 0   // 初期値: 開いた状態
-
-      meshRef.current = child
+      const mat = child.material as THREE.MeshStandardMaterial
+      if (!mat) return
+      mat.metalness        = 0.05
+      mat.roughness        = 0.65
+      mat.envMapIntensity  = 0.35
+      mat.needsUpdate      = true
     })
 
     onLoaded()
@@ -136,30 +67,43 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // ── ボブ・ゆれアニメーション ─────────────────────────────────────────
-    const bobAmp  = isTalking ? 0.05  : 0.015
-    const bobFreq = isTalking ? 0.11  : 0.022
-    groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
+    if (isTalking) {
+      // ── 話している状態: 元気よくしゃべる ──────────────────────────────
+      const bobFreq  = 0.14
+      const bobAmp   = 0.055
 
-    const targetRZ = isTalking ? Math.sin(t * 0.07) * 0.022 : 0
-    groupRef.current.rotation.z =
-      THREE.MathUtils.lerp(groupRef.current.rotation.z, targetRZ, 0.05)
+      // 上下ボブ（速め）
+      groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
 
-    // open_full 時: わずかにスケールアップ（口が大きく開く強調）
-    const tgtScale = mouthState === "open_full" ? 1.035 : 1.0
-    const cs = groupRef.current.scale.x
-    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(cs, tgtScale, 0.12))
+      // Z軸ゆれ（体を振る）
+      groupRef.current.rotation.z = Math.sin(t * 0.09) * 0.030
 
-    // ── 口の開閉モーフ ────────────────────────────────────────────────────
-    // 0=開いた状態  1=閉じた状態（奥歯が後退して皮に隠れる）
-    const targetMorph = mouthState === "rest" ? 1.0 : 0.0
+      // ── 口の開閉: Y軸スケールの脈動で「顎が動く」印象を作る ─────────────
+      // open_full: スケールが大きい（口が開ききってる）
+      // open_mid:  やや縮む（顎が少し閉じる）
+      const targetScaleY = mouthState === "open_full" ? 1.06 : 0.94
+      const targetScaleX = mouthState === "open_full" ? 0.97 : 1.02  // 横は逆に
+      const curY = groupRef.current.scale.y
+      const curX = groupRef.current.scale.x
+      groupRef.current.scale.y = THREE.MathUtils.lerp(curY, targetScaleY, 0.22)
+      groupRef.current.scale.x = THREE.MathUtils.lerp(curX, targetScaleX, 0.22)
+      groupRef.current.scale.z = THREE.MathUtils.lerp(groupRef.current.scale.z, 1.0, 0.10)
 
-    // 開く: 速い（0.18） 閉じる: ゆっくり（0.08）→ 自然な顎の重さ
-    const speed = targetMorph < morphVal.current ? 0.18 : 0.08
-    morphVal.current = THREE.MathUtils.lerp(morphVal.current, targetMorph, speed)
+      // open_full 時: 少し前傾（大きく開いた強調）
+      const targetRX = mouthState === "open_full" ? 0.06 : 0.0
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRX, 0.15)
 
-    if (meshRef.current?.morphTargetInfluences) {
-      meshRef.current.morphTargetInfluences[0] = morphVal.current
+    } else {
+      // ── 休止状態: ゆったりした呼吸 ─────────────────────────────────────
+      groupRef.current.position.y =
+        THREE.MathUtils.lerp(groupRef.current.position.y, Math.sin(t * 0.022) * 0.016, 0.08)
+
+      // 全スケール・回転を1/0に戻す
+      groupRef.current.scale.x = THREE.MathUtils.lerp(groupRef.current.scale.x, 1.0, 0.05)
+      groupRef.current.scale.y = THREE.MathUtils.lerp(groupRef.current.scale.y, 1.0, 0.05)
+      groupRef.current.scale.z = THREE.MathUtils.lerp(groupRef.current.scale.z, 1.0, 0.05)
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.05)
+      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.05)
     }
   })
 
@@ -216,11 +160,9 @@ export default function BananaScene({
         }}
       >
         <CanvasBridge canvasRef={canvasRef} />
-
-        {/* 自然な光: 強すぎず、テクスチャが潰れない強度に調整 */}
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[3, 5, 4]}  intensity={1.4} />
-        <directionalLight position={[-2, 1, -1]} intensity={0.4} />
+        <ambientLight intensity={0.9} />
+        <directionalLight position={[3, 5, 4]}  intensity={1.5} />
+        <directionalLight position={[-2, 1, -1]} intensity={0.45} />
         <directionalLight position={[0, -1, 3]}  intensity={0.3} />
         <Environment preset="apartment" />
 
