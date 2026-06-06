@@ -18,82 +18,62 @@ function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElem
 // ─────────────────────────────────────────────────────────────────────────────
 // 口閉じモーフターゲット生成
 //
-// GLB座標系（実測）:
-//   X: -0.55 ~ +0.55  (口の幅)
-//   Y:  0.04 ~ -0.40  (口の高さ: 上端0.04, 下端-0.40)
-//   Z: -0.27 ~ +0.27  (前後: 前面=正, 後面=負)
+// 戦略: Y方向（上下）ではなく Z方向（奥行き）で「隠す」
+//   開いた状態: 奥歯・口腔内が正面から見える (Z > 0.15)
+//   閉じた状態: 奥歯・口腔内をZ方向に後退させてバナナの皮の裏に隠す
+//   → 歯が交差する問題が物理的に発生しない
 //
-// 口腔内 (Z>0.15): 28,013頂点
-//   上グループ (Y > -0.08): 上顎・上の歯
-//   下グループ (Y < -0.12): 下顎・下の歯
-//
-// ★ 解法: 剛体平行移動（Rigid Body Translation）
-//   各グループ内の頂点は全て同じΔYだけ移動 → 歯の形が崩れない
-//   前後圧縮（ΔZ）も一様に適用
+// 加えて: ごく小さなY移動で唇の「すぼまり感」を演出
 // ─────────────────────────────────────────────────────────────────────────────
 function buildMouthMorph(geometry: THREE.BufferGeometry): Float32Array {
   const pos    = geometry.attributes.position as THREE.BufferAttribute
   const count  = pos.count
   const deltas = new Float32Array(count * 3)
 
-  // ── 閉じる量 ──────────────────────────────────────────────────────────────
-  const UPPER_DY = -0.10   // 上グループ: 下に0.10移動
-  const LOWER_DY = +0.13   // 下グループ: 上に0.13移動
-  const INNER_DZ = -0.06   // 奥行きを縮める
+  // ── パラメータ ─────────────────────────────────────────────────────────────
+  const CLOSE_Z      = -0.18   // 奥歯・口腔内をZ方向に後退（皮の裏へ隠す）
+  const LIP_CLOSE_Y  = 0.025   // 唇の微小な閉じ（上下それぞれ ±0.025 のみ）
 
   // ── 境界 ─────────────────────────────────────────────────────────────────
-  const SEAM_HI  = -0.08   // 上グループ下端 (Y > SEAM_HI → 上グループ)
-  const SEAM_LO  = -0.14   // 下グループ上端 (Y < SEAM_LO → 下グループ)
-  // SEAM_HI ~ SEAM_LO 間はブレンド
-
-  // ── 口の領域 ─────────────────────────────────────────────────────────────
-  const Z_OUTER  = 0.07    // 口の外縁Z（これより小さいと口の外）
-  const Z_INNER  = 0.16    // 完全な内側Z（これより大きいと奥歯・喉）
+  const Z_LIP    = 0.07    // 唇外縁（これより小さいと口の外）
+  const Z_TEETH  = 0.15    // 歯・口腔内の境界
   const X_FULL   = 0.42    // この内側は100%効果
-  const X_EDGE   = 0.56    // この外側はゼロ（境界フェード）
-  const Y_TOP    = 0.08    // 口の上端
-  const Y_BOT    = -0.42   // 口の下端
+  const X_EDGE   = 0.57    // この外側はゼロ
+  const Y_SEAM   = -0.09   // 上唇と下唇の境界
 
   for (let i = 0; i < count; i++) {
     const x = pos.getX(i)
     const y = pos.getY(i)
     const z = pos.getZ(i)
 
-    // 口の領域外はスキップ
-    if (z <= Z_OUTER) continue
+    // 口の外はスキップ
+    if (z <= Z_LIP)           continue
     if (Math.abs(x) >= X_EDGE) continue
-    if (y >= Y_TOP || y <= Y_BOT) continue
+    if (y >= 0.09 || y <= -0.43) continue
 
-    // ── X方向フォールオフ: 両端のみなだらかにフェード ──────────────────────
+    // X方向フォールオフ（端だけなめらかにフェード）
     const ax = Math.abs(x)
     const xFall = ax <= X_FULL
       ? 1.0
-      : 1.0 - ((ax - X_FULL) / (X_EDGE - X_FULL)) ** 2
+      : Math.max(0, 1 - ((ax - X_FULL) / (X_EDGE - X_FULL)) ** 1.5)
     if (xFall <= 0) continue
 
-    // ── Z方向フォールオフ: 奥ほど強く動く ─────────────────────────────────
-    // 外縁(Z=Z_OUTER)→0、内側(Z=Z_INNER以上)→1
-    const zFactor = Math.max(0, Math.min(1, (z - Z_OUTER) / (Z_INNER - Z_OUTER)))
-
-    // ── 剛体平行移動: 上グループ/下グループで固定量を適用 ──────────────────
-    let rigidDY: number
-    if (y > SEAM_HI) {
-      // 上グループ: 全頂点を同じ量だけ下に移動
-      rigidDY = UPPER_DY
-    } else if (y < SEAM_LO) {
-      // 下グループ: 全頂点を同じ量だけ上に移動
-      rigidDY = LOWER_DY
-    } else {
-      // 境界ブレンドゾーン (-0.14 ~ -0.08)
-      const t = (y - SEAM_LO) / (SEAM_HI - SEAM_LO)  // 0→下, 1→上
-      rigidDY = LOWER_DY + t * (UPPER_DY - LOWER_DY)
-    }
+    // Z方向: 奥ほど強く後退
+    // 唇外縁(Z_LIP)→0, 歯・口腔内(Z_TEETH以上)→1
+    const zFactor = z >= Z_TEETH
+      ? 1.0
+      : (z - Z_LIP) / (Z_TEETH - Z_LIP)
 
     const inf = xFall * zFactor
 
-    deltas[i * 3 + 0] = 0                // ΔX なし
-    deltas[i * 3 + 1] = rigidDY * inf    // ΔY: 剛体移動
-    deltas[i * 3 + 2] = INNER_DZ * inf   // ΔZ: 奥行きを縮める
+    // ── 奥行き圧縮（主）: 歯・口腔内を後退させる ─────────────────────────
+    deltas[i * 3 + 2] = CLOSE_Z * inf
+
+    // ── Y方向（微量）: 唇のすぼまり感のみ。歯の交差は絶対に起きないサイズ ─
+    const lipY = y > Y_SEAM
+      ? -LIP_CLOSE_Y * inf          // 上唇: わずかに下へ
+      : +LIP_CLOSE_Y * inf * 0.6    // 下唇: わずかに上へ（控えめ）
+    deltas[i * 3 + 1] = lipY
   }
 
   return deltas
@@ -113,7 +93,7 @@ function BananaModel({
   const groupRef    = useRef<THREE.Group>(null)
   const meshRef     = useRef<THREE.Mesh | null>(null)
   const frame       = useRef(0)
-  const morphVal    = useRef(0)  // 0=開, 1=閉
+  const morphVal    = useRef(0)   // 0=開 1=閉
 
   useEffect(() => {
     // 中心合わせ・スケール正規化
@@ -123,9 +103,18 @@ function BananaModel({
     scene.position.sub(center)
     scene.scale.setScalar(1.8 / Math.max(size.x, size.y, size.z))
 
-    // モーフターゲット設定
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
+
+      // ── 材質修正: metallicFactor=1 を補正してテクスチャを正しく表示 ──────
+      if (child.material) {
+        const mat = child.material as THREE.MeshStandardMaterial
+        mat.metalness = 0.05   // ほぼ非金属（バナナは有機物）
+        mat.roughness = 0.65   // 適度なざらつき
+        mat.envMapIntensity = 0.4  // 環境反射を抑える
+        mat.needsUpdate = true
+      }
+
       if (!child.geometry?.attributes?.position) return
 
       const geo    = child.geometry
@@ -133,8 +122,8 @@ function BananaModel({
 
       geo.morphAttributes.position = [new THREE.BufferAttribute(deltas, 3)]
       geo.morphTargetsRelative = true
-      child.morphTargetInfluences = [0]  // 0=開いた状態
       child.updateMorphTargets()
+      child.morphTargetInfluences![0] = 0   // 初期値: 開いた状態
 
       meshRef.current = child
     })
@@ -147,26 +136,27 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // ── ボブ・ゆれ ─────────────────────────────────────────────────────────
-    const bobAmp  = isTalking ? 0.055 : 0.016
-    const bobFreq = isTalking ? 0.10  : 0.022
+    // ── ボブ・ゆれアニメーション ─────────────────────────────────────────
+    const bobAmp  = isTalking ? 0.05  : 0.015
+    const bobFreq = isTalking ? 0.11  : 0.022
     groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
 
-    const targetZ = isTalking ? Math.sin(t * 0.08) * 0.028 : 0
+    const targetRZ = isTalking ? Math.sin(t * 0.07) * 0.022 : 0
     groupRef.current.rotation.z =
-      THREE.MathUtils.lerp(groupRef.current.rotation.z, targetZ, 0.06)
+      THREE.MathUtils.lerp(groupRef.current.rotation.z, targetRZ, 0.05)
 
-    const targetScale = mouthState === "open_full" ? 1.04 : 1.0
+    // open_full 時: わずかにスケールアップ（口が大きく開く強調）
+    const tgtScale = mouthState === "open_full" ? 1.035 : 1.0
     const cs = groupRef.current.scale.x
-    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(cs, targetScale, 0.14))
+    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(cs, tgtScale, 0.12))
 
-    // ── 口の開閉モーフ ─────────────────────────────────────────────────────
-    // 0=完全に開いた状態, 1=閉じた状態
+    // ── 口の開閉モーフ ────────────────────────────────────────────────────
+    // 0=開いた状態  1=閉じた状態（奥歯が後退して皮に隠れる）
     const targetMorph = mouthState === "rest" ? 1.0 : 0.0
 
-    // 開く時は速く・閉じる時はゆっくり（自然な顎の動き）
-    const lerpSpeed = targetMorph < morphVal.current ? 0.14 : 0.09
-    morphVal.current = THREE.MathUtils.lerp(morphVal.current, targetMorph, lerpSpeed)
+    // 開く: 速い（0.18） 閉じる: ゆっくり（0.08）→ 自然な顎の重さ
+    const speed = targetMorph < morphVal.current ? 0.18 : 0.08
+    morphVal.current = THREE.MathUtils.lerp(morphVal.current, targetMorph, speed)
 
     if (meshRef.current?.morphTargetInfluences) {
       meshRef.current.morphTargetInfluences[0] = morphVal.current
@@ -226,11 +216,13 @@ export default function BananaScene({
         }}
       >
         <CanvasBridge canvasRef={canvasRef} />
-        <ambientLight intensity={1.4} />
-        <directionalLight position={[4, 5, 5]}  intensity={2.2} castShadow />
-        <directionalLight position={[-3, 2, -2]} intensity={0.7} />
-        <directionalLight position={[0, -2, 3]}  intensity={0.4} />
-        <Environment preset="studio" />
+
+        {/* 自然な光: 強すぎず、テクスチャが潰れない強度に調整 */}
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[3, 5, 4]}  intensity={1.4} />
+        <directionalLight position={[-2, 1, -1]} intensity={0.4} />
+        <directionalLight position={[0, -1, 3]}  intensity={0.3} />
+        <Environment preset="apartment" />
 
         <Suspense fallback={<Loader />}>
           <BananaModel
