@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    default: "877hand｜Banana Hand",
     template: "%s | 877hand",
   },
   description:
@@ -56,11 +56,11 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    title: "877hand｜Banana Hand",
     description:
       "BANANAHAND（バナナハンド）こと877handは、フィリピンのバナナ農家とつながるクリエイティブブランド。バナナ素材・ミュージアム・AIなど新たな体験を。",
     url: BASE_URL,
-    siteName: "877hand | BANANAHAND",
+    siteName: "877hand｜Banana Hand",
     images: [
       {
         url: "/ogp-image.png",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    title: "877hand｜Banana Hand",
     description:
       "BANANAHAND（バナナハンド）こと877hand。フィリピンのバナナ農家とつながるクリエイティブブランド。",
     images: ["/ogp-image.png"],
