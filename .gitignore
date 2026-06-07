@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# native binaries (platform-specific, not deployable to Vercel)
+/bin/
+
+# docs (local claude docs)
+/docs/

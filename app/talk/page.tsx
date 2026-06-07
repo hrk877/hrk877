@@ -2,11 +2,10 @@
 
 import { useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import HamburgerMenu from "../components/navigation/HamburgerMenu"
-import BananaScene    from "./BananaScene"
+import HamburgerMenu         from "../components/navigation/HamburgerMenu"
+import BananaScene           from "./BananaScene"
 import { useTalkController } from "./useTalkController"
 
-// ── Animated sound-bar indicator ────────────────────────────────────────────
 function SoundBars() {
   const bars = [0.6, 1.0, 0.7, 1.0, 0.5, 0.9, 0.6]
   return (
@@ -26,8 +25,7 @@ function SoundBars() {
 
 export default function TalkPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [script, setScript]   = useState("")
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [script, setScript] = useState("")
 
   const { mouthState, isTalking, isRecording, hasRecording, speak, stop, download } =
     useTalkController(canvasRef)
@@ -37,10 +35,9 @@ export default function TalkPage() {
       <div className="noise-overlay" />
       <HamburgerMenu />
 
-      {/* ── Top spacer ── */}
       <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-10 pt-20 pb-12">
 
-        {/* ── Hero header ────────────────────────────────────────────────── */}
+        {/* Header */}
         <header className="w-full max-w-4xl mb-6 md:mb-8">
           <div className="border-b border-black/20 pb-4">
             <h1 className="text-[clamp(2.8rem,10vw,5.5rem)] font-serif font-thin leading-[0.92] tracking-tight">
@@ -53,9 +50,7 @@ export default function TalkPage() {
               <AnimatePresence>
                 {isTalking && (
                   <motion.div
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 8 }}
+                    initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }}
                     className="flex items-center gap-2"
                   >
                     <SoundBars />
@@ -69,7 +64,7 @@ export default function TalkPage() {
           </div>
         </header>
 
-        {/* ── Canvas ─────────────────────────────────────────────────────── */}
+        {/* Canvas */}
         <div className="w-full max-w-4xl mb-6 md:mb-8">
           <div className="border border-black/10 overflow-hidden w-full">
             <BananaScene
@@ -81,16 +76,15 @@ export default function TalkPage() {
           </div>
         </div>
 
-        {/* ── Two-column layout on desktop ────────────────────────────────── */}
+        {/* Controls */}
         <div className="w-full max-w-4xl flex flex-col md:flex-row gap-5 md:gap-8 items-start">
 
-          {/* ── Script textarea ────────────────────────────────────────────── */}
+          {/* Script textarea */}
           <div className="flex-1 w-full">
             <label className="font-mono text-[9px] tracking-[0.24em] uppercase opacity-35 block mb-2">
               Script
             </label>
             <textarea
-              ref={textareaRef}
               value={script}
               onChange={e => setScript(e.target.value)}
               disabled={isTalking}
@@ -106,10 +100,8 @@ export default function TalkPage() {
             />
           </div>
 
-          {/* ── Controls ───────────────────────────────────────────────────── */}
+          {/* Buttons */}
           <div className="flex flex-col gap-3 md:pt-[1.6rem] w-full md:w-auto shrink-0">
-
-            {/* Talk / Stop */}
             <AnimatePresence mode="wait">
               {!isTalking ? (
                 <motion.button
@@ -144,14 +136,11 @@ export default function TalkPage() {
               )}
             </AnimatePresence>
 
-            {/* Download */}
             <AnimatePresence>
               {hasRecording && (
                 <motion.button
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={{ duration: 0.20 }}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.20 }}
                   onClick={download}
                   className="
                     w-full md:w-44 font-mono text-[11px] tracking-[0.24em] uppercase
@@ -164,14 +153,12 @@ export default function TalkPage() {
                 </motion.button>
               )}
             </AnimatePresence>
-
           </div>
         </div>
 
-        {/* ── Footer note ────────────────────────────────────────────────── */}
         <footer className="w-full max-w-4xl mt-10 pt-5 border-t border-black/10">
           <p className="font-mono text-[8px] opacity-18 tracking-widest uppercase">
-            Audio by Web Speech API — video export .webm — 877hand Lab
+            Audio by Web Speech API — Video export .webm — 877hand Lab
           </p>
         </footer>
 

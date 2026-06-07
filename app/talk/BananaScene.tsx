@@ -15,68 +15,60 @@ function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElem
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 口閉じモーフターゲット
+// 口開閉 モーフターゲット（上唇 + 下顎 統合版）
 //
-// ★ 核心戦略: 歯（Z > 0.15）には絶対に触れない
-//    バナナの皮の縁（唇縁ゾーン Z=0.06〜0.148）だけを動かして
-//    皮が内側に折りたたまれて歯を覆う → カーテンが閉まるイメージ
+// 戦略:
+//   【下顎】Y < SEAM_Y → 下唇皮 + 下歯 + 口腔下部 すべて一緒に落とす
+//           Z_LIP_MAX 制限なし。歯も一体で動かして「伸び」を防ぐ。
+//           ただし口縁に近いほど（zFactor）強く落とす。
 //
-// 実測データ:
-//   上唇縁 (Y > -0.09, Z=0.06~0.148): 7,871頂点  Y範囲 -0.09~+0.09
-//   下唇縁 (Y <=-0.09, Z=0.06~0.148): 19,631頂点 Y範囲 -0.43~-0.09
-//   歯・口腔 (Z > 0.15):              28,013頂点  ← 一切動かさない
+//   【上唇】Y in (SEAM_Y, SEAM_Y + 0.20) → 上唇皮だけ持ち上げる
+//           上歯（Z > 0.148）はスキップ — 固定アンカー
+//
+//   morph=0 → 自然（rest）
+//   morph=0.5 → 中開き（open_mid）
+//   morph=1.0 → 大開き（open_full）
 // ─────────────────────────────────────────────────────────────────────────────
-function buildLipMorph(geometry: THREE.BufferGeometry): Float32Array {
+// ── banana-talk.glb 実測値（共通定数） ────────────────────────────────────
+// 上歯: y ∈ [0.000, +0.025], z > 0.20
+// 下歯: y ∈ [-0.025, -0.175], z > 0.20
+// 口幅: x ∈ [-0.30, +0.31]
+const SEAM_Y   = 0.000    // y<0 の下顎のみ動かす（上唇・上歯を完全に除外）
+const BOTTOM_Y = -0.559
+
+function calcWeights(x: number, y: number, z: number, xFullWidth: number, xFadeEnd: number) {
+  if (y >= SEAM_Y || y <= BOTTOM_Y || z < 0.05) return null
+  const zWeight = z >= 0.12 ? 1.0 : (z - 0.05) / 0.07
+  const ax = Math.abs(x)
+  const xWeight = ax <= xFullWidth
+    ? 1.0
+    : Math.max(0, 1 - (ax - xFullWidth) / (xFadeEnd - xFullWidth))
+  const yNorm   = (-y) / (-BOTTOM_Y)
+  const yWeight = 1.0 - Math.pow(yNorm, 2.5)
+  return zWeight * xWeight * yWeight
+}
+
+// モーフ0: A形（あ段・広い開口）—— 下顎↓のみ、上唇は一切動かさない
+function buildMorphA(geometry: THREE.BufferGeometry): Float32Array {
   const pos    = geometry.attributes.position as THREE.BufferAttribute
-  const count  = pos.count
-  const deltas = new Float32Array(count * 3)
-
-  const Z_LIP_START = 0.060   // 唇縁ゾーン開始（バナナ皮の表面）
-  const Z_LIP_END   = 0.148   // 唇縁ゾーン終了（歯の手前、Z>0.15の歯には触れない）
-  const SEAM_Y      = -0.09   // 上唇と下唇が合わさるライン
-  const LOWER_CAP   = 0.105   // 下唇の最大移動量（これ以上動かさない）
-  const X_FULL      = 0.43    // この内側は100%効果
-  const X_EDGE      = 0.57    // この外側はゼロ
-
-  for (let i = 0; i < count; i++) {
-    const x = pos.getX(i)
-    const y = pos.getY(i)
-    const z = pos.getZ(i)
-
-    // ── 唇縁ゾーン以外は完全にスキップ ──────────────────────────────────
-    if (z < Z_LIP_START || z >= Z_LIP_END) continue   // 歯(Z≥0.148)は無視
-    if (y >= 0.10 || y <= -0.44)           continue
-    if (Math.abs(x) >= X_EDGE)             continue
-
-    // ── X方向フォールオフ（口の両端のみなめらかにフェード） ──────────────
-    const ax = Math.abs(x)
-    const xFall = ax <= X_FULL
-      ? 1.0
-      : Math.max(0, 1 - ((ax - X_FULL) / (X_EDGE - X_FULL)) ** 1.5)
-    if (xFall <= 0) continue
-
-    // ── Z方向フォールオフ（外縁→フル効果、Z_LIP_STARTから0.04でランプアップ） ─
-    const zFactor = Math.max(0, Math.min(1, (z - Z_LIP_START) / 0.04))
-
-    const inf = xFall * zFactor
-
-    // ── Y移動量: シームラインに向かって折りたたむ ─────────────────────────
-    // rawDY = SEAM_Y - y （シームへの方向ベクトル）
-    //   上唇(Y > SEAM_Y): rawDY < 0 → 下方向
-    //   下唇(Y < SEAM_Y): rawDY > 0 → 上方向
-    const rawDY = SEAM_Y - y
-
-    // 下唇は動きすぎないようにキャップ（バナナ形状が崩れないため）
-    const cappedDY = y > SEAM_Y
-      ? rawDY                           // 上唇: シームまで完全に閉じる
-      : Math.min(rawDY, LOWER_CAP)      // 下唇: 最大 LOWER_CAP まで
-
-    deltas[i * 3 + 0] = 0
-    deltas[i * 3 + 1] = cappedDY * inf
-    // 唇縁を僅かにZ後退させて内側ジオメトリとのZ-fightingを防止
-    deltas[i * 3 + 2] = -0.012 * inf
+  const deltas = new Float32Array(pos.count * 3)
+  const JAW_DROP = 0.17
+  for (let i = 0; i < pos.count; i++) {
+    const w = calcWeights(pos.getX(i), pos.getY(i), pos.getZ(i), 0.40, 0.60)
+    if (w !== null && w > 0) deltas[i * 3 + 1] = -(JAW_DROP * w)
   }
+  return deltas
+}
 
+// モーフ1: O形（お段・中央のみ）—— 下顎↓のみ、上唇は一切動かさない
+function buildMorphO(geometry: THREE.BufferGeometry): Float32Array {
+  const pos    = geometry.attributes.position as THREE.BufferAttribute
+  const deltas = new Float32Array(pos.count * 3)
+  const JAW_DROP = 0.12
+  for (let i = 0; i < pos.count; i++) {
+    const w = calcWeights(pos.getX(i), pos.getY(i), pos.getZ(i), 0.16, 0.28)
+    if (w !== null && w > 0) deltas[i * 3 + 1] = -(JAW_DROP * w)
+  }
   return deltas
 }
 
@@ -92,22 +84,22 @@ function BananaModel({
 }) {
   const { scene } = useGLTF("/banana-talk.glb")
   const groupRef  = useRef<THREE.Group>(null)
-  const meshRef   = useRef<THREE.Mesh | null>(null)
-  const frame     = useRef(0)
-  const morphVal  = useRef(0)  // 0=口全開、1=口閉じ
+  const meshRef    = useRef<THREE.Mesh[]>([])
+  const frame      = useRef(0)
+  const morphAVal  = useRef(0)   // A形モーフ（広い開口）
+  const morphOVal  = useRef(0)   // O形モーフ（丸い開口）
 
   useEffect(() => {
-    // 中心合わせ・スケール正規化
     const box    = new THREE.Box3().setFromObject(scene)
     const center = box.getCenter(new THREE.Vector3())
     const size   = box.getSize(new THREE.Vector3())
     scene.position.sub(center)
     scene.scale.setScalar(1.8 / Math.max(size.x, size.y, size.z))
 
+    meshRef.current = []
     scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
 
-      // 材質修正: metallicFactor=1 → 0.05（バナナは非金属）
       const mat = child.material as THREE.MeshStandardMaterial
       if (mat) {
         mat.metalness       = 0.05
@@ -118,15 +110,17 @@ function BananaModel({
 
       if (!child.geometry?.attributes?.position) return
 
-      const geo    = child.geometry
-      const deltas = buildLipMorph(geo)
-
-      geo.morphAttributes.position = [new THREE.BufferAttribute(deltas, 3)]
+      const geo = child.geometry
+      geo.morphAttributes.position = [
+        new THREE.BufferAttribute(buildMorphA(geo), 3),  // index 0: 広い開口（A形）
+        new THREE.BufferAttribute(buildMorphO(geo), 3),  // index 1: 丸い開口（O形）
+      ]
       geo.morphTargetsRelative = true
       child.updateMorphTargets()
-      child.morphTargetInfluences![0] = 0  // 初期: 口全開
+      child.morphTargetInfluences![0] = 0
+      child.morphTargetInfluences![1] = 0
 
-      meshRef.current = child
+      meshRef.current.push(child)
     })
 
     onLoaded()
@@ -138,28 +132,46 @@ function BananaModel({
     const t = frame.current
 
     // ── ボブ・ゆれアニメーション ─────────────────────────────────────────
-    const bobAmp  = isTalking ? 0.05  : 0.015
-    const bobFreq = isTalking ? 0.12  : 0.022
+    const bobAmp  = isTalking ? 0.04  : 0.012
+    const bobFreq = isTalking ? 0.10  : 0.020
     groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
 
-    const targetRZ = isTalking ? Math.sin(t * 0.08) * 0.025 : 0
+    const targetRZ = isTalking ? Math.sin(t * 0.07) * 0.018 : 0
     groupRef.current.rotation.z =
       THREE.MathUtils.lerp(groupRef.current.rotation.z, targetRZ, 0.05)
 
-    const tgtScale = mouthState === "open_full" ? 1.03 : 1.0
-    const cs = groupRef.current.scale.x
-    groupRef.current.scale.setScalar(THREE.MathUtils.lerp(cs, tgtScale, 0.12))
+    groupRef.current.scale.setScalar(1.0)  // スケール変化なし
 
-    // ── 口の開閉モーフ ────────────────────────────────────────────────────
-    // 0=全開（歯が全部見える）/ 1=閉（唇縁が歯を覆う）
-    const targetMorph = mouthState === "rest" ? 1.0 : 0.0
+    // ── 5段音素ステート → モーフ値 ──────────────────────────────────────
+    // morphA(idx0): 広い開口（A形、全幅）
+    // morphO(idx1): 丸い開口（O形、中央のみ）
+    //
+    //  ア: 広く大きく      → A高 O無
+    //  イ: 浅く小さく      → A低 O無  （歯が少し見える程度）
+    //  ウ: すぼめ・やや丸  → A低 O中
+    //  エ: 中間・やや広め  → A中 O無
+    //  オ: 丸く小さく      → A極小 O高
+    let tgtA = 0, tgtO = 0
+    switch (mouthState) {
+      case "open_a":  tgtA = 1.00; tgtO = 0.00; break  // ア: 全開
+      case "open_i":  tgtA = 0.28; tgtO = 0.00; break  // イ: 浅め
+      case "open_u":  tgtA = 0.10; tgtO = 0.80; break  // ウ: 丸く小さく
+      case "open_e":  tgtA = 0.62; tgtO = 0.00; break  // エ: 中広め
+      case "open_o":  tgtA = 0.04; tgtO = 1.00; break  // オ: 完全に丸く
+      default:        tgtA = 0.00; tgtO = 0.00; break  // rest
+    }
 
-    // 開くとき速く(0.20)、閉じるときゆっくり(0.07) = 自然な顎の重さ
-    const speed = targetMorph < morphVal.current ? 0.20 : 0.07
-    morphVal.current = THREE.MathUtils.lerp(morphVal.current, targetMorph, speed)
+    // 開くとき速く(0.42)、閉じるとき(0.28) → 130ms/charで完全に開閉
+    const sA = tgtA > morphAVal.current ? 0.42 : 0.28
+    const sO = tgtO > morphOVal.current ? 0.42 : 0.28
+    morphAVal.current = THREE.MathUtils.lerp(morphAVal.current, tgtA, sA)
+    morphOVal.current = THREE.MathUtils.lerp(morphOVal.current, tgtO, sO)
 
-    if (meshRef.current?.morphTargetInfluences) {
-      meshRef.current.morphTargetInfluences[0] = morphVal.current
+    for (const mesh of meshRef.current) {
+      if (mesh.morphTargetInfluences) {
+        mesh.morphTargetInfluences[0] = morphAVal.current
+        mesh.morphTargetInfluences[1] = morphOVal.current
+      }
     }
   })
 

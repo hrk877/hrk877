@@ -11,31 +11,12 @@ export function useTalkController(
   const [isRecording,   setIsRecording]   = useState(false)
   const [hasRecording,  setHasRecording]  = useState(false)
 
-  const recorderRef     = useRef<MediaRecorder | null>(null)
-  const chunksRef       = useRef<Blob[]>([])
-  const blobRef         = useRef<Blob | null>(null)
-  const toggleRef       = useRef<"open_mid" | "open_full">("open_mid")
-  const restTimer       = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const isTalkingRef    = useRef(false)
-
-  // ── フォールバックタイマー: onboundaryが発火しないブラウザ用 ──────────────
-  // 170ms間隔でopen_mid/open_fullをトグル → 確実にパクパクする
-  const lipTimerRef     = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
-  const boundaryFiredRef = useRef(false)  // onboundaryが動いているか監視
-
-  const startLipTimer = useCallback(() => {
-    stopLipTimer()
-    boundaryFiredRef.current = false
-    // 300ms後にまだonboundaryが来てなければフォールバック開始
-    restTimer.current = setTimeout(() => {
-      if (!boundaryFiredRef.current && isTalkingRef.current) {
-        lipTimerRef.current = setInterval(() => {
-          toggleRef.current = toggleRef.current === "open_mid" ? "open_full" : "open_mid"
-          setMouthState(toggleRef.current)
-        }, 170)
-      }
-    }, 300)
-  }, [])
+  const recorderRef  = useRef<MediaRecorder | null>(null)
+  const chunksRef    = useRef<Blob[]>([])
+  const blobRef      = useRef<Blob | null>(null)
+  const isTalkingRef = useRef(false)
+  const lipTimerRef  = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const phonemeIdxRef = useRef(0)
 
   const stopLipTimer = useCallback(() => {
     if (lipTimerRef.current) {
@@ -44,12 +25,50 @@ export function useTalkController(
     }
   }, [])
 
-  // cleanup on unmount
   useEffect(() => () => { stopLipTimer() }, [stopLipTimer])
 
-  // ── 言語自動検出 ──────────────────────────────────────────────────────────
   const detectLang = (text: string) =>
     /[぀-ゟ゠-ヿ一-龯]/.test(text) ? "ja-JP" : "en-US"
+
+  // 文字 → 口の形（日本語5段 + 英語近似 + 句読点でrest）
+  const charToMouth = (ch: string): MouthState => {
+    if ("。、！？!?., \n　".includes(ch)) return "rest"
+    if ("あかさたなはまやらわぁゃゎアカサタナハマヤラワァャヮ".includes(ch)) return "open_a"
+    if ("いきしちにひみりゐィキシチニヒミリヰ".includes(ch)) return "open_i"
+    if ("うくすつぬふむゆるぅゅウクスツヌフムユルゥュ".includes(ch)) return "open_u"
+    if ("えけせてねへめれゑェケセテネヘメレヱ".includes(ch)) return "open_e"
+    if ("おこそとのほもよろをぉょォコソトノホモヨロヲォョ".includes(ch)) return "open_o"
+    if ("aAáÁ".includes(ch)) return "open_a"
+    if ("iIíÍyY".includes(ch)) return "open_i"
+    if ("uUúÚ".includes(ch)) return "open_u"
+    if ("eEéÉ".includes(ch)) return "open_e"
+    if ("oOóÓ".includes(ch)) return "open_o"
+    return "open_a"
+  }
+
+  // 全文字を口形シーケンスに変換してすぐに開始
+  const startLipTimer = useCallback((text: string) => {
+    stopLipTimer()
+
+    const phonemes: MouthState[] = []
+    for (const ch of text) {
+      phonemes.push(charToMouth(ch))
+    }
+    if (phonemes.length === 0) return
+
+    phonemeIdxRef.current = 0
+
+    // 1文字あたり約130ms（rate=0.92の日本語TTS目安）
+    lipTimerRef.current = setInterval(() => {
+      if (!isTalkingRef.current || phonemeIdxRef.current >= phonemes.length) {
+        stopLipTimer()
+        return
+      }
+      setMouthState(phonemes[phonemeIdxRef.current])
+      phonemeIdxRef.current++
+    }, 130)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopLipTimer])
 
   // ── speak ─────────────────────────────────────────────────────────────────
   const speak = useCallback(
@@ -57,32 +76,28 @@ export function useTalkController(
       if (!text.trim() || typeof window === "undefined") return
 
       window.speechSynthesis.cancel()
-      clearTimeout(restTimer.current)
       stopLipTimer()
       blobRef.current = null
       setHasRecording(false)
 
-      const utter       = new SpeechSynthesisUtterance(text)
-      utter.lang        = detectLang(text)
-      utter.rate        = 0.92
-      utter.pitch       = 1.05
-      toggleRef.current = "open_mid"
+      const utter   = new SpeechSynthesisUtterance(text)
+      utter.lang    = detectLang(text)
+      utter.rate    = 0.92
+      utter.pitch   = 1.05
 
-      // ── onstart ─────────────────────────────────────────────────────────
       utter.onstart = () => {
         isTalkingRef.current = true
         setIsTalking(true)
-        setMouthState("open_mid")
-        startLipTimer()   // フォールバックタイマー待機開始
+        startLipTimer(text)
 
         const canvas = canvasRef.current
         if (!canvas) return
         try {
-          const stream    = canvas.captureStream(30)
-          const mimeType  = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          const stream   = canvas.captureStream(30)
+          const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
             ? "video/webm;codecs=vp9"
             : "video/webm"
-          const recorder  = new MediaRecorder(stream, { mimeType })
+          const recorder = new MediaRecorder(stream, { mimeType })
           chunksRef.current = []
           recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
           recorder.onstop = () => {
@@ -98,21 +113,11 @@ export function useTalkController(
         }
       }
 
-      // ── onboundary: 単語ごとにパクパク ─────────────────────────────────
-      utter.onboundary = (e) => {
-        if (e.name !== "word") return
-        boundaryFiredRef.current = true   // フォールバック不要と判断
-        stopLipTimer()
-        toggleRef.current = toggleRef.current === "open_mid" ? "open_full" : "open_mid"
-        setMouthState(toggleRef.current)
-      }
-
-      // ── finish ──────────────────────────────────────────────────────────
       const finish = () => {
         isTalkingRef.current = false
         setIsTalking(false)
         stopLipTimer()
-        restTimer.current = setTimeout(() => setMouthState("rest"), 350)
+        setTimeout(() => setMouthState("rest"), 200)
         if (recorderRef.current?.state !== "inactive") recorderRef.current?.stop()
       }
 
