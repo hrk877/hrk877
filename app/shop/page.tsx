@@ -1,4 +1,20 @@
+import type { Metadata } from "next"
 import HamburgerMenu from "../components/navigation/HamburgerMenu"
+
+export const metadata: Metadata = {
+    title: "SHOP",
+    description:
+        "877hand（BANANAHAND）のオンラインショップ。バナナ素材のプロダクトを近日公開予定。",
+    alternates: {
+        canonical: "https://877hand.vercel.app/shop",
+    },
+    openGraph: {
+        title: "SHOP | 877hand",
+        description:
+            "877hand（BANANAHAND）のオンラインショップ。バナナ素材のプロダクトを近日公開予定。",
+        url: "https://877hand.vercel.app/shop",
+    },
+}
 
 export default function ShopPage() {
     return (

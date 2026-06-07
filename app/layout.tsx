@@ -15,59 +15,134 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// メタデータをここに集約します
+const BASE_URL = "https://877hand.vercel.app"
+
 export const metadata: Metadata = {
-  title: "877hand",
-  description: "バナナの力で世界を曲げるクリエイティブスペース『877hand』。ミュージアム、AI対話、手紙など、バナナの新たな可能性を体験してください。",
-  keywords: ["877hand", "バナナハンド", "banana hand", "バナナ", "banana", "creative space", "AI", "museum", "877"],
+  metadataBase: new URL(BASE_URL),
+
+  title: {
+    default: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    template: "%s | 877hand",
+  },
+  description:
+    "BANANAHAND（バナナハンド）こと877handは、フィリピンのバナナ農家とつながるクリエイティブブランド。バナナ素材のプロダクト・ミュージアム・AIなど、バナナの新たな可能性を体験できます。",
+  keywords: [
+    "BANANAHAND",
+    "バナナハンド",
+    "banana hand",
+    "877hand",
+    "バナナ ブランド",
+    "banana brand",
+    "バナナ クリエイティブ",
+    "バナナ プロダクト",
+    "フィリピン バナナ",
+    "バナナペーパー",
+    "Bananatex",
+    "バナナ ミュージアム",
+    "877",
+    "hrk877",
+  ],
+  authors: [{ name: "877hand" }],
+  creator: "877hand",
+  publisher: "877hand",
+  category: "creative brand",
+
+  alternates: {
+    canonical: BASE_URL,
+  },
+
   verification: {
     google: "X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE",
   },
-  // ★★★ 本番環境のURLをここに設定してください（例: https://877hand.vercel.app）
-  metadataBase: new URL("https://877hand.vercel.app"),
 
-  // OGP (Open Graph Protocol) と Twitterカードの設定
   openGraph: {
-    title: "877hand",
-    description: "バナナの力で世界を曲げるクリエイティブスペース『877hand』。",
-    url: "/",
-    siteName: "877hand",
+    title: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    description:
+      "BANANAHAND（バナナハンド）こと877handは、フィリピンのバナナ農家とつながるクリエイティブブランド。バナナ素材・ミュージアム・AIなど新たな体験を。",
+    url: BASE_URL,
+    siteName: "877hand | BANANAHAND",
     images: [
       {
-        url: "/ogp-image.png", // public/ogp-image.png
+        url: "/ogp-image.png",
         width: 1200,
         height: 630,
-        alt: "877hand",
+        alt: "877hand — BANANAHAND バナナのクリエイティブブランド",
       },
     ],
     locale: "ja_JP",
     type: "website",
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "877hand",
-    description: "バナナの力で世界を曲げるクリエイティブスペース『877hand』。",
-    images: ["/ogp-image.png"], // public/ogp-image.png
+    title: "877hand | BANANAHAND — バナナのクリエイティブブランド",
+    description:
+      "BANANAHAND（バナナハンド）こと877hand。フィリピンのバナナ農家とつながるクリエイティブブランド。",
+    images: ["/ogp-image.png"],
   },
 
-  // アイコンとマニフェストの設定
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/icons/apple-touch-icon.png',
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
 
-  // iOS Safari用の設定
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "877hand",
   },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#FAC800",
+}
+
+// JSON-LD 構造化データ
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "877hand",
+  alternateName: ["BANANAHAND", "バナナハンド", "banana hand"],
+  url: BASE_URL,
+  logo: `${BASE_URL}/ogp-image.png`,
+  image: `${BASE_URL}/ogp-image.png`,
+  description:
+    "フィリピンのバナナ農家とつながるクリエイティブブランド。バナナ素材のプロダクト・ミュージアム・AIなど、バナナの新たな可能性を体験できます。",
+  foundingDate: "2024",
+  sameAs: ["https://www.instagram.com/877hand/"],
+}
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "877hand | BANANAHAND",
+  alternateName: ["BANANAHAND", "バナナハンド"],
+  url: BASE_URL,
+  description:
+    "BANANAHAND（バナナハンド）こと877hand — フィリピンのバナナ農家とつながるクリエイティブブランド",
+  inLanguage: "ja",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: `${BASE_URL}/journal?q={search_term_string}`,
+    },
+    "query-input": "required name=search_term_string",
+  },
 }
 
 export default function RootLayout({
@@ -76,8 +151,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // <head>タグはNext.jsが自動生成するため削除します
     <html lang="ja" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
