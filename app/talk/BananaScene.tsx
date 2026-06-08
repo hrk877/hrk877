@@ -131,8 +131,8 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // ── ゆったりした浮遊アニメーション（サイズ変化なし・常に一定）─────
-    groupRef.current.position.y = Math.sin(t * 0.018) * 0.010
+    // 静止（揺れ・スケール変化なし）
+    groupRef.current.position.y = 0
     groupRef.current.rotation.z = 0
     groupRef.current.scale.setScalar(1.0)
 
@@ -201,7 +201,7 @@ export default function BananaScene({
   const [loaded, setLoaded] = useState(false)
 
   return (
-    <div className="relative w-full" style={{ aspectRatio: "600 / 400" }}>
+    <div className="relative w-full h-full">
       {!loaded && (
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="font-mono text-[10px] tracking-widest uppercase opacity-30 animate-pulse">
@@ -214,6 +214,8 @@ export default function BananaScene({
         camera={{ position: [0, 0.05, 2.6], fov: 52 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         style={{
+          width: "100%",
+          height: "100%",
           background: "transparent",
           opacity: loaded ? 1 : 0,
           transition: "opacity 0.6s",
