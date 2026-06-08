@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, Suspense, useState } from "react"
+import { useRef, useEffect, Suspense, useState, useCallback } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, Environment } from "@react-three/drei"
 import * as THREE from "three"
@@ -83,13 +83,16 @@ function BananaModel({
   onLoaded:   () => void
 }) {
   const { scene } = useGLTF("/banana-talk.glb")
-  const groupRef  = useRef<THREE.Group>(null)
-  const meshRef    = useRef<THREE.Mesh[]>([])
-  const frame      = useRef(0)
-  const morphAVal  = useRef(0)   // A形モーフ（広い開口）
-  const morphOVal  = useRef(0)   // O形モーフ（丸い開口）
+  const groupRef    = useRef<THREE.Group>(null)
+  const meshRef     = useRef<THREE.Mesh[]>([])
+  const frame       = useRef(0)
+  const morphAVal   = useRef(0)
+  const morphOVal   = useRef(0)
+  const initialized = useRef(false)  // スケール設定を一度だけ実行するガード
 
   useEffect(() => {
+    if (initialized.current) return   // 再レンダー時の再実行を防ぐ
+    initialized.current = true
     const box    = new THREE.Box3().setFromObject(scene)
     const center = box.getCenter(new THREE.Vector3())
     const size   = box.getSize(new THREE.Vector3())
@@ -199,6 +202,8 @@ export default function BananaScene({
   isRecording,
 }: BananaSceneProps) {
   const [loaded, setLoaded] = useState(false)
+  // useCallbackで参照を安定化 → BananaModelのuseEffectが再実行されない
+  const handleLoaded = useCallback(() => setLoaded(true), [])
 
   return (
     <div className="relative w-full h-full">
@@ -232,7 +237,7 @@ export default function BananaScene({
           <BananaModel
             isTalking={!!isTalking}
             mouthState={mouthState}
-            onLoaded={() => setLoaded(true)}
+            onLoaded={handleLoaded}
           />
         </Suspense>
       </Canvas>
