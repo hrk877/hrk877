@@ -94,7 +94,7 @@ function BananaModel({
     const center = box.getCenter(new THREE.Vector3())
     const size   = box.getSize(new THREE.Vector3())
     scene.position.sub(center)
-    scene.scale.setScalar(1.8 / Math.max(size.x, size.y, size.z))
+    scene.scale.setScalar(2.4 / Math.max(size.x, size.y, size.z))
 
     meshRef.current = []
     scene.traverse((child) => {
@@ -131,16 +131,10 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // ── ボブ・ゆれアニメーション ─────────────────────────────────────────
-    const bobAmp  = isTalking ? 0.04  : 0.012
-    const bobFreq = isTalking ? 0.10  : 0.020
-    groupRef.current.position.y = Math.sin(t * bobFreq) * bobAmp
-
-    const targetRZ = isTalking ? Math.sin(t * 0.07) * 0.018 : 0
-    groupRef.current.rotation.z =
-      THREE.MathUtils.lerp(groupRef.current.rotation.z, targetRZ, 0.05)
-
-    groupRef.current.scale.setScalar(1.0)  // スケール変化なし
+    // ── ゆったりした浮遊アニメーション（サイズ変化なし・常に一定）─────
+    groupRef.current.position.y = Math.sin(t * 0.018) * 0.010
+    groupRef.current.rotation.z = 0
+    groupRef.current.scale.setScalar(1.0)
 
     // ── 5段音素ステート → モーフ値 ──────────────────────────────────────
     // morphA(idx0): 広い開口（A形、全幅）
@@ -217,7 +211,7 @@ export default function BananaScene({
       )}
 
       <Canvas
-        camera={{ position: [0, 0.05, 3.2], fov: 42 }}
+        camera={{ position: [0, 0.05, 2.6], fov: 52 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         style={{
           background: "transparent",

@@ -65,8 +65,8 @@ export default function TalkPage() {
         </header>
 
         {/* Canvas */}
-        <div className="w-full max-w-4xl mb-6 md:mb-8">
-          <div className="border border-black/10 overflow-hidden w-full">
+        <div className="w-full max-w-5xl mb-6 md:mb-8">
+          <div className="overflow-hidden w-full">
             <BananaScene
               canvasRef={canvasRef}
               mouthState={mouthState}
@@ -90,9 +90,10 @@ export default function TalkPage() {
               disabled={isTalking}
               placeholder="ここにスクリプトを入力..."
               rows={4}
+              style={{ fontSize: "16px" }}
               className="
                 w-full bg-transparent border border-black/30 p-4
-                font-mono text-sm leading-relaxed resize-none
+                font-mono leading-relaxed resize-none
                 placeholder:opacity-20 focus:outline-none focus:border-black
                 disabled:opacity-30 disabled:cursor-not-allowed
                 transition-colors
