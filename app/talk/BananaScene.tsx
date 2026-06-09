@@ -189,17 +189,15 @@ function Loader() {
 }
 
 interface BananaSceneProps {
-  canvasRef:    React.RefObject<HTMLCanvasElement | null>
-  mouthState:   MouthState
-  isTalking?:   boolean
-  isRecording?: boolean
+  canvasRef:  React.RefObject<HTMLCanvasElement | null>
+  mouthState: MouthState
+  isTalking?: boolean
 }
 
 export default function BananaScene({
   canvasRef,
   mouthState,
   isTalking,
-  isRecording,
 }: BananaSceneProps) {
   const [loaded, setLoaded] = useState(false)
   // useCallbackで参照を安定化 → BananaModelのuseEffectが再実行されない
@@ -241,13 +239,6 @@ export default function BananaScene({
           />
         </Suspense>
       </Canvas>
-
-      {isRecording && (
-        <div className="absolute top-3 right-4 flex items-center gap-1.5 pointer-events-none select-none">
-          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse block" />
-          <span className="font-mono text-[9px] uppercase tracking-widest opacity-50">REC</span>
-        </div>
-      )}
     </div>
   )
 }
