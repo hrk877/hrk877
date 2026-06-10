@@ -16,6 +16,22 @@ function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElem
   return null
 }
 
+// バナナ（幅2.4・高さ約1.35）が画面の縦横比に関わらず必ず収まる距離へカメラを置く。
+// 固定距離だと縦長画面で水平視野が足りず左右が見切れる。
+function ResponsiveCamera({ zoomed }: { zoomed?: boolean }) {
+  const { camera, size } = useThree()
+  useEffect(() => {
+    const persp = camera as THREE.PerspectiveCamera
+    const aspect  = size.width / Math.max(1, size.height)
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2))
+    const needW = zoomed ? 2.5 : 2.7   // 必要な水平視野（バナナ幅2.4+余白）
+    const needH = zoomed ? 1.5 : 1.9   // 必要な垂直視野（バナナ高1.35+余白）
+    persp.position.z = Math.max(needW / (2 * tanHalf * aspect), needH / (2 * tanHalf))
+    persp.updateProjectionMatrix()
+  }, [camera, size, zoomed])
+  return null
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 口開閉 モーフターゲット（GLB実測ベース v2）
 //
@@ -253,7 +269,7 @@ export default function BananaScene({
       )}
 
       <Canvas
-        camera={{ position: [0, 0.05, zoomed ? 1.7 : 2.6], fov: 52 }}
+        camera={{ position: [0, 0.05, 2.6], fov: 52 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         style={{
           width: "100%",
@@ -264,6 +280,7 @@ export default function BananaScene({
         }}
       >
         <CanvasBridge canvasRef={canvasRef} />
+        <ResponsiveCamera zoomed={zoomed} />
         <ambientLight intensity={0.2} />
         <directionalLight position={[3, 5, 4]}  intensity={0.38} />
         <directionalLight position={[-2, 1, -1]} intensity={0.1} />
