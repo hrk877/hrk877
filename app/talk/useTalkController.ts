@@ -110,35 +110,54 @@ export function useTalkController(
     const utter    = new SpeechSynthesisUtterance(text)
     const isJa     = detectLang(text) === "ja-JP"
     utter.lang     = isJa ? "ja-JP" : "en-US"
-    utter.pitch    = 1.25   // ほんのり明るい程度（1.9はチップマンク風だった）
-    utter.rate     = 1.05   // 落ち着いたテンポ
     utter.volume   = 1.0
 
-    // 声キャラクター選択: 高品質なニューラル系を最優先（プラットフォーム依存なのでフォールバックあり）
+    // Apple純正のキャラクターボイス（macOS/iOS）。普通のKyokoより
+    // 個性的でオシャレな声。端末によっては未ダウンロードなのでフォールバックあり
+    const JA_CHARACTER = ["Flo", "Rocko", "Sandy", "Shelley", "Eddy", "Reed", "Grandpa", "Grandma"]
+    const EN_CHARACTER = ["Flo", "Rocko", "Sandy", "Shelley", "Eddy", "Reed", "Superstar", "Bubbles"]
+
+    // 声キャラクター選択。キャラ声が取れたか(found)で後段のピッチ調整を変える
+    let usedCharacter = false
     const pickVoice = () => {
       const voices = window.speechSynthesis.getVoices()
       if (voices.length === 0) return
-      if (isJa) {
-        utter.voice =
-          voices.find(v => v.lang.startsWith("ja") && v.name.includes("Google")) ??  // Chrome: ニューラル系で滑らか
-          voices.find(v => v.lang.startsWith("ja") && v.name.includes("Kyoko"))  ??
-          voices.find(v => v.lang.startsWith("ja") && v.name.includes("O-Ren"))  ??
-          voices.find(v => v.lang.startsWith("ja")) ??
-          null
+      const pool = voices.filter(v => v.lang.startsWith(isJa ? "ja" : "en"))
+      const names = isJa ? JA_CHARACTER : EN_CHARACTER
+      // 1) 個性的なキャラクターボイスを優先
+      for (const n of names) {
+        const v = pool.find(p => p.name.includes(n))
+        if (v) { utter.voice = v; usedCharacter = true; return }
+      }
+      // 2) なければ滑らかな標準声
+      utter.voice =
+        pool.find(v => v.name.includes("Google")) ??
+        pool.find(v => v.name.includes(isJa ? "Kyoko" : "Samantha")) ??
+        pool[0] ?? null
+    }
+
+    // 声に合わせてピッチ・テンポを調整。
+    //  キャラ声: 声自体に個性があるので軽く整える程度（やや低め＝オシャレ）
+    //  標準声 : Kyoko等は無加工だと平坦なので少し遊びを足す
+    const applyProsody = () => {
+      if (usedCharacter) {
+        utter.pitch = 0.95   // 落ち着いた・こなれた印象
+        utter.rate  = 0.98
       } else {
-        utter.voice =
-          voices.find(v => v.lang.startsWith("en") && v.name.includes("Google")) ??
-          voices.find(v => v.lang.startsWith("en") && v.name.includes("Samantha")) ??
-          voices.find(v => v.lang.startsWith("en") && v.name.includes("Victoria")) ??
-          voices.find(v => v.lang.startsWith("en")) ??
-          null
+        utter.pitch = 1.3
+        utter.rate  = 1.05
       }
     }
 
     if (window.speechSynthesis.getVoices().length > 0) {
       pickVoice()
+      applyProsody()
     } else {
-      window.speechSynthesis.addEventListener("voiceschanged", pickVoice, { once: true })
+      window.speechSynthesis.addEventListener("voiceschanged", () => {
+        pickVoice()
+        applyProsody()
+      }, { once: true })
+      applyProsody()  // 声未ロード時の暫定値
     }
 
     utter.onstart = () => {
