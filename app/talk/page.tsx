@@ -14,19 +14,54 @@ export default function TalkPage() {
   const [script, setScript] = useState("")
   const [isDebug, setIsDebug] = useState(false)
   const [debugMouth, setDebugMouth] = useState<MouthState | null>(null)
+  const [isLandscapePhone, setIsLandscapePhone] = useState(false)
 
   useEffect(() => {
     setIsDebug(new URLSearchParams(window.location.search).has("debug"))
   }, [])
 
+  // スマホ横画面の検出（高さ600px以下に限定してデスクトップを除外）
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape) and (max-height: 600px)")
+    const update = () => setIsLandscapePhone(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+
+  // ブラウザUI色（iOSステータスバー・オーバースクロール）もページに合わせて黒にする
+  useEffect(() => {
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#000000")
+    const prevBg = document.body.style.backgroundColor
+    document.body.style.backgroundColor = "#000000"
+    return () => { document.body.style.backgroundColor = prevBg }
+  }, [])
+
   const { mouthState, isTalking, speak, stop } = useTalkController(canvasRef)
+
+  // ── スマホ横画面: バナナだけの全画面。タップで入力済みスクリプトを喋る ──
+  if (isLandscapePhone) {
+    return (
+      <div
+        className="h-dvh w-screen bg-black overflow-hidden"
+        onPointerUp={() => (isTalking ? stop() : speak(script.trim() || "こんにちは、バナナです"))}
+      >
+        <BananaScene
+          canvasRef={canvasRef}
+          mouthState={debugMouth ?? mouthState}
+          isTalking={isTalking}
+          zoomed
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="h-dvh bg-black text-[#FAC800] overflow-hidden relative flex flex-col">
       <div className="noise-overlay" />
 
       {/* HamburgerMenu — 他のページと同じ絶対配置 */}
-      <HamburgerMenu color="#FAC800" />
+      <HamburgerMenu color="#FAC800" themeColor="#000000" />
 
       {/* コンテンツ全体 — pt はハンバーガー分の余白 */}
       <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pt-20 md:pt-24 pb-4 md:pb-5">

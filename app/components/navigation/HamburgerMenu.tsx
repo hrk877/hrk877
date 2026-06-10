@@ -36,10 +36,12 @@ const MENU_ITEMS = [
 
 interface HamburgerMenuProps {
     color?: string
+    /** メニューを閉じているときのモバイルステータスバー色（黒背景ページは "#000000" を渡す） */
+    themeColor?: string
     onToggle?: (isOpen: boolean) => void
 }
 
-export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
+export default function HamburgerMenu({ color, themeColor = "#FAC800", onToggle }: HamburgerMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [currentView, setCurrentView] = useState<"MAIN" | "LAB" | "SNS">("MAIN")
     const { user } = useAuth()
@@ -51,12 +53,12 @@ export default function HamburgerMenu({ color, onToggle }: HamburgerMenuProps) {
         if (isOpen) {
             metaThemeColor?.setAttribute("content", "#000000")
         } else {
-            metaThemeColor?.setAttribute("content", "#FAC800")
+            metaThemeColor?.setAttribute("content", themeColor)
         }
         return () => {
-            if (!isOpen) metaThemeColor?.setAttribute("content", "#FAC800")
+            if (!isOpen) metaThemeColor?.setAttribute("content", themeColor)
         }
-    }, [isOpen])
+    }, [isOpen, themeColor])
 
     const toggleMenu = () => {
         const nextState = !isOpen

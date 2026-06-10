@@ -228,12 +228,15 @@ interface BananaSceneProps {
   canvasRef:  React.RefObject<HTMLCanvasElement | null>
   mouthState: MouthState
   isTalking?: boolean
+  /** スマホ横画面の全画面表示用にカメラを寄せる */
+  zoomed?:    boolean
 }
 
 export default function BananaScene({
   canvasRef,
   mouthState,
   isTalking,
+  zoomed,
 }: BananaSceneProps) {
   const [loaded, setLoaded] = useState(false)
   // useCallbackで参照を安定化 → BananaModelのuseEffectが再実行されない
@@ -250,7 +253,7 @@ export default function BananaScene({
       )}
 
       <Canvas
-        camera={{ position: [0, 0.05, 2.6], fov: 52 }}
+        camera={{ position: [0, 0.05, zoomed ? 1.7 : 2.6], fov: 52 }}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
         style={{
           width: "100%",
