@@ -5,3 +5,4 @@ export type MouthState =
   | "open_u"   // ウ段: すぼめ気味・中程度
   | "open_e"   // エ段: 中間・やや広め
   | "open_o"   // オ段: 丸く小さく開く
+  | "closed"   // ま・ば・ぱ行/ん: 唇を完全に閉じる
