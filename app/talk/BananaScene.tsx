@@ -7,17 +7,18 @@ import * as THREE from "three"
 import type { MouthState } from "./types"
 
 function CanvasBridge({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement | null> }) {
-  const { gl, scene } = useThree()
+  const { gl, scene, camera } = useThree()
   useEffect(() => {
     ;(canvasRef as React.MutableRefObject<HTMLCanvasElement | null>).current = gl.domElement
-    // デバッグ用: コンソールからライト・マテリアルを調整できるように公開
-    ;(window as unknown as Record<string, unknown>).__talkScene = { gl, scene }
-  }, [gl, scene, canvasRef])
+    // デバッグ用: コンソールからライト・マテリアル・カメラを調整できるように公開
+    ;(window as unknown as Record<string, unknown>).__talkScene = { gl, scene, camera }
+  }, [gl, scene, camera, canvasRef])
   return null
 }
 
 // バナナ（幅2.4・高さ約1.35）が画面の縦横比に関わらず必ず収まる距離へカメラを置く。
 // 固定距離だと縦長画面で水平視野が足りず左右が見切れる。
+// 垂直視野は開口時に顎が下へ伸びる分（JAW_DROP×スケール1.2≈0.19）まで含める。
 function ResponsiveCamera({ zoomed }: { zoomed?: boolean }) {
   const { camera, size } = useThree()
   useEffect(() => {
@@ -25,7 +26,9 @@ function ResponsiveCamera({ zoomed }: { zoomed?: boolean }) {
     const aspect  = size.width / Math.max(1, size.height)
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(persp.fov / 2))
     const needW = zoomed ? 2.5 : 2.7   // 必要な水平視野（バナナ幅2.4+余白）
-    const needH = zoomed ? 1.5 : 1.9   // 必要な垂直視野（バナナ高1.35+余白）
+    // 必要な垂直視野: バナナ高1.35+顎下がり0.19+余白。
+    // 顎は前方(z≈0.33)へ突き出していて大きく投影されるため、その分も含めた実測値
+    const needH = 1.95
     persp.position.z = Math.max(needW / (2 * tanHalf * aspect), needH / (2 * tanHalf))
     persp.updateProjectionMatrix()
   }, [camera, size, zoomed])
@@ -56,6 +59,9 @@ const halfGap  = (x: number) => Math.max(0.012, 0.0575 - 0.45 * x * x)
 const rampTop  = (x: number) => seamY(x) + halfGap(x)             // 上歯の下端
 const rampBot  = (x: number) => seamY(x) - halfGap(x)             // 下歯の上端
 const JAW_DROP = 0.16
+// バナナの持ち上げ量（ワールド単位）。開口時に顎が下へ伸びるため、
+// 少し上に置いて上下の余白を均等化する（iPhoneで顎が見切れる対策）
+const LIFT_Y = 0.15
 
 // SHUT（閉唇）用: 口全体（上歯上端〜下歯下端）を中心線へ圧縮する帯
 const mouthTop = (x: number) => -0.055 - 1.04 * x * x + 0.012     // 上唇の際
@@ -183,8 +189,8 @@ function BananaModel({
     frame.current++
     const t = frame.current
 
-    // 静止（揺れ・スケール変化なし）
-    groupRef.current.position.y = 0
+    // 静止（揺れ・スケール変化なし）。LIFT_Y だけ上に置いて顎の伸び代を確保
+    groupRef.current.position.y = LIFT_Y
     groupRef.current.rotation.z = 0
     groupRef.current.scale.setScalar(1.0)
 
