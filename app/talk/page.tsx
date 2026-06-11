@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import HamburgerMenu         from "../components/navigation/HamburgerMenu"
 import BananaScene           from "./BananaScene"
 import { useTalkController } from "./useTalkController"
+import { prefetchPhonemes }  from "./phonemize"
 import type { MouthState }   from "./types"
 
 const DEBUG_STATES: MouthState[] = ["rest", "open_a", "open_i", "open_u", "open_e", "open_o", "closed"]
@@ -28,6 +29,13 @@ export default function TalkPage() {
     mq.addEventListener("change", update)
     return () => mq.removeEventListener("change", update)
   }, [])
+
+  // 入力中に形態素解析を先読みして、TALK押下時にはモーラ精度のタイムラインが揃っている状態にする
+  useEffect(() => {
+    if (!script.trim()) return
+    const id = setTimeout(() => prefetchPhonemes(script), 400)
+    return () => clearTimeout(id)
+  }, [script])
 
   // ブラウザUI色（iOSステータスバー・オーバースクロール）もページに合わせて黒にする
   useEffect(() => {

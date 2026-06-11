@@ -2,10 +2,18 @@
 
 import { useState, useRef, useCallback, useEffect } from "react"
 import type { MouthState } from "./types"
-import { buildTimeline, type LipStep } from "./lipSync"
+import {
+  buildTimeline,
+  buildTimelineFromTokens,
+  splitSegments,
+  type LipStep,
+  type PhonToken,
+} from "./lipSync"
+import { getCachedTokens, prefetchPhonemes } from "./phonemize"
 
 // 改行で区切られた行の間に置く間（ま）
 const NEWLINE_PAUSE_MS = 500
+const CALIB_STORAGE_PREFIX = "talk-lip-calib:"
 
 export function useTalkController(
   _canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -23,9 +31,36 @@ export function useTalkController(
   const startedAtRef = useRef(0)        // 発話開始時刻 performance.now()
   const offsetMsRef  = useRef(0)        // onboundary 再同期によるタイムラインずらし
   const estTotalRef  = useRef(0)        // 推定発話時間（キャリブレーション用）
-  // 実測キャリブレーション: 前回までの「実際の発話時間 ÷ 推定時間」の移動平均。
-  // 端末・選ばれた声ごとに違うTTS速度へタイムラインを自動で合わせ込む
-  const calibRef = useRef(1)
+
+  // 実測キャリブレーション: 「実際の発話時間 ÷ 推定時間」の移動平均を
+  // **声ごとに** 保持し localStorage に永続化する。iPhoneとMacで声も速度も
+  // 違うため、端末・声単位で学習してタイムラインを自動で合わせ込む
+  const calibMapRef  = useRef<Record<string, number>>({})
+  const calibKeyRef  = useRef("default")
+  const calibUsedRef = useRef(1)
+
+  const clampCalib = (v: number) => Math.min(2.5, Math.max(0.5, v))
+
+  const calibFor = useCallback((key: string): number => {
+    const m = calibMapRef.current
+    if (!(key in m)) {
+      let v = 1
+      try {
+        const s = localStorage.getItem(CALIB_STORAGE_PREFIX + key)
+        if (s) {
+          const p = parseFloat(s)
+          if (Number.isFinite(p)) v = clampCalib(p)
+        }
+      } catch { /* localStorage不可（プライベートモード等）でも動く */ }
+      m[key] = v
+    }
+    return m[key]
+  }, [])
+
+  const saveCalib = useCallback((key: string, v: number) => {
+    calibMapRef.current[key] = v
+    try { localStorage.setItem(CALIB_STORAGE_PREFIX + key, v.toFixed(3)) } catch { /* noop */ }
+  }, [])
 
   const stopLipLoop = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -41,14 +76,22 @@ export function useTalkController(
   useEffect(() => () => {
     stopLipLoop()
     clearPause()
-    if (typeof window !== "undefined") window.speechSynthesis.cancel()
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel()
   }, [stopLipLoop, clearPause])
 
-  const startLipLoop = useCallback((text: string) => {
+  const startLipLoop = useCallback((text: string, tokens: PhonToken[] | null, scale: number) => {
     stopLipLoop()
-    const { steps, total } = buildTimeline(text, calibRef.current)
+    // 形態素解析結果があればモーラ精度のタイムライン、なければ文字ベース推定
+    const { steps, total } = tokens && tokens.length > 0
+      ? buildTimelineFromTokens(tokens, scale)
+      : buildTimeline(text, scale)
+    if (typeof window !== "undefined") {
+      // デバッグ用: コンソールから直近のタイムラインを確認できる
+      ;(window as unknown as Record<string, unknown>).__lipTimeline = { text, usedTokens: !!(tokens && tokens.length), steps }
+    }
     stepsRef.current     = steps
     estTotalRef.current  = total
+    calibUsedRef.current = scale
     stepPtrRef.current   = 0
     startedAtRef.current = performance.now()
     offsetMsRef.current  = 0
@@ -120,15 +163,19 @@ export function useTalkController(
   }
 
   const speak = useCallback((text: string) => {
-    if (!text.trim() || typeof window === "undefined") return
+    if (!text.trim() || typeof window === "undefined" || !window.speechSynthesis) return
 
     window.speechSynthesis.cancel()
     clearPause()
     stopLipLoop()
 
     // 改行ごとにセグメント化し、各行の間に NEWLINE_PAUSE_MS の間を置いて読む
-    const segments = text.split(/\n+/).map(s => s.trim()).filter(Boolean)
+    const segments = splitSegments(text)
     if (segments.length === 0) return
+
+    // 形態素解析を先読み（fire-and-forget）。入力中の先読みで大抵キャッシュ済みだが、
+    // 直接 speak された場合も2行目以降・リプレイはここで間に合う
+    prefetchPhonemes(text)
 
     isTalkingRef.current = true
     setIsTalking(true)
@@ -145,7 +192,11 @@ export function useTalkController(
       utter.onstart = () => {
         if (!isTalkingRef.current) return
         spokeAt = performance.now()
-        startLipLoop(seg)
+        // 声が確定するのは発話開始時。声ごとのキャリブレーションをここで引く
+        const key = `${utter.voice?.name ?? "default"}|${utter.lang}`
+        calibKeyRef.current = key
+        // 同期参照のみ（awaitしない）。未取得・失敗時は文字ベース推定へ
+        startLipLoop(seg, getCachedTokens(seg) ?? null, calibFor(key))
       }
 
       // TTSの実際の発話位置でリップ位置を再同期（タイマーとの速度ドリフトを補正）
@@ -165,9 +216,9 @@ export function useTalkController(
         if (spokeAt > 0 && est > 400) {
           const actual = performance.now() - spokeAt
           if (actual > 400) {
-            const ideal = (actual / est) * calibRef.current
-            const next  = calibRef.current * 0.5 + ideal * 0.5
-            calibRef.current = Math.min(2.5, Math.max(0.5, next))
+            const used  = calibUsedRef.current
+            const ideal = (actual / est) * used
+            saveCalib(calibKeyRef.current, clampCalib(used * 0.5 + ideal * 0.5))
           }
         }
 
@@ -188,10 +239,10 @@ export function useTalkController(
     }
 
     speakSegment(0)
-  }, [clearPause, stopLipLoop, startLipLoop, resyncToChar])
+  }, [clearPause, stopLipLoop, startLipLoop, resyncToChar, calibFor, saveCalib])
 
   const stop = useCallback(() => {
-    window.speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
     isTalkingRef.current = false
     setIsTalking(false)
     clearPause()

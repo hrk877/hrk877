@@ -3,13 +3,15 @@ import type { MouthState } from "./types"
 // ─────────────────────────────────────────────────────────────────────────────
 // テキスト → 口形タイムライン変換（純粋ロジック）
 //
-// 旧実装は setTimeout チェーンで1文字=固定115msだったため、
-//   ・拗音（きゃ・しょ等）が2文字=2モーラ扱いになり口が余計に動く
-//   ・促音っが「閉唇」になり不自然（実際は次の音の口形のまま詰まる）
-//   ・TTSの実速度と合わずに後半ほどズレる
-// という問題があった。ここでは全文を先にタイムライン（開始時刻+持続時間の列）へ
-// コンパイルし、再生側が経過時間ベースで口形を引く。速度のズレは
-// useTalkController 側の実測キャリブレーション（scale引数）で吸収する。
+// 2系統のタイムライン生成を持つ:
+//   1) buildTimelineFromTokens — kuromojiの発音（カタカナ+長音ー）からモーラ単位で生成。
+//      漢字の読み・助詞の発音変化（は→ワ）・長音（今日→キョー）・無声化（です→デs）まで
+//      反映する高精度パス。/api/talk/phonemize の結果を使う。
+//   2) buildTimeline — 文字ベースの推定。APIが使えない時のフォールバック。
+//      数字は読み（877→ハッピャクナナジュウナナ）に展開してから処理する。
+//
+// 再生側（useTalkController）は経過時間ベースで口形を引き、onboundaryのcharIndexで
+// 再同期、発話ごとの実測時間でタイムライン速度を自動キャリブレーションする。
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type LipStep = {
@@ -19,12 +21,26 @@ export type LipStep = {
   charIndex: number            // 元テキスト内の UTF-16 位置（onboundary 再同期用）
 }
 
-// 基準時間（scale=1のとき）。日本語TTSはおよそ7〜9モーラ/秒
-const MORA_MS   = 115   // 仮名1モーラ
-const KANJI_MS  = 185   // 漢字は平均約1.6モーラ
-const SOKUON_MS = 90    // っ: 詰まる無音（口形は維持）
+// kuromoji トークン（/api/talk/phonemize のレスポンス）
+export type PhonToken = {
+  s: number        // 元テキスト内の UTF-16 開始位置
+  surface: string  // 表層形
+  pron: string     // 発音（カタカナ。長音はー。未知語は空文字）
+}
+
+// 基準時間（scale=1のとき）。日本語TTSはおよそ7〜8モーラ/秒
+const MORA_MS   = 130   // 発音ベースの1モーラ（読みが正確なので一定値でよい）
+const CHAR_MS   = 115   // 文字ベース推定の仮名1文字
+const KANJI_MS  = 185   // 文字ベース推定の漢字（平均約1.6モーラ）
 const COMMA_MS  = 260   // 読点
 const PERIOD_MS = 380   // 句点・文末
+const GAP_MS    = 70    // トークン間の空白ぶんの小休止
+
+// 改行ごとの読み上げセグメント分割（controller と phonemize 共用）
+export const splitSegments = (text: string): string[] =>
+  text.split(/\n+/).map(s => s.trim()).filter(Boolean)
+
+// ── 仮名 → 口形テーブル ──────────────────────────────────────────────────────
 
 // 拗音・小書き母音 → 合体先の母音口形（きゃ＝1モーラで「あ」の口）
 const SMALL_VOWEL: Record<string, MouthState> = {
@@ -49,8 +65,21 @@ const VOWEL_ROWS: [string, MouthState][] = [
   ["おこごそぞとどのほぼぽもよろをオコゴソゾトドノホボポモヨロヲ", "open_o"],
 ]
 
-export function charToMouth(ch: string): MouthState | "hold" {
+const vowelOf = (ch: string): MouthState | null => {
   for (const [row, mouth] of VOWEL_ROWS) if (row.includes(ch)) return mouth
+  return null
+}
+
+// 無声子音で始まるモーラ（か・さ・た・は・ぱ行）。い/う段の無声化判定に使う
+const VOICELESS = "カキクケコサシスセソタチツテトハヒフヘホパピプペポ"
+
+// ひらがな → カタカナ（ぁ U+3041 〜 ゖ U+3096 を +0x60）
+const toKatakana = (s: string): string =>
+  s.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60))
+
+export function charToMouth(ch: string): MouthState | "hold" {
+  const v = vowelOf(ch)
+  if (v) return v
   if ("aAáÁ".includes(ch)) return "open_a"
   if ("iIíÍyY".includes(ch)) return "open_i"
   if ("uUúÚwW".includes(ch)) return "open_u"
@@ -63,10 +92,130 @@ export function charToMouth(ch: string): MouthState | "hold" {
   return vowels[ch.codePointAt(0)! % 5]
 }
 
-/**
- * テキストを口形タイムラインへコンパイルする。
- * @param scale 実測キャリブレーション係数（>1 = TTSが基準より遅い）
- */
+// ── 数字 → 読み（カタカナ） ──────────────────────────────────────────────────
+// 877 → ハッピャクナナジュウナナ、2026 → ニセンニジュウロク
+const DIGIT_KANA = ["", "イチ", "ニ", "サン", "ヨン", "ゴ", "ロク", "ナナ", "ハチ", "キュウ"]
+const DIGIT_SOLO = ["ゼロ", "イチ", "ニ", "サン", "ヨン", "ゴ", "ロク", "ナナ", "ハチ", "キュウ"]
+
+const fourDigitToKana = (n: number): string => {
+  let out = ""
+  const th = Math.floor(n / 1000) % 10
+  const hu = Math.floor(n / 100) % 10
+  const te = Math.floor(n / 10) % 10
+  const on = n % 10
+  if (th) out += th === 1 ? "セン" : th === 3 ? "サンゼン" : th === 8 ? "ハッセン" : DIGIT_KANA[th] + "セン"
+  if (hu) out += hu === 1 ? "ヒャク" : hu === 3 ? "サンビャク" : hu === 6 ? "ロッピャク" : hu === 8 ? "ハッピャク" : DIGIT_KANA[hu] + "ヒャク"
+  if (te) out += te === 1 ? "ジュウ" : DIGIT_KANA[te] + "ジュウ"
+  if (on) out += DIGIT_KANA[on]
+  return out
+}
+
+export function numberToKana(numStr: string): string {
+  // 8桁超や先頭0の桁読み（電話番号等）は1桁ずつ読む
+  if (numStr.length > 8 || (numStr.length > 1 && numStr.startsWith("0"))) {
+    return [...numStr].map(d => DIGIT_SOLO[Number(d)] ?? "").join("")
+  }
+  const n = parseInt(numStr, 10)
+  if (!Number.isFinite(n)) return ""
+  if (n === 0) return "ゼロ"
+  const man  = Math.floor(n / 10000)
+  const rest = n % 10000
+  let out = ""
+  if (man) out += fourDigitToKana(man) + "マン"
+  if (rest) out += fourDigitToKana(rest)
+  return out
+}
+
+// ── 発音（カタカナ） → モーラ列 ───────────────────────────────────────────────
+// rel は1モーラを1.0とした相対時間。無声化・促音はここで短くする
+export type MoraStep = { mouth: MouthState | "hold"; rel: number }
+
+export function parseMoras(pronIn: string): MoraStep[] {
+  const pron = toKatakana(pronIn)
+  type M = { base: string | null; mouth: MouthState | "hold"; rel: number }
+  const moras: M[] = []
+  const chars = [...pron]
+
+  for (let k = 0; k < chars.length; k++) {
+    const ch = chars[k]
+    if (ch === "ッ") { moras.push({ base: null, mouth: "hold",   rel: 0.8 }); continue }
+    if (ch === "ー" || ch === "〜") { moras.push({ base: null, mouth: "hold", rel: 1.0 }); continue }
+    if (ch === "ン") { moras.push({ base: null, mouth: "closed", rel: 1.0 }); continue }
+
+    // 拗音・小書き母音は直前の子音と合体して1モーラ（キャ→「あ」の口）
+    const small = chars[k + 1] ? SMALL_VOWEL[chars[k + 1]] : undefined
+    let mouth: MouthState | "hold" | null = small ?? vowelOf(ch)
+    if (small) k++
+    if (!mouth) {
+      if (SMALL_VOWEL[ch]) mouth = SMALL_VOWEL[ch]   // 単独で現れた小書き仮名
+      else continue                                   // 発音に寄与しない文字は無視
+    }
+    moras.push({ base: ch, mouth, rel: 1.0 })
+  }
+
+  // 無声化: 無声子音モーラ(い/う段)が「次も無声子音」or「語末のス・シ・ク・チ・ツ」のとき短く
+  for (let i = 0; i < moras.length; i++) {
+    const m = moras[i]
+    if (!m.base || !VOICELESS.includes(m.base)) continue
+    if (m.mouth !== "open_i" && m.mouth !== "open_u") continue
+    const next = moras[i + 1]
+    if (!next && "スシクチツ".includes(m.base)) m.rel *= 0.55          // です・ます等の語末
+    else if (next?.base && VOICELESS.includes(next.base)) m.rel *= 0.6 // した・きく等
+  }
+
+  // 両唇音は「閉唇→母音」の2フェーズに展開
+  const out: MoraStep[] = []
+  for (const m of moras) {
+    if (m.base && isBilabial(m.base) && m.mouth !== "hold") {
+      out.push({ mouth: "closed", rel: m.rel * 0.42 })
+      out.push({ mouth: m.mouth,  rel: m.rel * 0.58 })
+    } else {
+      out.push({ mouth: m.mouth, rel: m.rel })
+    }
+  }
+  return out
+}
+
+// ── 高精度パス: kuromojiトークン → タイムライン ──────────────────────────────
+export function buildTimelineFromTokens(tokens: PhonToken[], scale = 1): { steps: LipStep[]; total: number } {
+  const steps: LipStep[] = []
+  let t = 0
+  const push = (mouth: MouthState | "hold", dur: number, charIndex: number) => {
+    const d = Math.max(1, Math.round(dur * scale))
+    steps.push({ mouth, t, dur: d, charIndex })
+    t += d
+  }
+
+  let prevEnd: number | null = null
+  for (const tok of tokens) {
+    if (!tok || typeof tok.s !== "number" || typeof tok.surface !== "string") continue
+    // トークン間の空白（スペース等）は小休止
+    if (prevEnd !== null && tok.s > prevEnd) push("rest", GAP_MS, prevEnd)
+    prevEnd = tok.s + tok.surface.length
+
+    const surf = tok.surface
+    if (/^[。．！？!?‼⁉]+$/.test(surf)) { push("rest", PERIOD_MS, tok.s); continue }
+    if (/^[、，,]+$/.test(surf))         { push("rest", COMMA_MS,  tok.s); continue }
+    if (/^[\s…・·「」『』（）()［］\[\]"'’”〝〟]+$/.test(surf)) { push("rest", GAP_MS, tok.s); continue }
+
+    let pron = tok.pron
+    if (!pron || pron === "*") {
+      if (/^[ぁ-ゖァ-ヶーっッ〜]+$/.test(surf)) {
+        pron = toKatakana(surf)               // ひらがな未知語: 表層＝読み
+      } else if (/^\d+$/.test(surf)) {
+        pron = numberToKana(surf)             // 数字: 読みに展開
+      } else {
+        // 英字等: 文字ベースで流す
+        for (const ch of surf) push(charToMouth(ch), CHAR_MS * 0.85, tok.s)
+        continue
+      }
+    }
+    for (const m of parseMoras(pron)) push(m.mouth, MORA_MS * m.rel, tok.s)
+  }
+  return { steps, total: t }
+}
+
+// ── フォールバックパス: 文字ベース推定 ────────────────────────────────────────
 export function buildTimeline(text: string, scale = 1): { steps: LipStep[]; total: number } {
   const steps: LipStep[] = []
   let t = 0
@@ -83,15 +232,23 @@ export function buildTimeline(text: string, scale = 1): { steps: LipStep[]; tota
     const charIndex = idx
     idx += ch.length
 
+    // 数字の連続は読みへ展開してモーラで流す（877→ハッピャクナナジュウナナ）
+    if (/\d/.test(ch)) {
+      let run = ch
+      while (k + 1 < chars.length && /\d/.test(chars[k + 1])) { k++; run += chars[k]; idx += chars[k].length }
+      for (const m of parseMoras(numberToKana(run))) push(m.mouth, CHAR_MS * m.rel, charIndex)
+      continue
+    }
+
     // 文頭などに単独で現れた小書き仮名: そのまま1モーラ
-    if (SMALL_VOWEL[ch]) { push(SMALL_VOWEL[ch], MORA_MS, charIndex); continue }
+    if (SMALL_VOWEL[ch]) { push(SMALL_VOWEL[ch], CHAR_MS, charIndex); continue }
 
     if ("。！？!?．".includes(ch)) { push("rest", PERIOD_MS, charIndex); continue }
     if ("、，,".includes(ch))      { push("rest", COMMA_MS,  charIndex); continue }
-    if (" 　\n\t…・「」『』（）()\"'’”".includes(ch)) { push("rest", MORA_MS, charIndex); continue }
-    if ("ー〜".includes(ch)) { push("hold", MORA_MS,   charIndex); continue }   // 長音: 口形を保って伸ばす
-    if ("っッ".includes(ch)) { push("hold", SOKUON_MS, charIndex); continue }   // 促音: 口形を保って詰める
-    if ("んン".includes(ch)) { push("closed", MORA_MS, charIndex); continue }
+    if (" 　\n\t…・「」『』（）()\"'’”".includes(ch)) { push("rest", CHAR_MS, charIndex); continue }
+    if ("ー〜".includes(ch)) { push("hold", CHAR_MS,        charIndex); continue }   // 長音: 口形を保って伸ばす
+    if ("っッ".includes(ch)) { push("hold", CHAR_MS * 0.8,  charIndex); continue }   // 促音: 口形を保って詰める
+    if ("んン".includes(ch)) { push("closed", CHAR_MS,      charIndex); continue }
 
     // 直後の拗音・小書き母音を取り込んで1モーラに合体（きゃ→「あ」の口）
     let vowelOverride: MouthState | undefined
@@ -102,7 +259,7 @@ export function buildTimeline(text: string, scale = 1): { steps: LipStep[]; tota
       idx += next.length
     }
 
-    const base  = isKanji(ch) ? KANJI_MS : MORA_MS
+    const base  = isKanji(ch) ? KANJI_MS : CHAR_MS
     const mouth = vowelOverride ?? charToMouth(ch)
     if (isBilabial(ch)) {
       const vowel = (mouth === "hold" ? "open_a" : mouth) as MouthState

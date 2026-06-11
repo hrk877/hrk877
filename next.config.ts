@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // kuromojiの辞書ファイル(.dat.gz)はfsで動的に読まれるため、
+  // Vercelのファイルトレーシングに明示的に含めないと本番で404になる
+  outputFileTracingIncludes: {
+    "/api/talk/phonemize": ["./node_modules/kuromoji/dict/**/*"],
+  },
   images: {
     remotePatterns: [
       {
