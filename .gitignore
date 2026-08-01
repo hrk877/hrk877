@@ -45,3 +45,6 @@ next-env.d.ts
 
 # docs (local claude docs)
 /docs/
+
+# isolated feature worktrees
+/.worktrees/
