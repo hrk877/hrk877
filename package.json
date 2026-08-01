@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:seo": "node --test tests/seo-metadata.test.mjs",
     "update-stats": "node scripts/generate-stats.js"
   },
   "dependencies": {
