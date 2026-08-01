@@ -31,6 +31,9 @@ export const metadata: Metadata = {
     "バナナハンド",
     "banana hand",
     "877hand",
+    "877finger",
+    "877 finger",
+    "877FINGER",
     "バナナ ブランド",
     "banana brand",
     "バナナ クリエイティブ",
@@ -115,8 +118,16 @@ export const viewport: Viewport = {
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${BASE_URL}/#organization`,
   name: "877hand",
-  alternateName: ["BANANAHAND", "バナナハンド", "banana hand"],
+  alternateName: [
+    "BANANAHAND",
+    "バナナハンド",
+    "banana hand",
+    "877finger",
+    "877 finger",
+    "877FINGER",
+  ],
   url: BASE_URL,
   logo: `${BASE_URL}/ogp-image.png`,
   image: `${BASE_URL}/ogp-image.png`,
@@ -129,12 +140,22 @@ const organizationSchema = {
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": `${BASE_URL}/#website`,
   name: "877hand | BANANAHAND",
-  alternateName: ["BANANAHAND", "バナナハンド"],
+  alternateName: [
+    "BANANAHAND",
+    "バナナハンド",
+    "877finger",
+    "877 finger",
+    "877FINGER",
+  ],
   url: BASE_URL,
   description:
     "BANANAHAND（バナナハンド）こと877hand — フィリピンのバナナ農家とつながるクリエイティブブランド",
   inLanguage: "ja",
+  publisher: {
+    "@id": `${BASE_URL}/#organization`,
+  },
   potentialAction: {
     "@type": "SearchAction",
     target: {
