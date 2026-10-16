@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const isBananaMoon = roundedAge === 5 || roundedAge === 25;
 
     if (isBananaMoon) {
-        const SITE_URL = "https://877hand.vercel.app";
+        const SITE_URL = "https://877hand.com";
         const subject = "Banana Moon Day Has Arrived🍌";
         const message = `
 今日はバナナムーンの日。

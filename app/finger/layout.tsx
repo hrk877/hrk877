@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-const BASE_URL = "https://877hand.vercel.app"
+const BASE_URL = "https://877hand.com"
 
 export const metadata: Metadata = {
   title: {

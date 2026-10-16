@@ -77,6 +77,14 @@ test("keeps the rendered homepage title branded as 877hand", async () => {
   const html = await fetch(baseUrl).then((response) => response.text())
 
   assert.match(html, /<title>877hand｜Banana Hand<\/title>/)
+  assert.match(
+    html,
+    /<link rel="canonical" href="https:\/\/877hand\.com"\/>/,
+  )
+  assert.match(
+    html,
+    /<meta property="og:url" content="https:\/\/877hand\.com"\/>/,
+  )
   assert.doesNotMatch(html, /<title>[^<]*877finger/i)
 })
 
@@ -98,6 +106,18 @@ test("renders 877finger as an alternate name for the homepage", async () => {
   )
 })
 
+test("publishes only the custom domain in crawler entry points", async () => {
+  const [robots, sitemap] = await Promise.all([
+    fetch(`${baseUrl}/robots.txt`).then((response) => response.text()),
+    fetch(`${baseUrl}/sitemap.xml`).then((response) => response.text()),
+  ])
+
+  assert.match(robots, /Sitemap: https:\/\/877hand\.com\/sitemap\.xml/)
+  assert.doesNotMatch(robots, /877hand\.vercel\.app/)
+  assert.match(sitemap, /https:\/\/877hand\.com\/finger/)
+  assert.doesNotMatch(sitemap, /877hand\.vercel\.app/)
+})
+
 test("renders the finger page as part of the 877hand website", async () => {
   const html = await fetch(`${baseUrl}/finger`).then((response) => response.text())
   const schemas = extractJsonLd(html)
@@ -105,13 +125,13 @@ test("renders the finger page as part of the 877hand website", async () => {
 
   assert.match(
     html,
-    /<link rel="canonical" href="https:\/\/877hand\.vercel\.app\/finger"\/>/,
+    /<link rel="canonical" href="https:\/\/877hand\.com\/finger"\/>/,
   )
   assert.match(html, /<title>877hand｜Banana Hand<\/title>/)
   assert.ok(fingerPage)
   assert.equal(fingerPage.name, "877finger")
   assert.equal(
     fingerPage.isPartOf["@id"],
-    "https://877hand.vercel.app/#website",
+    "https://877hand.com/#website",
   )
 })

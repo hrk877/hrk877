@@ -6,13 +6,13 @@ export const metadata: Metadata = {
     description:
         "877hand（BANANAHAND）のAIコンテンツ。バナナについてAIと対話できるインタラクティブな体験。",
     alternates: {
-        canonical: "https://877hand.vercel.app/ai",
+        canonical: "https://877hand.com/ai",
     },
     openGraph: {
         title: "BANANA AI | 877hand",
         description:
             "877hand（BANANAHAND）のAIコンテンツ。バナナについてAIと対話できるインタラクティブな体験。",
-        url: "https://877hand.vercel.app/ai",
+        url: "https://877hand.com/ai",
     },
 }
 

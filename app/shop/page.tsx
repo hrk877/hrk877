@@ -6,13 +6,13 @@ export const metadata: Metadata = {
     description:
         "877hand（BANANAHAND）のオンラインショップ。バナナ素材のプロダクトを近日公開予定。",
     alternates: {
-        canonical: "https://877hand.vercel.app/shop",
+        canonical: "https://877hand.com/shop",
     },
     openGraph: {
         title: "SHOP | 877hand",
         description:
             "877hand（BANANAHAND）のオンラインショップ。バナナ素材のプロダクトを近日公開予定。",
-        url: "https://877hand.vercel.app/shop",
+        url: "https://877hand.com/shop",
     },
 }
 

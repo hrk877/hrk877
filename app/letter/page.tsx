@@ -6,13 +6,13 @@ export const metadata: Metadata = {
     description:
         "877hand（BANANAHAND）へ手紙を送ろう。バナナブランドとつながる、アナログな温もりのあるレター体験。",
     alternates: {
-        canonical: "https://877hand.vercel.app/letter",
+        canonical: "https://877hand.com/letter",
     },
     openGraph: {
         title: "LETTER | 877hand",
         description:
             "877hand（BANANAHAND）へ手紙を送ろう。バナナブランドとつながる、アナログな温もりのあるレター体験。",
-        url: "https://877hand.vercel.app/letter",
+        url: "https://877hand.com/letter",
     },
 }
 

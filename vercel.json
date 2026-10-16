@@ -1,4 +1,17 @@
 {
+    "redirects": [
+        {
+            "source": "/:path*",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "877hand\\.vercel\\.app"
+                }
+            ],
+            "destination": "https://877hand.com/:path*",
+            "permanent": true
+        }
+    ],
     "crons": [
         {
             "path": "/api/cron/banana-moon",

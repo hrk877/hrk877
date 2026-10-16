@@ -6,13 +6,13 @@ export const metadata: Metadata = {
     description:
         "877hand（BANANAHAND）のミュージアム。バナナにまつわるアート・知識・物語を体験できるデジタルミュージアム。",
     alternates: {
-        canonical: "https://877hand.vercel.app/museum",
+        canonical: "https://877hand.com/museum",
     },
     openGraph: {
         title: "MUSEUM | 877hand",
         description:
             "877hand（BANANAHAND）のミュージアム。バナナにまつわるアート・知識・物語を体験できるデジタルミュージアム。",
-        url: "https://877hand.vercel.app/museum",
+        url: "https://877hand.com/museum",
     },
 }
 
