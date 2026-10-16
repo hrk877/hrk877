@@ -85,6 +85,14 @@ test("keeps the rendered homepage title branded as 877hand", async () => {
     html,
     /<meta property="og:url" content="https:\/\/877hand\.com"\/>/,
   )
+  assert.match(
+    html,
+    /<meta name="google-site-verification" content="X6UWVQfbAQAaVvacVXVXUs9C87v60eB8kr1YSoTLAtE"\/>/,
+  )
+  assert.match(
+    html,
+    /<meta name="google-site-verification" content="ILfGPL-4uUK4LMpAAPT3Cx6EGKeEZHJkQXz7vc12jXg"\/>/,
+  )
   assert.doesNotMatch(html, /<title>[^<]*877finger/i)
 })
 
