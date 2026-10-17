@@ -1,6 +1,17 @@
 {
     "redirects": [
         {
+            "source": "/",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "877hand\\.vercel\\.app"
+                }
+            ],
+            "destination": "https://877hand.com/",
+            "permanent": true
+        },
+        {
             "source": "/:path*",
             "has": [
                 {
