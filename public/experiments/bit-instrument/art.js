@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {OBJLoader} from './vendor/OBJLoader.js';
 import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
-import {MechanicalSynth} from './synth.js?v=emotions-1';
+import {MechanicalSynth} from './synth.js?v=ios-audio-2';
 import {MusicPattern} from './music-pattern.js?v=1';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
 import {LogoMorph} from './logo-morph.js?v=3';
@@ -9,6 +9,9 @@ import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effect
 const canvas=document.querySelector('#scene'),hud=document.querySelector('#hud'),c=hud.getContext('2d');
 const music=new MusicPattern();
 const synth=new MechanicalSynth(),status=document.querySelector('#status');
+// Safari must receive the unlock inside a real completed tap as well as key input.
+function unlockAudio(){try{synth.unlockFromGesture();}catch(e){status.textContent='AUDIO / '+e.message;}}
+for(const event of ['pointerdown','pointerup','touchend','click','keydown'])document.addEventListener(event,unlockAudio,{capture:true,passive:true});
 addEventListener('error',e=>{status.textContent='ERROR / '+e.message});
 const renderer=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xf9c70d,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
 const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,100);camera.position.z=12;

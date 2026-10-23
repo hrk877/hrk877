@@ -2,6 +2,8 @@
 export class MechanicalSynth {
   constructor(){this.ctx=null;this.muted=false;this.volume=.22;this.voices=0;this.lastFrequency=0;this.peak=0;}
   unlock(){
+    // Web Audio defaults to ambient on iPhone, which obeys the silent switch.
+    try{const session=globalThis.navigator?.audioSession;if(session&&session.type!=='playback')session.type='playback';}catch{}
     if(!this.ctx){
       const Context=window.AudioContext||window.webkitAudioContext;if(!Context)throw new Error('Web Audio is unavailable');
       this.ctx=new Context({latencyHint:'interactive'});const a=this.ctx;
@@ -15,8 +17,14 @@ export class MechanicalSynth {
       this.bus.connect(this.delay);this.delay.connect(this.feedback);this.feedback.connect(this.delay);this.delay.connect(this.wet);this.wet.connect(this.compressor);
       this.noise=a.createBuffer(1,Math.floor(a.sampleRate*.05),a.sampleRate);const data=this.noise.getChannelData(0);let s=877;for(let i=0;i<data.length;i++){s=(s*1664525+1013904223)>>>0;data[i]=(s/4294967296*2-1)*(1-i/data.length);}
     }
-    if(this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});
+    if(this.ctx.state==='suspended'||this.ctx.state==='interrupted')this.ctx.resume().catch(()=>{});
     return this.ctx;
+  }
+  unlockFromGesture(){
+    const a=this.unlock(),source=a.createBufferSource();
+    source.buffer=a.createBuffer(1,1,a.sampleRate);source.connect(a.destination);
+    source.onended=()=>source.disconnect();source.start();
+    return a;
   }
   setVolume(v){this.volume=v;if(this.master)this.master.gain.setTargetAtTime(this.muted?0:v,this.ctx.currentTime,.015);}
   mute(){this.muted=!this.muted;this.setVolume(this.volume);return this.muted;}
