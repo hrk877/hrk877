@@ -46,6 +46,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
         // LABコンテンツ
         {
+            url: `${BASE_URL}/play`,
+            lastModified: now,
+            changeFrequency: 'monthly',
+            priority: 0.5,
+        },
+        {
             url: `${BASE_URL}/camera`,
             lastModified: now,
             changeFrequency: 'monthly',
