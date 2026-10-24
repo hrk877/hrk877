@@ -4,7 +4,7 @@ import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
 import {MechanicalSynth} from './synth.js?v=skin-music-4';
 import {MusicPattern} from './music-pattern.js?v=3';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
-import {LogoMorph} from './logo-morph.js?v=3';
+import {LogoMorph} from './logo-morph.js?v=4';
 import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effects.js?v=4';
 const canvas=document.querySelector('#scene'),hud=document.querySelector('#hud'),c=hud.getContext('2d');
 const music=new MusicPattern();
@@ -61,7 +61,7 @@ function body(i,baseScale){
  depth.renderOrder=-2;points.renderOrder=1;g.add(mesh,depth,points,wire);scene.add(g);
  const b={g,mesh,depth,points,wire,mat,baseScale,base:new T.Vector3(),baseRot:new T.Vector3(.12,Math.PI,-.4),rot:new T.Vector3(),rv:new T.Vector3(),offset:new T.Vector3(),ov:new T.Vector3(),energy:0,anger:0,tapId:0,tapLevel:0,tapUntil:-Infinity,rageStyle:0,mood:new T.Vector3(),phase:0,phaseTarget:0,shape:new T.Vector4(1,0,0,0),shapeTarget:new T.Vector4(1,0,0,0)};bodies.push(b);return b;
 }
-const hero=body(0,1);for(let i=1;i<=12;i++){const b=body(i,.17+(i%3)*.025);b.baseRot.set(.12+(i%3)*.14,Math.PI+(i%4)*.6,-.6+i*.42)}
+const satelliteCount=6;const hero=body(0,1);for(let i=1;i<=satelliteCount;i++){const b=body(i,.17+(i%3)*.025);b.baseRot.set(.12+(i%3)*.14,Math.PI+(i%4)*.6,-.6+i*.42)}
 // Portrait layout is fitted in screen space: a tall soloist, two separate satellite lanes.
 const layoutVector=new T.Vector3(),layoutNormal=new T.Vector3();
 function sculptPoint(vector,normal,e,body){
@@ -75,7 +75,7 @@ function projectedBounds(group,samples=240,padding=0,deformation=0){let left=Inf
 function layout(){
  bodies.forEach((b,i)=>{b.g.visible=i===0||!mobileView.matches});
  const portrait=w<h,halfHeight=camera.position.z*Math.tan(T.MathUtils.degToRad(camera.fov/2));
- if(portrait){
+ if(portrait&&mobileView.matches){
   const stageTop=mobileView.matches?96:70,stageBottom=Math.max(stageTop+160,h-(mobileView.matches?28:90)),stageHeight=stageBottom-stageTop,pixelsPerUnit=h/(2*halfHeight);
   hero.baseRot.set(.08,Math.PI,-1.4);hero.g.position.set(0,0,0);hero.g.scale.setScalar(1);
   // The OBJ is mirrored by its Y rotation; find its actual upright silhouette instead of guessing an Euler angle.
@@ -87,9 +87,21 @@ function layout(){
   bodies.slice(1).forEach((body,j)=>{const row=Math.floor(j/2),sx=(j%2===0?.09:.91)*w,sy=stageTop+26+row*(stageHeight-52)/5,z=-1.2-(j%3)*.2,unitsPerPixel=2*(camera.position.z-z)*Math.tan(T.MathUtils.degToRad(camera.fov/2))/h;
    body.base.set((sx-w/2)*unitsPerPixel,(h/2-sy)*unitsPerPixel,z);body.baseScale=(Math.min(36,w*.095)/4.6)*unitsPerPixel;
   });
+ }else if(mobileView.matches){
+  hero.baseRot.set(.12,Math.PI,-.4);hero.base.set(0,.25,0);hero.baseScale=1.15;
  }else{
-  hero.baseRot.set(.12,Math.PI,-.4);hero.base.set(0,.25,0);hero.baseScale=mobileView.matches?1.15:1;const side=Math.min(4.1,halfHeight*camera.aspect*.78);
-  bodies.slice(1).forEach((body,j)=>{const row=Math.floor(j/2);body.base.set((j%2?1:-1)*side+(row%2?-.16:.12),2.42-row*.92,-1.2-(row%3)*.25);body.baseScale=.17+((j+1)%3)*.025});
+  // Fit the real silhouettes into a generous center and three balanced rows per side.
+  function fit(body,cx,cy,maxWidth,maxHeight,z){
+   body.g.position.set(0,0,z);body.g.rotation.set(body.baseRot.x,body.baseRot.y,body.baseRot.z);body.g.scale.setScalar(1);body.g.updateMatrixWorld(true);
+   const unit=projectedBounds(body.g,400);body.baseScale=Math.min(maxWidth/unit.width,maxHeight/unit.height);
+   body.g.scale.setScalar(body.baseScale);body.g.updateMatrixWorld(true);const bounds=projectedBounds(body.g,400),unitsPerPixel=2*(camera.position.z-z)*Math.tan(T.MathUtils.degToRad(camera.fov/2))/h;
+   body.base.set((cx-bounds.x-bounds.width/2)*unitsPerPixel,(bounds.y+bounds.height/2-cy)*unitsPerPixel,z);body.g.position.copy(body.base);body.g.updateMatrixWorld(true);
+  }
+  hero.baseRot.set(.12,Math.PI,-.32);fit(hero,w*.5,h*.52,w*.54,h*.58,0);
+  bodies.slice(1).forEach((body,j)=>{
+   const row=Math.floor(j/2),right=j%2===1,tilt=[-.48,.22,-.28][row];body.baseRot.set(.1+row*.05,Math.PI+(row-1)*.22,right?-tilt:tilt);
+   fit(body,w*(right?.87:.13),h*(.24+row*.27),w*.16,h*.20,-.65);
+  });
  }
 }
 layout();addEventListener('resize',layout);
@@ -99,8 +111,8 @@ const logoMorph=await LogoMorph.create({scene,camera,count:mobileView.matches?28
  scene.updateMatrixWorld(true);const normalMatrices=bodies.map(b=>new T.Matrix3().getNormalMatrix(b.g.matrixWorld));
  const count=positions.count;
  for(let i=0;i<count;i++){
-  const bodyIndex=mobileView.matches||i<count*.68?0:1+Math.min(11,Math.floor((i-count*.68)/(count*.32)*12));
-  const b=bodies[bodyIndex],sample=(i*77)%(w<h?28000:N);
+  const bodyIndex=mobileView.matches||i<count*.68?0:1+Math.min(satelliteCount-1,Math.floor((i-count*.68)/(count*.32)*satelliteCount));
+  const b=bodies[bodyIndex],sampleCount=bodyIndex===0?(w<h?28000:N):(w<h?2200:14000),sample=(i*73)%sampleCount;
   morphVector.fromArray(pos,sample*3);morphNormal.fromArray(normals,sample*3);
   if(b.energy>.00001||b.anger>.00001||b.mood.lengthSq()>.00001||b.tapLevel>.00001)sculptPoint(morphVector,morphNormal,b.energy,b);morphVector.applyMatrix4(b.g.matrixWorld);positions.setXYZ(i,morphVector.x,morphVector.y,morphVector.z);
   morphNormal.applyMatrix3(normalMatrices[bodyIndex]).normalize();morphView.copy(camera.position).sub(morphVector).normalize();facing.setX(i,morphNormal.dot(morphView)>.03?1:0);
@@ -115,8 +127,8 @@ const keys='asdfghjklqwertyuiopzxcvbnm1234567890',held=new Map();
 const morphs=[new T.Vector4(1,.15,.15,0),new T.Vector4(.2,1,.25,0),new T.Vector4(.2,.35,1,0),new T.Vector4(.3,.15,.15,1)];
 function pulse(b,i,power=1){const effect=i%TAP_EFFECTS.length;b.tapId=effect===4?3:0;b.tapUntil=effect>=4?time+.65:-Infinity;if(effect>=4)b.shapeTarget.set(0,0,0,0);else b.shapeTarget.copy(morphs[effect]);b.phaseTarget=(i%7)*.45;b.energy=Math.min(1.4,b.energy+.85*power);const sign=i%2?1:-1;b.rv.x=T.MathUtils.clamp(b.rv.x+sign*(1.7+i%3)*power,-8,8);b.rv.y=T.MathUtils.clamp(b.rv.y+sign*2.6*power,-8,8);b.rv.z=T.MathUtils.clamp(b.rv.z+((i%5)-2)*1.9*power,-9,9);b.ov.y=T.MathUtils.clamp(b.ov.y+2.3*power,-5,5);b.ov.x=T.MathUtils.clamp(b.ov.x+sign*.7*power,-3,3)}
 function press(k,all=false,effectOverride=null){try{const context=synth.unlock();music.hit(k,context.currentTime)}catch(e){status.textContent='AUDIO / '+e.message}
- const i=Math.max(0,keys.indexOf(k));selected=1+i%12;energy=Math.min(1.5,energy+.7);lastHit=time;totalHits++;lastKey=k===' '?'SPACE':k.toUpperCase();document.body.classList.add('played');
- const effect=effectOverride??effectForKey(k,i);document.body.dataset.tapEffect=TAP_EFFECTS[effect%TAP_EFFECTS.length];pulse(hero,effect,all?1.2:.6);if(all)bodies.slice(1).forEach(b=>pulse(b,effect,1));else{pulse(bodies[selected],effect,1.15);pulse(bodies[1+(i+5)%12],effect,.45)}
+ const i=Math.max(0,keys.indexOf(k));selected=1+i%satelliteCount;energy=Math.min(1.5,energy+.7);lastHit=time;totalHits++;lastKey=k===' '?'SPACE':k.toUpperCase();document.body.classList.add('played');
+ const effect=effectOverride??effectForKey(k,i);document.body.dataset.tapEffect=TAP_EFFECTS[effect%TAP_EFFECTS.length];pulse(hero,effect,all?1.2:.6);if(all)bodies.slice(1).forEach(b=>pulse(b,effect,1));else{pulse(bodies[selected],effect,1.15);pulse(bodies[1+(i+3)%satelliteCount],effect,.45)}
 
  status.textContent=lastKey+' / '+synth.lastFrequency.toFixed(1)+' Hz / B'+String(selected).padStart(2,'0');
  document.body.dataset.lastKey=lastKey;document.body.dataset.hits=totalHits;document.body.dataset.frequency=synth.lastFrequency.toFixed(2);
@@ -163,7 +175,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/10
   const dy=bound.y<minY?minY-bound.y:bound.y+bound.height>maxY?maxY-bound.y-bound.height:0;
   const pixelsPerUnit=h/(2*camera.position.z*Math.tan(T.MathUtils.degToRad(camera.fov/2)));hero.g.position.x+=dx/pixelsPerUnit;hero.g.position.y-=dy/pixelsPerUnit;hero.g.updateMatrixWorld(true);
  }
- if(w<h&&Math.floor(time*5)!==Number(document.body.dataset.boundsTick)){document.body.dataset.boundsTick=String(Math.floor(time*5));document.body.dataset.layoutBounds=JSON.stringify(bodies.map((b,i)=>({i,...projectedBounds(b.g,i===0?400:100,i===0?8:3,mode===0?b.energy:0)})));}
+ if(Math.floor(time*5)!==Number(document.body.dataset.boundsTick)){document.body.dataset.boundsTick=String(Math.floor(time*5));document.body.dataset.layoutBounds=JSON.stringify(bodies.map((b,i)=>({i,visible:b.g.visible,...projectedBounds(b.g,i===0?400:100,i===0?8:3,mode===0?b.energy:0)})));}
  logoMorph.refreshReturn(time);
  if(mode===2&&!logoMorph.active){renderer.setRenderTarget(target);renderer.render(scene,camera);renderer.setRenderTarget(null);renderer.render(postScene,postCamera)}else renderer.render(scene,camera);drawHud(dt);
 

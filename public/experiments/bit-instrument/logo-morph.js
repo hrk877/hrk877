@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {LogoMorphState} from './logo-morph-state.js';
+import {LogoMorphState} from './logo-morph-state.js?v=2';
 import {pairPointSets} from './point-pairing.js';
 
 export class LogoMorph {
@@ -27,14 +27,27 @@ export class LogoMorph {
     const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(positions,3));geometry.setAttribute('destination',new T.BufferAttribute(targets,3));geometry.setAttribute('facing',new T.BufferAttribute(facing,1));geometry.setAttribute('chunk',new T.BufferAttribute(chunks,2));
     this.material=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uProgress:{value:0},uDpr:{value:1}},
       vertexShader:`attribute vec3 destination;attribute float facing;attribute vec2 chunk;uniform float uProgress,uDpr;varying float vAlpha;
-      void main(){float p=smoothstep(chunk.x,.95,uProgress);vec3 q=mix(position,destination,p);
-       vAlpha=mix(facing,1.,smoothstep(0.,.28,p));gl_Position=projectionMatrix*viewMatrix*vec4(q,1.);gl_PointSize=mix(1.12,.95,p)*uDpr;}`,
+      void main(){
+       float t=clamp((uProgress-chunk.x)/(1.-chunk.x),0.,1.);
+       float p=t*t*t*(t*(t*6.-15.)+10.);
+       vec3 delta=destination-position;
+       float ribbon=sin(3.14159265*p),sweep=sin(6.2831853*p);
+       // Neighbours share a flowing, tangential path; every point still has one destination.
+       vec2 tangent=vec2(-delta.y,delta.x);
+       vec3 q=mix(position,destination,p);
+       q.xy+=tangent*ribbon*(.19+.045*chunk.y);
+       q.y+=sweep*ribbon*.13*(.6+chunk.y);
+       q.z+=ribbon*(.32+.18*chunk.y);
+       vAlpha=mix(facing,1.,smoothstep(0.,.28,p));
+       gl_Position=projectionMatrix*viewMatrix*vec4(q,1.);
+       gl_PointSize=mix(1.12,1.10,p)*(1.+ribbon*.12)*uDpr;
+      }`,
       fragmentShader:'varying float vAlpha;void main(){vec2 p=gl_PointCoord-.5;float edge=1.-smoothstep(.30,.5,length(p));gl_FragColor=vec4(.08,.10,.045,vAlpha*edge);}' });
     this.points=new T.Points(geometry,this.material);this.points.frustumCulled=false;this.points.visible=false;this.points.renderOrder=5;scene.add(this.points);this.resize();
   }
   resize(){
     const units=2*this.camera.position.z*Math.tan(T.MathUtils.degToRad(this.camera.fov/2))/innerHeight;
-    const width=Math.min(innerWidth*(innerWidth<700?.87:.78),1400)*units,height=width/this.aspect;
+    const width=Math.min(innerWidth*(innerWidth<700?.87:.78),1400)*.25*units,height=width/this.aspect;
     const target=this.points.geometry.attributes.destination;
     for(let i=0;i<this.count;i++){this.rawDestination[i*3]=this.normalized[i*2]*width;this.rawDestination[i*3+1]=this.normalized[i*2+1]*height+.06;}
     this.applyMapping();this.material.uniforms.uDpr.value=Math.min(devicePixelRatio,2);
@@ -51,9 +64,9 @@ export class LogoMorph {
       const chunk=this.points.geometry.attributes.chunk;let minX=Infinity,maxX=-Infinity;
       for(let i=0;i<this.count;i++){minX=Math.min(minX,source.getX(i));maxX=Math.max(maxX,source.getX(i));}
       for(let i=0;i<this.count;i++){
-       const x=source.getX(i),y=source.getY(i),z=source.getZ(i),cx=Math.floor(x/.065),cy=Math.floor(y/.065),cz=Math.floor(z/.065);
-       const hash=((cx*73856093)^(cy*19349663)^(cz*83492791))>>>0;
-       const wave=(x-minX)/Math.max(.001,maxX-minX);chunk.setXY(i,.035+(.70*wave+.30*(hash%1000)/1000)*.26,0);
+       const x=source.getX(i),y=source.getY(i),z=source.getZ(i);
+       const wave=(x-minX)/Math.max(.001,maxX-minX),lane=.5+.5*Math.sin(y*1.65+z*.7+x*.3);
+       chunk.setXY(i,.012+wave*.23+lane*.025,lane);
       }
       chunk.needsUpdate=true;source.needsUpdate=true;facing.needsUpdate=true;
     }
