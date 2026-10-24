@@ -44,28 +44,39 @@ export class MechanicalSynth {
   }
   music(event){
     const a=this.unlock();if(this.voices>=40)return;
+    const skin=event.skin??this.musicSkin??0;
+    if(this.musicSkin!==skin){
+      this.musicSkin=skin;const room=[[.105,.16,.16],[.29,.45,.48],[.055,.035,.025],[.145,.28,.22]][skin];
+      this.delay.delayTime.setTargetAtTime(room[0],a.currentTime,.04);this.feedback.gain.setTargetAtTime(room[1],a.currentTime,.04);this.wet.gain.setTargetAtTime(room[2],a.currentTime,.04);
+    }
     const t=Math.max(a.currentTime+.002,event.at),drum=['kick','snare','hat'].includes(event.kind);
     const duration=drum?(event.kind==='kick'?.19:event.kind==='snare'?.12:.045):event.duration;
-    const env=a.createGain(),filter=a.createBiquadFilter();let source,mod,modGain;
+    const env=a.createGain(),filter=a.createBiquadFilter();let source,mod,modGain,drive;
     this.voices++;
     if(event.kind==='snare'||event.kind==='hat'){
       source=a.createBufferSource();source.buffer=this.noise;source.loop=true;
-      filter.type='highpass';filter.frequency.value=event.kind==='hat'?7000:1400;
+      filter.type='highpass';filter.frequency.value=event.noiseCutoff||(event.kind==='hat'?7000:1400);
     }else{
       source=a.createOscillator();const freq=event.kind==='kick'?135:440*2**((event.midi-69)/12);
       source.type=event.kind==='kick'?'sine':event.wave||(event.kind==='arp'?'sine':event.kind==='bass'?'triangle':'square');
       source.frequency.setValueAtTime(freq,t);
-      if(event.fm){mod=a.createOscillator();modGain=a.createGain();mod.frequency.value=freq*2.73;modGain.gain.setValueAtTime(freq*event.fm,t);modGain.gain.exponentialRampToValueAtTime(.1,t+duration);mod.connect(modGain);modGain.connect(source.frequency);mod.start(t);mod.stop(t+duration+.02);}
+      if(event.fm){mod=a.createOscillator();modGain=a.createGain();mod.frequency.value=freq*(event.fmRatio||2.73);modGain.gain.setValueAtTime(freq*event.fm,t);modGain.gain.exponentialRampToValueAtTime(.1,t+duration);mod.connect(modGain);modGain.connect(source.frequency);mod.start(t);mod.stop(t+duration+.02);}
       if(event.kind==='kick')source.frequency.exponentialRampToValueAtTime(42,t+.13);
-      filter.type='lowpass';filter.Q.value=event.kind==='lead'?1.3:.5;
-      filter.frequency.setValueAtTime(event.kind==='bass'?650:event.kind==='kick'?500:(event.cutoff||3800),t);
-      filter.frequency.exponentialRampToValueAtTime(event.kind==='lead'?700:400,t+duration);
+      filter.type='lowpass';filter.Q.value=event.resonance??(event.kind==='lead'?1.3:.5);
+      filter.frequency.setValueAtTime(event.kind==='kick'?500:(event.cutoff||(event.kind==='bass'?650:3800)),t);
+      filter.frequency.exponentialRampToValueAtTime(event.filterEnd||(event.kind==='lead'?700:400),t+duration);
       this.lastFrequency=freq;
     }
     const gain=(event.kind==='kick'?.55:event.kind==='hat'?.24:event.kind==='snare'?.40:.24)*event.velocity;
-    env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(gain,t+.004);env.gain.exponentialRampToValueAtTime(.0001,t+duration);
-    source.connect(filter);filter.connect(env);env.connect(this.bus);source.start(t);source.stop(t+duration+.02);
-    source.onended=()=>{this.voices--;source.disconnect();filter.disconnect();env.disconnect();mod?.disconnect();modGain?.disconnect();};
+    env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(gain,t+Math.min(event.attack??.004,duration*.4));env.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    source.connect(filter);
+    if(event.drive){
+      this.driveCurves??=new Map();let curve=this.driveCurves.get(event.drive);
+      if(!curve){curve=new Float32Array(256);for(let i=0;i<256;i++){const x=i/127.5-1;curve[i]=Math.tanh(x*event.drive)/Math.tanh(event.drive);}this.driveCurves.set(event.drive,curve);}
+      drive=a.createWaveShaper();drive.curve=curve;drive.oversample='2x';filter.connect(drive);drive.connect(env);
+    }else filter.connect(env);
+    env.connect(this.bus);source.start(t);source.stop(t+duration+.02);
+    source.onended=()=>{this.voices--;source.disconnect();filter.disconnect();env.disconnect();mod?.disconnect();modGain?.disconnect();drive?.disconnect();};
   }
   waveform(){if(!this.analyser)return null;this.analyser.getByteTimeDomainData(this.samples);let sum=0;for(const x of this.samples)sum+=((x-128)/128)**2;this.peak=Math.sqrt(sum/this.samples.length);return this.samples;}
   react(name,strength=1){

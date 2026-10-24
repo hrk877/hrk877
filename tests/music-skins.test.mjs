@@ -34,3 +34,30 @@ test('each skin stops after inactivity and keeps finite, bounded musical events'
     assert.deepEqual(p.drain(20),[]);
   }
 });
+
+test('the natural skin plays sustained chord pads without a drum machine',()=>{
+  const {events}=phrase(1);
+  assert.ok(!events.some(e=>['kick','snare','hat'].includes(e.kind)));
+  const pads=events.filter(e=>e.kind==='pad');
+  assert.ok(pads.length>=3);
+  assert.ok(pads.every(e=>e.duration>=1.5&&e.attack>=.15));
+  assert.ok(events.find(e=>e.kind==='lead').attack>phrase(2).events.find(e=>e.kind==='lead').attack);
+});
+
+test('1BIT has a rapid, short square-wave arpeggio rather than a soft sustained backing',()=>{
+  const notes=phrase(2).events.filter(e=>e.kind==='arp');
+  assert.ok(notes.length>=12);
+  assert.ok(notes.every(e=>e.wave==='square'&&e.duration<=.12&&e.filterEnd>=3000));
+});
+
+test('wireframe uses distorted low bass and strongly inharmonic metal voices',()=>{
+  const {events}=phrase(3);
+  assert.ok(events.some(e=>e.kind==='bass'&&e.midi<36&&e.drive>1));
+  assert.ok(events.some(e=>e.fm>1&&e.fmRatio>3));
+});
+
+test('points has syncopated kick placement distinct from the four-on-the-floor wire groove',()=>{
+  const {p,events}=phrase(0);
+  assert.ok(events.filter(e=>e.kind==='kick').some(e=>Math.round((e.at-p.origin)/p.step)%4!==0));
+  assert.ok(events.filter(e=>e.kind==='lead').every(e=>e.duration<=.22));
+});

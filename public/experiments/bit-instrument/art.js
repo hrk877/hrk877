@@ -1,8 +1,8 @@
 import * as T from 'three';
 import {OBJLoader} from './vendor/OBJLoader.js';
 import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
-import {MechanicalSynth} from './synth.js?v=skin-music-3';
-import {MusicPattern} from './music-pattern.js?v=2';
+import {MechanicalSynth} from './synth.js?v=skin-music-4';
+import {MusicPattern} from './music-pattern.js?v=3';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
 import {LogoMorph} from './logo-morph.js?v=3';
 import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effects.js?v=4';
