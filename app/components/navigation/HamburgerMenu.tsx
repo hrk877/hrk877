@@ -28,9 +28,7 @@ const MENU_ITEMS = [
             { label: "SPIN", href: "/spin" },
             { label: "MOON", href: "/moon" },
             { label: "HABIT", href: "/habit", isPrivate: true },
-            { label: "RUNNING", href: "/training", isPrivate: true },
-            { label: "TALK", href: "/talk" },
-            { label: "PLAY", href: "/play" },
+            { label: "MUSIC", href: "/play" },
         ]
     },
     { label: "LETTER", href: "/letter" },
@@ -84,9 +82,7 @@ export default function HamburgerMenu({ color, themeColor = "#FAC800", onToggle 
                     { label: "SPIN", href: "/spin" },
                     { label: "MOON", href: "/moon" },
                     { label: "HABIT", href: "/habit", isPrivate: true },
-                    { label: "RUNNING", href: "/training", isPrivate: true },
-                    { label: "TALK", href: "/talk" },
-                    { label: "PLAY", href: "/play" },
+                    { label: "MUSIC", href: "/play" },
                     { label: "STATS", href: "/stats", isPrivate: true },
                     { label: "BACK", action: () => setCurrentView("MAIN") }
                 ]

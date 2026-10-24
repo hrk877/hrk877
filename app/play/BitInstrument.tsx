@@ -11,8 +11,8 @@ export default function BitInstrument() {
         <>
         <iframe
             ref={frame}
-            src="/experiments/bit-instrument/index.html?v=2"
-            title="877hand BIT INSTRUMENT"
+            src="/experiments/bit-instrument/index.html?v=3"
+            title="877hand MUSIC"
             allow="autoplay"
             className="fixed inset-0 h-dvh w-full border-0 bg-[#f9c70d]"
             onLoad={() => { if (!menuOpen.current) frame.current?.contentWindow?.focus() }}

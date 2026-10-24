@@ -46,25 +46,26 @@ export class MechanicalSynth {
     const a=this.unlock();if(this.voices>=40)return;
     const t=Math.max(a.currentTime+.002,event.at),drum=['kick','snare','hat'].includes(event.kind);
     const duration=drum?(event.kind==='kick'?.19:event.kind==='snare'?.12:.045):event.duration;
-    const env=a.createGain(),filter=a.createBiquadFilter();let source;
+    const env=a.createGain(),filter=a.createBiquadFilter();let source,mod,modGain;
     this.voices++;
     if(event.kind==='snare'||event.kind==='hat'){
       source=a.createBufferSource();source.buffer=this.noise;source.loop=true;
       filter.type='highpass';filter.frequency.value=event.kind==='hat'?7000:1400;
     }else{
       source=a.createOscillator();const freq=event.kind==='kick'?135:440*2**((event.midi-69)/12);
-      source.type=event.kind==='kick'||event.kind==='arp'?'sine':event.kind==='bass'?'triangle':'square';
+      source.type=event.kind==='kick'?'sine':event.wave||(event.kind==='arp'?'sine':event.kind==='bass'?'triangle':'square');
       source.frequency.setValueAtTime(freq,t);
+      if(event.fm){mod=a.createOscillator();modGain=a.createGain();mod.frequency.value=freq*2.73;modGain.gain.setValueAtTime(freq*event.fm,t);modGain.gain.exponentialRampToValueAtTime(.1,t+duration);mod.connect(modGain);modGain.connect(source.frequency);mod.start(t);mod.stop(t+duration+.02);}
       if(event.kind==='kick')source.frequency.exponentialRampToValueAtTime(42,t+.13);
       filter.type='lowpass';filter.Q.value=event.kind==='lead'?1.3:.5;
-      filter.frequency.setValueAtTime(event.kind==='bass'?650:event.kind==='kick'?500:3800,t);
+      filter.frequency.setValueAtTime(event.kind==='bass'?650:event.kind==='kick'?500:(event.cutoff||3800),t);
       filter.frequency.exponentialRampToValueAtTime(event.kind==='lead'?700:400,t+duration);
       this.lastFrequency=freq;
     }
     const gain=(event.kind==='kick'?.55:event.kind==='hat'?.24:event.kind==='snare'?.40:.24)*event.velocity;
     env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(gain,t+.004);env.gain.exponentialRampToValueAtTime(.0001,t+duration);
     source.connect(filter);filter.connect(env);env.connect(this.bus);source.start(t);source.stop(t+duration+.02);
-    source.onended=()=>{this.voices--;source.disconnect();filter.disconnect();env.disconnect();};
+    source.onended=()=>{this.voices--;source.disconnect();filter.disconnect();env.disconnect();mod?.disconnect();modGain?.disconnect();};
   }
   waveform(){if(!this.analyser)return null;this.analyser.getByteTimeDomainData(this.samples);let sum=0;for(const x of this.samples)sum+=((x-128)/128)**2;this.peak=Math.sqrt(sum/this.samples.length);return this.samples;}
   react(name,strength=1){

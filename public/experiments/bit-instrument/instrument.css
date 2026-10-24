@@ -2,8 +2,9 @@
 html,body{margin:0;overflow:hidden;background:#f9c70d;color:#242919;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 canvas{position:fixed;inset:0;width:100%;height:100%}
 #hud{pointer-events:none}
-#mode{position:fixed;z-index:5;top:55.5px;right:36px;transform:translateY(-50%);min-height:44px;padding:12px 0;border:0;border-radius:0;background:transparent;color:inherit;font:11px/20px ui-monospace,monospace;letter-spacing:.09em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#mode{position:fixed;z-index:5;top:55.5px;right:18px;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;border-radius:0;background:transparent;color:inherit;font:11px/20px ui-monospace,monospace;letter-spacing:.09em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#mode svg{width:26px;height:26px}
 #mode:hover{opacity:.65}
 #mode:focus-visible{outline:1px solid currentColor;outline-offset:4px}
 #loading{position:fixed;inset:0;background:#f9c70d;z-index:20}
-@media(max-width:700px){#mode{right:20px;font-size:10px}}
+@media(max-width:700px){#mode{right:18px}}

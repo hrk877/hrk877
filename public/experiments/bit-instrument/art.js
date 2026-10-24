@@ -1,8 +1,8 @@
 import * as T from 'three';
 import {OBJLoader} from './vendor/OBJLoader.js';
 import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
-import {MechanicalSynth} from './synth.js?v=ios-audio-2';
-import {MusicPattern} from './music-pattern.js?v=1';
+import {MechanicalSynth} from './synth.js?v=skin-music-3';
+import {MusicPattern} from './music-pattern.js?v=2';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
 import {LogoMorph} from './logo-morph.js?v=3';
 import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effects.js?v=4';
@@ -76,19 +76,19 @@ function layout(){
  bodies.forEach((b,i)=>{b.g.visible=i===0||!mobileView.matches});
  const portrait=w<h,halfHeight=camera.position.z*Math.tan(T.MathUtils.degToRad(camera.fov/2));
  if(portrait){
-  const stageTop=mobileView.matches?118:70,stageBottom=Math.max(stageTop+160,h-90),stageHeight=stageBottom-stageTop,pixelsPerUnit=h/(2*halfHeight);
+  const stageTop=mobileView.matches?96:70,stageBottom=Math.max(stageTop+160,h-(mobileView.matches?28:90)),stageHeight=stageBottom-stageTop,pixelsPerUnit=h/(2*halfHeight);
   hero.baseRot.set(.08,Math.PI,-1.4);hero.g.position.set(0,0,0);hero.g.scale.setScalar(1);
   // The OBJ is mirrored by its Y rotation; find its actual upright silhouette instead of guessing an Euler angle.
   let bestAngle=-1.4,bestRatio=0;for(let j=0;j<80;j++){const angle=-Math.PI+j*Math.PI/80;hero.g.rotation.set(hero.baseRot.x,hero.baseRot.y,angle);hero.g.updateMatrixWorld(true);const bounds=projectedBounds(hero.g,150);const ratio=bounds.height/bounds.width;if(ratio>bestRatio){bestRatio=ratio;bestAngle=angle}}
   hero.baseRot.z=bestAngle;hero.g.rotation.set(hero.baseRot.x,hero.baseRot.y,bestAngle);hero.g.updateMatrixWorld(true);
-  const unit=projectedBounds(hero.g,500);hero.baseScale=Math.min(stageHeight*.90/unit.height,w*.57/unit.width);
+  const unit=projectedBounds(hero.g,500);hero.baseScale=Math.min(stageHeight*(mobileView.matches?.98:.90)/unit.height,w*(mobileView.matches?.78:.57)/unit.width);
   hero.g.scale.setScalar(hero.baseScale);hero.g.updateMatrixWorld(true);const fitted=projectedBounds(hero.g,500);
   hero.base.set((w*.5-fitted.x-fitted.width/2)/pixelsPerUnit,(fitted.y+fitted.height/2-(stageTop+stageBottom)/2)/pixelsPerUnit,0);
   bodies.slice(1).forEach((body,j)=>{const row=Math.floor(j/2),sx=(j%2===0?.09:.91)*w,sy=stageTop+26+row*(stageHeight-52)/5,z=-1.2-(j%3)*.2,unitsPerPixel=2*(camera.position.z-z)*Math.tan(T.MathUtils.degToRad(camera.fov/2))/h;
    body.base.set((sx-w/2)*unitsPerPixel,(h/2-sy)*unitsPerPixel,z);body.baseScale=(Math.min(36,w*.095)/4.6)*unitsPerPixel;
   });
  }else{
-  hero.baseRot.set(.12,Math.PI,-.4);hero.base.set(0,.25,0);hero.baseScale=1;const side=Math.min(4.1,halfHeight*camera.aspect*.78);
+  hero.baseRot.set(.12,Math.PI,-.4);hero.base.set(0,.25,0);hero.baseScale=mobileView.matches?1.15:1;const side=Math.min(4.1,halfHeight*camera.aspect*.78);
   bodies.slice(1).forEach((body,j)=>{const row=Math.floor(j/2);body.base.set((j%2?1:-1)*side+(row%2?-.16:.12),2.42-row*.92,-1.2-(row%3)*.25);body.baseScale=.17+((j+1)%3)*.025});
  }
 }
@@ -121,7 +121,7 @@ function press(k,all=false,effectOverride=null){try{const context=synth.unlock()
  status.textContent=lastKey+' / '+synth.lastFrequency.toFixed(1)+' Hz / B'+String(selected).padStart(2,'0');
  document.body.dataset.lastKey=lastKey;document.body.dataset.hits=totalHits;document.body.dataset.frequency=synth.lastFrequency.toFixed(2);
 }
-function setMode(n,audible=true){if(audible)synth.play(10+n,true);mode=n;document.querySelector('#mode').textContent=['POINTS','SKIN','1BIT','WIRE'][mode];document.body.dataset.mode=String(mode)}
+function setMode(n,audible=true){mode=n;music.setSkin(n);const name=['POINTS','SKIN','1BIT','WIRE'][mode],button=document.querySelector('#mode');button.title=name+' / スキンを切り替える';button.setAttribute('aria-label','スキンを切り替える（'+name+'）');document.body.dataset.mode=String(mode);document.body.dataset.musicSkin=name;if(audible){const context=synth.unlock();music.hit('skin',context.currentTime);}}
 function reset(){logoMorph.reset();music.stop();held.clear();bodies.forEach(b=>{b.rot.set(0,0,0);b.rv.set(0,0,0);b.offset.set(0,0,0);b.ov.set(0,0,0);b.energy=0;b.anger=0;b.tapId=0;b.tapLevel=0;b.tapUntil=-Infinity;b.mood.set(0,0,0)});energy=0;rx=ry=0;status.textContent='READY / PRESS ANY LETTER'}
 addEventListener('keydown',e=>{
  if(e.metaKey||e.ctrlKey||e.altKey||e.isComposing||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target.isContentEditable)return;
@@ -157,7 +157,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/10
  else{b.g.position.copy(b.base).add(b.offset);b.g.rotation.set(b.baseRot.x+b.rot.x+(i===0?rx:0),b.baseRot.y+b.rot.y+(i===0?ry:0),b.baseRot.z+b.rot.z);b.g.scale.setScalar(b.baseScale*(1+b.energy*.12))}const pointMode=mode===0;b.mesh.visible=mode===1||mode===2;b.points.visible=pointMode;b.depth.visible=pointMode||mode===3;b.wire.visible=mode===3;b.mat.uniforms.uTime.value=time;b.mat.uniforms.uEnergy.value=b.energy;b.mat.uniforms.uDpr.value=dpr;b.mat.uniforms.uShape.value.copy(b.shape);b.mat.uniforms.uPhase.value=b.phase;b.mat.uniforms.uAnger.value=b.anger;b.mat.uniforms.uRageStyle.value=b.rageStyle;b.mat.uniforms.uMood.value.copy(b.mood);b.mat.uniforms.uTap.value.set(b.tapId,b.tapLevel)});
  scene.updateMatrixWorld();
  if(w<h){
-  const energyMargin=mode===0||hero.anger>.001||hero.mood.lengthSq()>.00001||hero.tapLevel>.00001?hero.energy:0,minX=w*.18,maxX=w*.82,minY=mobileView.matches?118:70,maxY=Math.max(230,h-90);let bound=projectedBounds(hero.g,350,8,energyMargin);
+  const energyMargin=mode===0||hero.anger>.001||hero.mood.lengthSq()>.00001||hero.tapLevel>.00001?hero.energy:0,minX=w*(mobileView.matches?.06:.18),maxX=w*(mobileView.matches?.94:.82),minY=mobileView.matches?96:70,maxY=Math.max(230,h-(mobileView.matches?28:90));let bound=projectedBounds(hero.g,350,8,energyMargin);
   const fit=Math.min(1,(maxX-minX)/bound.width,(maxY-minY)/bound.height);if(fit<1){hero.g.scale.multiplyScalar(fit);hero.g.updateMatrixWorld(true);bound=projectedBounds(hero.g,350,8,energyMargin)}
   const dx=bound.x<minX?minX-bound.x:bound.x+bound.width>maxX?maxX-bound.x-bound.width:0;
   const dy=bound.y<minY?minY-bound.y:bound.y+bound.height>maxY?maxY-bound.y-bound.height:0;
