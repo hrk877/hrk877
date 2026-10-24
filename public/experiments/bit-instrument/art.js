@@ -146,9 +146,12 @@ addEventListener('keydown',e=>{
  if(e.metaKey||e.ctrlKey||e.altKey||e.isComposing||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target.isContentEditable)return;
  if(e.code==='Escape'){reset();return;}
  if(e.code==='Enter'&&!e.target.closest?.('button,summary,a,[role="button"]')){e.preventDefault();if(!e.repeat)toggleLogo();return;}
+ if(e.code==='Space'){
+  if(e.target.closest?.('button,summary,a,[role="button"]'))return;
+  e.preventDefault();if(!e.repeat)setMode((mode+1)%4);return;
+ }
  if(e.key.length!==1||e.repeat)return;
- if(e.code==='Space'&&e.target.closest?.('button,summary,a,[role="button"]'))return;
- e.preventDefault();const note=e.code==='Space'?' ':e.key.toLowerCase();press(note,note===' ');held.set(e.code,{key:note,next:time+.26});
+ e.preventDefault();const note=e.key.toLowerCase();press(note);held.set(e.code,{key:note,next:time+.26});
 });
 addEventListener('keyup',e=>held.delete(e.code));
 addEventListener('blur',()=>{held.clear();music.stop();});
