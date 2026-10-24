@@ -16,7 +16,7 @@ addEventListener('error',e=>{status.textContent='ERROR / '+e.message});
 const renderer=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xf9c70d,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
 const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,100);camera.position.z=12;
 scene.add(new T.HemisphereLight(0xffffff,0xb5b29d,2.4));const key=new T.DirectionalLight(0xfff5d9,3.2);key.position.set(-3,5,7);scene.add(key);const fill=new T.DirectionalLight(0xffffff,1.4);fill.position.set(3,-1,-2);scene.add(fill);
-let w,h,dpr,time=0,last=performance.now(),mode=0,clean=false,drag=false,px=0,py=0,rx=0,ry=0,energy=0,totalHits=0,lastKey='—',lastHit=-10,selected=0;
+let w,h,dpr,time=0,last=performance.now(),mode=2,clean=false,drag=false,px=0,py=0,rx=0,ry=0,energy=0,totalHits=0,lastKey='—',lastHit=-10,selected=0;
 let recording=false,recorder,recordStart=0,recordChunks=[],fps=60;
 const composite=document.createElement('canvas'),cc=composite.getContext('2d');
 const target=new T.WebGLRenderTarget(1,1),postScene=new T.Scene(),postCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);
@@ -93,7 +93,7 @@ function layout(){
  }
 }
 layout();addEventListener('resize',layout);
-const anchors=[];for(let i=0;i<320;i++){const k=Math.floor(rnd()*N),p=new T.Vector3().fromArray(pos,k*3),n=new T.Vector3().fromArray(normals,k*3),a=Math.abs(n.y)<.9?new T.Vector3(0,1,0):new T.Vector3(1,0,0),tangent=new T.Vector3().crossVectors(n,a).normalize();anchors.push({p,n,k,tangent,r:.04+rnd()*.09})}
+const anchors=[];for(let i=0;i<400;i++){const k=Math.floor(rnd()*N),p=new T.Vector3().fromArray(pos,k*3),n=new T.Vector3().fromArray(normals,k*3),a=Math.abs(n.y)<.9?new T.Vector3(0,1,0):new T.Vector3(1,0,0),tangent=new T.Vector3().crossVectors(n,a).normalize();anchors.push({p,n,k,tangent,r:.04+rnd()*.09})}
 const morphVector=new T.Vector3(),morphNormal=new T.Vector3(),morphView=new T.Vector3();
 const logoMorph=await LogoMorph.create({scene,camera,count:mobileView.matches?28000:75000,capture:(positions,facing)=>{
  scene.updateMatrixWorld(true);const normalMatrices=bodies.map(b=>new T.Matrix3().getNormalMatrix(b.g.matrixWorld));
@@ -136,12 +136,12 @@ addEventListener('blur',()=>{held.clear();music.stop();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){held.clear();music.stop();}});
 function screen(p,g=hero.g){const a=p.clone().applyMatrix4(g.matrixWorld).project(camera);return{x:(a.x*.5+.5)*w,y:(-.5*a.y+.5)*h}}
 function label(s,x,y,color='#505845'){c.fillStyle=color;c.font='9px monospace';c.fillText(s,x,y)}
-function box(x,y,bw,bh,a=.35){c.strokeStyle=`rgba(24,35,13,${a})`;c.lineWidth=.65;c.strokeRect(x,y,bw,bh)}
+function box(x,y,bw,bh,a=.35){c.strokeStyle=`rgba(24,35,13,${a})`;c.lineWidth=1;c.strokeRect(x,y,bw,bh)}
 let regionCount=0;
 function drawHud(dt){c.clearRect(0,0,w,h);if(clean||logoMorph.active)return;
  const norm=new T.Matrix3().getNormalMatrix(hero.g.matrixWorld),visible=[];
- anchors.forEach((a,i)=>{const wn=a.n.clone().applyMatrix3(norm),world=a.p.clone().applyMatrix4(hero.g.matrixWorld);if(wn.dot(camera.position.clone().sub(world).normalize())<.1)return;const surfacePoint=sculptPoint(a.p.clone(),a.n,hero.energy,hero);const p=screen(surfacePoint),q=screen(surfacePoint.clone().addScaledVector(a.tangent,a.r));visible.push({p,i});const active=energy>.08;if(active?i%3!==0:i%11!==0)return;const r=active?5+((i*13)%15)*(1+energy*.35):6;box(p.x-r/2,p.y-r/2,r,r,active?.42:.16); });regionCount=visible.length;
- if(energy>.025&&visible.length>10){c.strokeStyle=`rgba(41,57,13,${Math.min(.12,energy*.10)})`;c.beginPath();for(let i=0;i<visible.length;i+=12){const a=visible[i].p,b=visible[(i+9)%visible.length].p;c.moveTo(a.x,a.y);c.lineTo(b.x,b.y)}c.stroke()}
+ anchors.forEach((a,i)=>{const wn=a.n.clone().applyMatrix3(norm),world=a.p.clone().applyMatrix4(hero.g.matrixWorld);if(wn.dot(camera.position.clone().sub(world).normalize())<.1)return;const surfacePoint=sculptPoint(a.p.clone(),a.n,hero.energy,hero);const p=screen(surfacePoint),q=screen(surfacePoint.clone().addScaledVector(a.tangent,a.r));visible.push({p,i});const active=energy>.08;if(active?i%2!==0:i%10!==0)return;const r=active?6+((i*13)%15)*(1+energy*.35):6;box(p.x-r/2,p.y-r/2,r,r,active?.55:.22); });regionCount=visible.length;
+ if(energy>.025&&visible.length>10){c.strokeStyle=`rgba(41,57,13,${Math.min(.24,energy*.20)})`;c.lineWidth=.95;c.beginPath();for(let i=0;i<visible.length;i+=7){const a=visible[i].p,b=visible[(i+9)%visible.length].p;c.moveTo(a.x,a.y);c.lineTo(b.x,b.y)}c.stroke()}
  bodies.slice(1).forEach((b,j)=>{if(!b.g.visible||b.energy<.06)return;const p=screen(new T.Vector3(),b.g),s=(w<h?Math.min(38,w*.10):h*(.065+(j%3)*.008))*(1+b.energy*.08);box(p.x-s/2,p.y-s/2,s,s,b.energy>.08?.7:.2);const key=keys[j]||'';if(b.energy>.1){c.fillStyle='#f9c70d';c.fillRect(p.x-s/2-3,p.y-s/2-3,6,6)}});
 
  synth.waveform();
@@ -169,7 +169,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/10
 
  if(recording){compose();if(now-recordStart>=12000&&recorder.state==='recording')recorder.stop()}
 }
-document.querySelector('#loading').remove();setMode(0,false);requestAnimationFrame(frame);
+document.querySelector('#loading').remove();setMode(2,false);requestAnimationFrame(frame);
 document.querySelector('#mode').onclick=()=>setMode((mode+1)%4);
 let tapCursor=0;
 function tap(){press(' ',true,TAP_ORDER[tapCursor++%TAP_ORDER.length]);}
