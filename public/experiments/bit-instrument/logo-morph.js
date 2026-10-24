@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {LogoMorphState} from './logo-morph-state.js?v=3';
+import {LogoMorphState} from './logo-morph-state.js?v=4';
 import {pairPointSets} from './point-pairing.js';
 
 export class LogoMorph {
