@@ -4,7 +4,7 @@ import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
 import {MechanicalSynth} from './synth.js?v=skin-music-4';
 import {MusicPattern} from './music-pattern.js?v=3';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
-import {LogoMorph} from './logo-morph.js?v=5';
+import {LogoMorph} from './logo-morph.js?v=6';
 import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effects.js?v=4';
 const canvas=document.querySelector('#scene'),hud=document.querySelector('#hud'),c=hud.getContext('2d');
 const music=new MusicPattern();
