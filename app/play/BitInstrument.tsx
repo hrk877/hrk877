@@ -24,7 +24,20 @@ export default function BitInstrument() {
     }, [])
 
     return (
-        <div className="fixed inset-0 h-dvh w-full overflow-hidden overscroll-none touch-none bg-[#f9c70d]">
+        <div data-music-stage className="fixed inset-0 h-dvh w-full overflow-hidden overscroll-none touch-none bg-[#f9c70d]">
+            <style jsx global>{`
+                html:has([data-music-stage]), body:has([data-music-stage]) {
+                    background-color: #f9c70d;
+                    min-height: 100%;
+                    color-scheme: light;
+                }
+            `}</style>
+            <div className="absolute" style={{
+                top: "env(safe-area-inset-top, 0px)",
+                right: "env(safe-area-inset-right, 0px)",
+                bottom: "env(safe-area-inset-bottom, 0px)",
+                left: "env(safe-area-inset-left, 0px)",
+            }}>
             <iframe
                 ref={frame}
                 src="/experiments/bit-instrument/index.html?v=4"
@@ -41,6 +54,7 @@ export default function BitInstrument() {
                     if (!open) frame.current?.contentWindow?.focus()
                 }}
             />
+            </div>
         </div>
     )
 }

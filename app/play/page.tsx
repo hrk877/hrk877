@@ -12,7 +12,11 @@ export const metadata: Metadata = {
     },
 }
 
-export const viewport: Viewport = { themeColor: "#f9c70d" }
+export const viewport: Viewport = {
+    themeColor: "#f9c70d",
+    colorScheme: "light",
+    viewportFit: "cover",
+}
 
 export default function PlayPage() {
     return <BitInstrument />

@@ -4,7 +4,7 @@ import {MeshSurfaceSampler} from './vendor/MeshSurfaceSampler.js';
 import {MechanicalSynth} from './synth.js?v=skin-music-4';
 import {MusicPattern} from './music-pattern.js?v=3';
 import {REACTIONS,ReactionPalette,emotionGLSL,deformEmotion} from './reactions.js?v=1';
-import {LogoMorph} from './logo-morph.js?v=4';
+import {LogoMorph} from './logo-morph.js?v=5';
 import {TAP_EFFECTS,TAP_ORDER,effectForKey,tapGLSL,deformTap} from './tap-effects.js?v=4';
 const canvas=document.querySelector('#scene'),hud=document.querySelector('#hud'),c=hud.getContext('2d');
 const music=new MusicPattern();
@@ -61,7 +61,14 @@ function body(i,baseScale){
  depth.renderOrder=-2;points.renderOrder=1;g.add(mesh,depth,points,wire);scene.add(g);
  const b={g,mesh,depth,points,wire,mat,baseScale,base:new T.Vector3(),baseRot:new T.Vector3(.12,Math.PI,-.4),rot:new T.Vector3(),rv:new T.Vector3(),offset:new T.Vector3(),ov:new T.Vector3(),energy:0,anger:0,tapId:0,tapLevel:0,tapUntil:-Infinity,rageStyle:0,mood:new T.Vector3(),phase:0,phaseTarget:0,shape:new T.Vector4(1,0,0,0),shapeTarget:new T.Vector4(1,0,0,0)};bodies.push(b);return b;
 }
-const satelliteCount=6;const hero=body(0,1);for(let i=1;i<=satelliteCount;i++){const b=body(i,.17+(i%3)*.025);b.baseRot.set(.12+(i%3)*.14,Math.PI+(i%4)*.6,-.6+i*.42)}
+const satelliteCount=6,orientations=Array.from({length:6},(_,i)=>i*Math.PI/3);
+for(let i=orientations.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[orientations[i],orientations[j]]=[orientations[j],orientations[i]];}
+const hero=body(0,1);
+for(let i=1;i<=satelliteCount;i++){
+ const b=body(i,.17+(i%3)*.025);
+ // Shuffle six directions once; keep the poses stable when the viewport resizes.
+ b.baseRot.set((Math.random()-.5)*.6,Math.PI+(Math.random()-.5)*1.1,orientations[i-1]+(Math.random()-.5)*.5);
+}
 // Portrait layout is fitted in screen space: a tall soloist, two separate satellite lanes.
 const layoutVector=new T.Vector3(),layoutNormal=new T.Vector3();
 function sculptPoint(vector,normal,e,body){
@@ -99,8 +106,8 @@ function layout(){
   }
   hero.baseRot.set(.12,Math.PI,-.32);fit(hero,w*.5,h*.52,w*.54,h*.58,0);
   bodies.slice(1).forEach((body,j)=>{
-   const row=Math.floor(j/2),right=j%2===1,tilt=[-.48,.22,-.28][row];body.baseRot.set(.1+row*.05,Math.PI+(row-1)*.22,right?-tilt:tilt);
-   fit(body,w*(right?.87:.13),h*(.24+row*.27),w*.16,h*.20,-.65);
+   const row=Math.floor(j/2),right=j%2===1;
+   fit(body,w*(right?.87:.13),h*(.24+row*.27),w*.17,h*.22,-.65);
   });
  }
 }

@@ -17,30 +17,28 @@ export class LogoMorph {
     const data=ctx.getImageData(0,0,2048,512).data,samples=[];let minX=2048,maxX=0,minY=512,maxY=0;
     for(let y=0;y<512;y+=2)for(let x=0;x<2048;x+=2){if(data[(y*2048+x)*4+3]>150){samples.push([x,y]);minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}}
     if(!samples.length)throw new Error('877handの字体を読み込めませんでした');
-    const positions=new Float32Array(count*3),targets=new Float32Array(count*3),chunks=new Float32Array(count*2),facing=new Float32Array(count);
+    const positions=new Float32Array(count*3),targets=new Float32Array(count*3),facing=new Float32Array(count);
     this.normalized=new Float32Array(count*2);this.mapping=Uint32Array.from({length:count},(_,i)=>i);this.rawDestination=new Float32Array(count*3);this.livePosition=new T.BufferAttribute(new Float32Array(count*3),3);this.liveFacing=new T.BufferAttribute(new Float32Array(count),1);this.aspect=(maxX-minX)/(maxY-minY);
     let seed=877;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
     for(let i=0;i<count;i++){
       const p=samples[Math.floor(rnd()*samples.length)];this.normalized[i*2]=(p[0]-minX)/(maxX-minX)-.5;this.normalized[i*2+1]=.5-(p[1]-minY)/(maxY-minY);
       facing[i]=1;
     }
-    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(positions,3));geometry.setAttribute('destination',new T.BufferAttribute(targets,3));geometry.setAttribute('facing',new T.BufferAttribute(facing,1));geometry.setAttribute('chunk',new T.BufferAttribute(chunks,2));
+    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(positions,3));geometry.setAttribute('destination',new T.BufferAttribute(targets,3));geometry.setAttribute('facing',new T.BufferAttribute(facing,1));
     this.material=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uProgress:{value:0},uDpr:{value:1}},
-      vertexShader:`attribute vec3 destination;attribute float facing;attribute vec2 chunk;uniform float uProgress,uDpr;varying float vAlpha;
+      vertexShader:`attribute vec3 destination;attribute float facing;uniform float uProgress,uDpr;varying float vAlpha;
       void main(){
-       float t=clamp((uProgress-chunk.x)/(1.-chunk.x),0.,1.);
-       float p=t*t*t*(t*(t*6.-15.)+10.);
+       // One shared progress keeps the whole silhouette continuous: no delayed strips.
+       float p=clamp(uProgress,0.,1.);
        vec3 delta=destination-position;
-       float ribbon=sin(3.14159265*p),sweep=sin(6.2831853*p);
-       // Neighbours share a flowing, tangential path; every point still has one destination.
-       vec2 tangent=vec2(-delta.y,delta.x);
+       float ribbon=sin(3.14159265*p);
        vec3 q=mix(position,destination,p);
-       q.xy+=tangent*ribbon*(.19+.045*chunk.y);
-       q.y+=sweep*ribbon*.13*(.6+chunk.y);
-       q.z+=ribbon*(.32+.18*chunk.y);
+       // The same gentle arc acts on every point, like one flexible surface.
+       q.xy+=vec2(-delta.y,delta.x)*ribbon*.075;
+       q.z+=ribbon*.16;
        vAlpha=mix(facing,1.,smoothstep(0.,.28,p));
        gl_Position=projectionMatrix*viewMatrix*vec4(q,1.);
-       gl_PointSize=mix(1.12,1.10,p)*(1.+ribbon*.12)*uDpr;
+       gl_PointSize=mix(1.12,1.10,p)*uDpr;
       }`,
       fragmentShader:'varying float vAlpha;void main(){vec2 p=gl_PointCoord-.5;float edge=1.-smoothstep(.30,.5,length(p));gl_FragColor=vec4(.08,.10,.045,vAlpha*edge);}' });
     this.points=new T.Points(geometry,this.material);this.points.frustumCulled=false;this.points.visible=false;this.points.renderOrder=5;scene.add(this.points);this.resize();
@@ -61,14 +59,7 @@ export class LogoMorph {
     const source=this.points.geometry.attributes.position,facing=this.points.geometry.attributes.facing;
     if(!this.active){
       this.capture(source,facing);this.mapping=pairPointSets(source.array,this.rawDestination);this.applyMapping();
-      const chunk=this.points.geometry.attributes.chunk;let minX=Infinity,maxX=-Infinity;
-      for(let i=0;i<this.count;i++){minX=Math.min(minX,source.getX(i));maxX=Math.max(maxX,source.getX(i));}
-      for(let i=0;i<this.count;i++){
-       const x=source.getX(i),y=source.getY(i),z=source.getZ(i);
-       const wave=(x-minX)/Math.max(.001,maxX-minX),lane=.5+.5*Math.sin(y*1.65+z*.7+x*.3);
-       chunk.setXY(i,.012+wave*.23+lane*.025,lane);
-      }
-      chunk.needsUpdate=true;source.needsUpdate=true;facing.needsUpdate=true;
+      source.needsUpdate=true;facing.needsUpdate=true;
     }
     this.state.toggle(now);
     if(this.state.target===0){this.returnSource=source.array.slice();this.returnFacing=facing.array.slice();}
