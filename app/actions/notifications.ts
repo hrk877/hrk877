@@ -58,10 +58,10 @@ ${SITE_URL}/museum`.trim()
             case 'journal':
                 subject = "New Journal Entry Published 🍌"
                 message = `
-新しい記録が綴られました。
-行間にある静けさを、共に味わってみませんか。
+877handのJournalに、新しい記事を公開しました。
+ぜひご覧ください
 
-Read the Journal
+▼ Journalはこちら
 ${SITE_URL}/journal`.trim()
                 break
         }
