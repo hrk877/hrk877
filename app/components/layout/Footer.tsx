@@ -26,11 +26,6 @@ const Footer = ({ isAdmin, handleSecretClick, handleLogout }: FooterProps) => {
                         >
                             877hand
                         </span>
-                        <span className="font-mono text-lg md:text-xs max-w-xs leading-relaxed opacity-60">
-                            Digital homage to the yellow curve.
-                            <br />
-                            Designed for banana finger.
-                        </span>
                     </div>
                     <div className="flex flex-col text-left font-mono text-lg md:text-xs gap-3">
                         <button
