@@ -1,13 +1,54 @@
 "use client"
 
 import { useRef } from "react"
+import Image from "next/image"
 import { motion, useInView } from "framer-motion"
 
-const PhilosophyItem = ({
-    data,
-}: {
-    data: { no: string; title: string; subtitle: string; desc: string }
-}) => {
+const SHOP_URL = "https://877hand.base.shop"
+
+type PhilosophyData = {
+    no: string
+    title: string
+    subtitle: string
+    desc: string
+    image?: string
+    imageAlt: string
+    href?: string
+}
+
+const PhilosophyImage = ({ data }: { data: PhilosophyData }) => {
+    const frame = (
+        <div className="relative w-full aspect-[4/5] overflow-hidden border border-[#FAC800]/40 bg-[#4a1e07]/40">
+            {data.image ? (
+                <Image
+                    src={data.image}
+                    alt={data.imageAlt}
+                    fill
+                    sizes="(min-width: 768px) 320px, 80vw"
+                    className="object-cover"
+                />
+            ) : (
+                <div className="absolute inset-0 flex items-center justify-center font-mono text-[#FAC800] text-xs tracking-[0.3em] opacity-40">
+                    PHOTO COMING
+                </div>
+            )}
+        </div>
+    )
+    if (!data.href) return frame
+    return (
+        <a
+            href={data.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${data.title} — SHOP`}
+            className="block transition-opacity duration-500 hover:opacity-80"
+        >
+            {frame}
+        </a>
+    )
+}
+
+const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
     const ref = useRef(null)
     const isInView = useInView(ref, { once: false, amount: 0.5 })
 
@@ -38,14 +79,19 @@ const PhilosophyItem = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                     transition={{ duration: 0.8, delay: 0.3 }}
-                    className="border-l-2 border-[#FAC800] pl-6 md:pl-10 ml-2"
+                    className="border-l-2 border-[#FAC800] pl-6 md:pl-10 ml-2 flex flex-col md:flex-row gap-8 md:gap-12 md:items-start"
                 >
-                    <p className="font-mono text-[#FAC800] text-sm tracking-[0.2em] mb-6 uppercase opacity-70">
-                        {data.subtitle}
-                    </p>
-                    <p className="text-[#FAC800] text-xl md:text-2xl font-serif leading-loose opacity-90 max-w-2xl">
-                        {data.desc}
-                    </p>
+                    <div className="flex-1">
+                        <p className="font-mono text-[#FAC800] text-sm tracking-[0.2em] mb-6 uppercase opacity-70">
+                            {data.subtitle}
+                        </p>
+                        <p className="text-[#FAC800] text-xl md:text-2xl font-serif leading-loose opacity-90 max-w-2xl">
+                            {data.desc}
+                        </p>
+                    </div>
+                    <div className="w-full max-w-[16rem] md:w-64 shrink-0">
+                        <PhilosophyImage data={data} />
+                    </div>
                 </motion.div>
             </div>
         </div>
@@ -53,24 +99,32 @@ const PhilosophyItem = ({
 }
 
 const Philosophy = () => {
-    const slides = [
+    const slides: PhilosophyData[] = [
         {
             no: "01",
-            title: "Curve",
-            subtitle: "The miracle of negative geotropism",
-            desc: "バナナの曲線は、重力への反逆である。果実は最初、地面に向かって成長するが、やがて太陽を求め、重力に逆らって上へと首を持ち上げる。「負の向地性」と呼ばれるこの現象こそが、あの美しい曲線を生み出している。",
+            title: "Craft",
+            subtitle: "Made by hand",
+            desc: "バナナの恵みを、人の手で形にする。裁断し、縫い合わせ、仕上げる。ひとつひとつの工程に手間をかけることが、素材への敬意であり、877handのものづくりの原点である。",
+            // TODO: 制作・縫製の写真が未提供（提供後に image を設定）
+            imageAlt: "制作・縫製の様子",
+            href: SHOP_URL,
         },
         {
             no: "02",
-            title: "Color",
-            subtitle: "Visualization of time",
-            desc: "緑から黄色、そして茶色へ。バナナほど雄弁に自らの「時」を語る果物はない。シュガースポット（茶色の斑点）は劣化ではなく、糖度が最高潮に達した証である。我々は色を通じて、自然のリズムを体感する。",
+            title: "Material",
+            subtitle: "Banapi skin",
+            desc: "バナナの皮から生まれた、植物由来の素材「バナピースキン」。かつて捨てられていたものが、しなやかな質感をまとって新しい素材になる。使うほどに表情が変わるのも魅力だ。",
+            // TODO: バナピースキンの質感アップ写真が未提供（提供後に image を設定）
+            imageAlt: "バナピースキンの質感",
+            href: SHOP_URL,
         },
         {
             no: "03",
-            title: "Unity",
+            title: "Bunch",
             subtitle: "Individual yet collective",
-            desc: "バナナは一本では実らない。必ず「ハンド（房）」と呼ばれる集団で成長する。この「バナナハンド」としての構造は、それぞれが独立した個体でありながら、一つの茎を共有し、互いに支え合いながら空を目指す。この姿は、理想的なコミュニティの在り方を示唆している。",
+            desc: "バナナは一本では実らない。ハンド（房）として寄り添い、ひとつの茎から広がっていく。作り手も、使い手も、プロダクトも。877handは、その房のように広がるコレクションとコミュニティを目指している。",
+            image: "/philosophy/bunch.jpg",
+            imageAlt: "フィリピンの農園で竹竿に吊るされたバナナの房",
         },
     ]
 
