@@ -79,8 +79,11 @@ const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                     transition={{ duration: 0.8, delay: 0.3 }}
-                    className="border-l-2 border-[#FAC800] pl-6 md:pl-10 ml-2 flex flex-col md:flex-row gap-8 md:gap-12 md:items-start"
+                    className="border-l-2 border-[#FAC800] pl-6 md:pl-10 ml-2 flex flex-col gap-8"
                 >
+                    <div className="w-full max-w-[16rem] md:w-64 shrink-0">
+                        <PhilosophyImage data={data} />
+                    </div>
                     <div className="flex-1">
                         <p className="font-mono text-[#FAC800] text-sm tracking-[0.2em] mb-6 uppercase opacity-70">
                             {data.subtitle}
@@ -88,9 +91,6 @@ const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
                         <p className="text-[#FAC800] text-xl md:text-2xl font-serif leading-loose opacity-90 max-w-2xl">
                             {data.desc}
                         </p>
-                    </div>
-                    <div className="w-full max-w-[16rem] md:w-64 shrink-0">
-                        <PhilosophyImage data={data} />
                     </div>
                 </motion.div>
             </div>
