@@ -113,7 +113,7 @@ const Philosophy = () => {
             no: "02",
             title: "Material",
             subtitle: "Banapi skin",
-            desc: "捨てられるバナナの皮が、素材になる。皮に浮くシュガースポットは、そのまま色になる。茶色は汚れじゃない。877handの色だ。",
+            desc: "捨てられるバナナの皮を、素材にする。皮に浮くシュガースポットは、そのまま色にする。茶色は877handの色だ。",
             // TODO: バナピースキンの質感アップ写真が未提供（提供後に image を設定）
             imageAlt: "バナピースキンの質感",
             href: SHOP_URL,
