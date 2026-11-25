@@ -91,6 +91,16 @@ const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
                         <p className="text-[#FAC800] text-xl md:text-2xl font-serif leading-loose opacity-90 max-w-2xl">
                             {data.desc}
                         </p>
+                        {data.href && (
+                            <a
+                                href={data.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block mt-8 font-mono text-[#FAC800] text-sm tracking-[0.2em] opacity-70 transition-opacity duration-500 hover:opacity-100"
+                            >
+                                こちらから → SHOP
+                            </a>
+                        )}
                     </div>
                 </motion.div>
             </div>
@@ -104,7 +114,7 @@ const Philosophy = () => {
             no: "01",
             title: "Craft",
             subtitle: "Made by hand",
-            desc: "877handは、バナナを人の手で表現した作品をつくっています。バナピースキンの財布やカードケース、ブックカバー、バナナを描いたTシャツやバッグ、帽子まで、企画から仕上げまでひとつずつ手で形にしています。",
+            desc: "877handは、バナナをモチーフにした作品を作るブランドです。バナナの独創的で美しい形を、日常に取り入れられるプロダクトに落とし込んでいます。ひとつひとつ、人の手で作っています。",
             // TODO: 制作・縫製の写真が未提供（提供後に image を設定）
             imageAlt: "制作・縫製の様子",
             href: SHOP_URL,
@@ -112,17 +122,17 @@ const Philosophy = () => {
         {
             no: "02",
             title: "Material",
-            subtitle: "Banapi skin",
-            desc: "バナピースキンは、廃棄されるバナナの皮から生まれる植物由来の素材です。捨てられるはずだった皮が、財布やカードケースに生まれ変わります。",
+            subtitle: "Banapee Skin",
+            desc: "Banapee Skinは、廃棄されるバナナの皮から生まれる植物由来の素材です。ふだん捨てられてしまう皮が、新しいプロダクトに生まれ変わります。その面白さを、ぜひ覗いてみてください。",
             // TODO: バナピースキンの質感アップ写真が未提供（提供後に image を設定）
             imageAlt: "バナピースキンの質感",
             href: SHOP_URL,
         },
         {
             no: "03",
-            title: "Bunch",
-            subtitle: "Individual yet collective",
-            desc: "877handのはじまりは、フィリピンの農園で出会った、規格外という理由で売れないバナナです。一本ずつ形の違うバナナが房になるように、バンチは、プロダクトが広がり、バナナを好きな人が集まる場所です。バナナのように、生きていく。",
+            title: "Community",
+            subtitle: "Live like a banana",
+            desc: "フィリピンのバナナ農園で見た、バナナとともに暮らす村。バナナは実るだけではなく、人をつなぐものでした。877handは、バナナのように生きる人の集まりです。",
             image: "/philosophy/bunch.jpg",
             imageAlt: "フィリピンの農園で竹竿に吊るされたバナナの房",
         },
