@@ -40,19 +40,19 @@ export async function notifyCommunityServer(type: 'banana' | 'museum' | 'journal
             case 'banana':
                 subject = "A New Banana Has Dropped 🍌"
                 message = `
-誰かの思考が、バナナとなって落ちてきました。
-その言葉の欠片を、拾い上げてみてください。
+877handのFingerに、新しいバナナが投稿されました。
+ぜひご覧ください
 
-Visit the 877hand
+▼ Fingerはこちら
 ${SITE_URL}/finger`.trim()
                 break
             case 'museum':
                 subject = "New Art Has Arrived 🍌"
                 message = `
-新しいコレクションが追加されました。
-静謐な空間で、その作品はあなたを待っています。
+877handのMuseumに、新しい作品が追加されました。
+ぜひご覧ください
 
-Visit the Museum
+▼ Museumはこちら
 ${SITE_URL}/museum`.trim()
                 break
             case 'journal':
