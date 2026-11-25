@@ -18,14 +18,14 @@ type PhilosophyData = {
 
 const PhilosophyImage = ({ data }: { data: PhilosophyData }) => {
     const frame = (
-        <div className="relative w-full aspect-[4/5] overflow-hidden border border-[#FAC800]/40 bg-[#4a1e07]/40">
+        <div className="relative w-full aspect-[4/3] overflow-hidden">
             {data.image ? (
                 <Image
                     src={data.image}
                     alt={data.imageAlt}
                     fill
                     sizes="(min-width: 768px) 320px, 80vw"
-                    className="object-cover"
+                    className="object-cover object-[50%_54%]"
                 />
             ) : (
                 <div className="absolute inset-0 flex items-center justify-center font-mono text-[#FAC800] text-xs tracking-[0.3em] opacity-40">
