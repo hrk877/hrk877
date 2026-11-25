@@ -92,14 +92,16 @@ const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
                             {data.desc}
                         </p>
                         {data.href && (
-                            <a
-                                href={data.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block mt-8 font-mono text-[#FAC800] text-sm tracking-[0.2em] opacity-70 transition-opacity duration-500 hover:opacity-100"
-                            >
-                                こちらから → SHOP
-                            </a>
+                            <div className="max-w-2xl text-right">
+                                <a
+                                    href={data.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block mt-8 font-mono text-[#FAC800] text-sm tracking-[0.2em] opacity-70 transition-opacity duration-500 hover:opacity-100"
+                                >
+                                    → SHOP
+                                </a>
+                            </div>
                         )}
                     </div>
                 </motion.div>
