@@ -59,7 +59,7 @@ const PhilosophyItem = ({ data }: { data: PhilosophyData }) => {
                     initial={{ opacity: 0, x: -50 }}
                     animate={isInView ? { opacity: 0.1, x: 0 } : { opacity: 0, x: -50 }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className="font-mono text-[12rem] md:text-[15rem] leading-none absolute -top-20 -left-10 md:-left-20 font-bold text-[#FAC800] select-none pointer-events-none"
+                    className="font-mono text-[9rem] md:text-[15rem] leading-none absolute -top-14 md:-top-20 left-0 xl:-left-20 font-bold text-[#FAC800] select-none pointer-events-none"
                 >
                     {data.no}
                 </motion.div>
@@ -104,7 +104,7 @@ const Philosophy = () => {
             no: "01",
             title: "Craft",
             subtitle: "Made by hand",
-            desc: "バナナの恵みを、人の手で形にする。裁断し、縫い合わせ、仕上げる。ひとつひとつの工程に手間をかけることが、素材への敬意であり、877handのものづくりの原点である。",
+            desc: "バナナグッズは買わない。ほしいなら、つくる。スーパーでバナナを手にして、装いを完成させるのはロゴじゃないと気づいた。そこから、つくり始めた。",
             // TODO: 制作・縫製の写真が未提供（提供後に image を設定）
             imageAlt: "制作・縫製の様子",
             href: SHOP_URL,
@@ -113,7 +113,7 @@ const Philosophy = () => {
             no: "02",
             title: "Material",
             subtitle: "Banapi skin",
-            desc: "バナナの皮から生まれた、植物由来の素材「バナピースキン」。かつて捨てられていたものが、しなやかな質感をまとって新しい素材になる。使うほどに表情が変わるのも魅力だ。",
+            desc: "捨てられるバナナの皮が、素材になる。皮に浮くシュガースポットは、そのまま色になる。茶色は汚れじゃない。877handの色だ。",
             // TODO: バナピースキンの質感アップ写真が未提供（提供後に image を設定）
             imageAlt: "バナピースキンの質感",
             href: SHOP_URL,
@@ -122,7 +122,7 @@ const Philosophy = () => {
             no: "03",
             title: "Bunch",
             subtitle: "Individual yet collective",
-            desc: "バナナは一本では実らない。ハンド（房）として寄り添い、ひとつの茎から広がっていく。作り手も、使い手も、プロダクトも。877handは、その房のように広がるコレクションとコミュニティを目指している。",
+            desc: "フィリピンの農園で、規格外で売れないバナナを見た。バナナは一本では実らず、房になる。バナナのように、生きていく。",
             image: "/philosophy/bunch.jpg",
             imageAlt: "フィリピンの農園で竹竿に吊るされたバナナの房",
         },
