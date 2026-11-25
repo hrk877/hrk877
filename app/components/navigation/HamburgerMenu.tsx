@@ -12,7 +12,7 @@ const MENU_ITEMS = [
     { label: "HOME", href: "/" },
     { label: "JOURNAL", href: "/journal" },
     { label: "MUSEUM", href: "/museum" },
-    { label: "SHOP", href: "/shop" },
+    { label: "SHOP", href: "https://877hand.base.shop", external: true },
     {
         label: "SNS",
         children: [
