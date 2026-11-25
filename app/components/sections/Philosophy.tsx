@@ -115,8 +115,8 @@ const Philosophy = () => {
             title: "Craft",
             subtitle: "Made by hand",
             desc: "877handは、バナナをモチーフにした作品を作るブランドです。バナナの独創的で美しい形を、日常に取り入れられるプロダクトに落とし込んでいます。ひとつひとつ、人の手で作っています。",
-            // TODO: 制作・縫製の写真が未提供（提供後に image を設定）
-            imageAlt: "制作・縫製の様子",
+            image: "/philosophy/craft.jpg",
+            imageAlt: "縫製で作られたバナナの皮の立体作品",
             href: SHOP_URL,
         },
         {
@@ -124,7 +124,7 @@ const Philosophy = () => {
             title: "Material",
             subtitle: "Banapee Skin",
             desc: "Banapee Skinは、廃棄されるバナナの皮から生まれる植物由来の素材です。ふだん捨てられてしまう皮が、新しいプロダクトに生まれ変わります。その面白さを、ぜひ覗いてみてください。",
-            // TODO: バナピースキンの質感アップ写真が未提供（提供後に image を設定）
+            image: "/philosophy/material.jpg",
             imageAlt: "バナピースキンの質感",
             href: SHOP_URL,
         },
@@ -133,8 +133,8 @@ const Philosophy = () => {
             title: "Community",
             subtitle: "Live like a banana",
             desc: "フィリピンのバナナ農園で見た、バナナとともに暮らす村。バナナは実るだけではなく、人をつなぐものでした。877handは、バナナのように生きる人の集まりです。",
-            image: "/philosophy/bunch.jpg",
-            imageAlt: "フィリピンの農園で竹竿に吊るされたバナナの房",
+            image: "/philosophy/community.jpg",
+            imageAlt: "バナナの木の前で紙飛行機で遊ぶフィリピンの子どもたち",
         },
     ]
 
