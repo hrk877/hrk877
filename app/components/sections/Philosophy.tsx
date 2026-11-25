@@ -134,7 +134,7 @@ const Philosophy = () => {
             no: "03",
             title: "Community",
             subtitle: "Live like a banana",
-            desc: "フィリピンのバナナ農園で見た、バナナとともに暮らす村。バナナは実るだけではなく、人をつなぐものでした。877handは、バナナのように生きる人の集まりです。",
+            desc: "フィリピンのバナナと共に暮らす村。バナナは実るだけではなく、人をつなぐものでした。877handは、バナナのように生きる人の集まりです。",
             image: "/philosophy/community.jpg",
             imageAlt: "バナナの木の前で紙飛行機で遊ぶフィリピンの子どもたち",
         },
